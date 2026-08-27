@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     pickup_location VARCHAR(150) NOT NULL,
-    dropoff_location VARCHAR(150) NOT NULL,
+    drop_location VARCHAR(150) NOT NULL,
     total_days INTEGER NOT NULL,
     daily_rate NUMERIC(10, 2) NOT NULL,
     total_amount NUMERIC(10, 2) NOT NULL,
@@ -119,7 +119,7 @@ ALTER TABLE bookings ADD COLUMN IF NOT EXISTS driver_id BIGINT;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS start_date DATE;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS end_date DATE;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS pickup_location VARCHAR(150);
-ALTER TABLE bookings ADD COLUMN IF NOT EXISTS dropoff_location VARCHAR(150);
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS drop_location VARCHAR(150);
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS total_days INTEGER;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS daily_rate NUMERIC(10, 2);
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS total_amount NUMERIC(10, 2);

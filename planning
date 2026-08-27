@@ -1,275 +1,777 @@
-Audit and fix the current Customer/Auth implementation based on the following requirements.
+You are working on my existing Spring Boot Car Rental backend project.
 
 IMPORTANT:
-Do not invent new architecture.
-Do not modify Owner/Driver functionality unless required for a shared User/Auth dependency.
-Do not remove database columns blindly.
-First inspect the existing code, entities, DTOs, mappers, repositories, security flow, Flyway migrations, and tests.
+Do NOT just report what is wrong.
+Actually inspect the existing codebase, database mappings, Flyway migrations, entities, DTOs, mappers, repositories, services, controllers and tests, then IMPLEMENT the complete fix.
 
-==================================================
-1. CUSTOMER RESPONSE CLEANUP
-==================================================
+GOAL:
+I want one clean, canonical Booking schema.
+Remove obsolete/duplicate/legacy booking fields and naming.
+Make Java Entity -> DTO -> Mapper -> Service -> Repository -> PostgreSQL column names completely consistent.
+The application must work against the EXISTING PostgreSQL database, not only pass unit tests.
 
-Current customer signup response contains these Driver-specific fields:
-
-- willingToDrive
-- drivingLicenseNumber
-- licenseExpiryDate
-
-Example current response:
-
-{
-  "id": 16,
-  "firstName": "Shivraj",
-  "lastName": "Koshti",
-  "fullName": "Shivraj Koshti",
-  "email": "customer@example.com",
-  "phoneNumber": "9876543210",
-  "role": "ROLE_CUSTOMER",
-  "willingToDrive": false,
-  "drivingLicenseNumber": null,
-  "licenseExpiryDate": null,
-  "emailVerified": false,
-  "enabled": true,
-  "createdAt": "..."
-}
-
-These Driver-specific fields MUST NOT be exposed in Customer signup/auth/customer responses.
-
-Customer response should contain only relevant customer/user fields, such as:
-
-- id
-- firstName
-- lastName
-- fullName
-- email
-- phoneNumber
-- role
-- emailVerified
-- createdAt
+==========================================================
+1. FIRST: FULL PROJECT AUDIT
+==========================================================
 
 Inspect:
 
-- User.java
-- CustomerProfile.java
-- CustomerResponse.java
-- CustomerSignupRequest/Response if present
-- AuthMapper.java
-- CustomerMapper.java
-- AuthServiceImpl.java
-- CustomerServiceImpl.java
-- AuthController.java
-- CustomerController.java
+- Booking.java
+- BookingRequest.java
+- BookingResponse.java
+- BookingMapper.java
+- BookingRepository.java
+- BookingService.java
+- BookingServiceImpl.java
+- BookingController.java
+- BookingStatus
+- PaymentStatus
+- TripType
+- all booking-related entities
+- all booking-related DTOs
+- all booking-related tests
+- all Flyway migrations V1 onward
+- application.properties/application.yml
+- PostgreSQL schema/migrations
+- any SQL scripts
+- any code referencing old booking fields
 
-Remove the Driver-specific fields from CUSTOMER DTO responses and MapStruct mappings.
+Search the ENTIRE project for these names:
 
-IMPORTANT:
-Do NOT delete willingToDrive, drivingLicenseNumber, or licenseExpiryDate from User.java/database until you verify whether Owner/Driver module currently uses them.
-If they are required by Driver functionality, keep them internally but do not expose them through Customer DTOs.
-If they are completely unused across the entire application, report that separately before deleting them.
+OLD / LEGACY:
+- passengers
+- passenger
+- phone_number
+- drop_location
+- dropLocation
+- daily_rate
+- dailyRate
+- total_amount
+- totalAmount
+- total_days
+- totalDays
+- transmission
+- image_url
+- imageUrl
 
-==================================================
-2. EMAIL VERIFICATION BUG
-==================================================
+Also search for:
 
-There is an issue with email verification/login.
+CANONICAL:
+- passenger_count
+- passengerCount
+- customer_phone_number
+- customerPhoneNumber
+- dropoff_location
+- dropoffLocation
 
-A customer was created with:
+Do not assume that unit tests prove database schema correctness.
 
-emailVerified = false
+==========================================================
+2. CANONICAL BOOKING DOMAIN
+==========================================================
 
-Then the database value was manually changed to:
+The ONLY canonical Booking fields should be:
 
-email_verified = true
-
-But the application still behaves as if the email is unverified and asks for email verification.
-
-Investigate the COMPLETE authentication flow.
-
-Trace:
-
-POST /api/auth/login
-        ↓
-AuthenticationManager
-        ↓
-AuthenticationProvider
-        ↓
-UserDetailsServiceImpl
-        ↓
-UserDetailsImpl
-        ↓
-enabled/account status
-        ↓
-email verification logic
-        ↓
-JWT generation
-
-Inspect:
-
-- User.java
-- UserDetailsImpl.java
-- UserDetailsServiceImpl.java
-- AuthServiceImpl.java
-- AuthService.java
-- AuthController.java
-- SecurityConfig.java
-- AuthenticationProvider configuration
-- Password authentication flow
-- emailVerified field
-- enabled field
-- getAuthorities()
-- isEnabled()
-- any email verification checks
-
-Find the EXACT reason why setting email_verified=true directly in DB does not allow login.
-
-Do not simply remove email verification protection.
-
-Expected business rule:
-
-- emailVerified=false → login must be rejected with:
-  "Account is disabled. Please verify your email first."
-
-- emailVerified=true → login must be allowed and JWT tokens must be generated, assuming password and account status are valid.
-
-Do not use enabled=true as a substitute for emailVerified.
-emailVerified and enabled are separate concepts unless the existing architecture explicitly combines them.
-
-If UserDetailsImpl.isEnabled() currently depends on emailVerified, verify that it reads the CURRENT database value through the freshly loaded User entity.
-
-If AuthServiceImpl separately checks emailVerified, ensure it checks the freshly loaded User entity and not a stale object/cache/value.
-
-Also inspect whether Hibernate/JPA first-level cache, second-level cache, transaction scope, or an old User object could explain stale emailVerified values.
-
-Do not add caching changes unless actually necessary.
-
-==================================================
-3. MANUAL DATABASE TEST
-==================================================
-
-After fixing the code, verify this exact scenario:
-
-A. Create new customer:
-
-POST /api/auth/signup/customer
-
-{
-  "firstName": "Shivraj",
-  "lastName": "Koshti",
-  "email": "customer@example.com",
-  "password": "Password@123",
-  "confirmPassword": "Password@123",
-  "phoneNumber": "9876543210"
-}
-
-Expected:
-
-emailVerified=false
-
-B. Try login before verification.
-
-Expected:
-
-403
-
-{
-  "success": false,
-  "message": "Account is disabled. Please verify your email first."
-}
-
-C. Set email_verified=true directly in the database ONLY for testing.
-
-D. Try login again with the same credentials.
-
-Expected:
-
-200
-
-JWT accessToken + refreshToken should be generated.
-
-E. Verify that no OTP verification is requested after email_verified=true.
-
-==================================================
-4. CUSTOMER SIGNUP RESPONSE
-==================================================
-
-The final customer signup response should NOT contain:
-
-- willingToDrive
-- drivingLicenseNumber
-- licenseExpiryDate
-
-It should look conceptually like:
-
-{
-  "success": true,
-  "message": "Customer registered successfully. Please check your email for verification.",
-  "data": {
-    "id": 16,
-    "firstName": "Shivraj",
-    "lastName": "Koshti",
-    "fullName": "Shivraj Koshti",
-    "email": "customer@example.com",
-    "phoneNumber": "9876543210",
-    "role": "ROLE_CUSTOMER",
-    "emailVerified": false,
-    "createdAt": "..."
-  }
-}
-
-==================================================
-5. DO NOT CHANGE BOOKING PHONE LOGIC
-==================================================
-
-Keep these as two separate concepts:
-
-User.phoneNumber
-    = signup/account mobile number
-
-Booking.customerPhoneNumber
-    = mobile number provided specifically for that booking
-
-The customer may provide a different phone number during booking.
-
-Do NOT replace Booking.customerPhoneNumber with User.phoneNumber.
-
-BookingResponse should continue to contain:
-
+id
+bookingReference
+customer
+vehicle
+driver
+startDate
+endDate
+pickupLocation
+dropoffLocation
 customerPhoneNumber
+tripType
+passengerCount
+finalAgreedAmount
+bookingStatus
+paymentStatus
+rejectionReason
+notes
+createdAt
+updatedAt
+
+Canonical PostgreSQL columns:
+
+id
+booking_reference
+customer_id
+vehicle_id
+driver_id
+start_date
+end_date
+pickup_location
+dropoff_location
+customer_phone_number
+trip_type
+passenger_count
+final_agreed_amount
+booking_status
+payment_status
+rejection_reason
+notes
+created_at
+updated_at
+
+There must NOT be any legacy booking columns such as:
+
+passengers
+phone_number
+drop_location
+daily_rate
+total_amount
+total_days
+transmission
+image_url
+
+Do NOT introduce duplicate Java fields just to support old database columns.
+
+==========================================================
+3. FIX Booking.java
+==========================================================
+
+Booking.java must use exactly these mappings:
+
+@Entity
+@Table(name = "bookings")
+public class Booking {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "booking_reference", nullable = false, unique = true, length = 50)
+    private String bookingReference;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id", nullable = false)
+    private User customer;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vehicle_id", nullable = false)
+    private Vehicle vehicle;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "driver_id")
+    private User driver;
+
+    @Column(name = "start_date", nullable = false)
+    private LocalDate startDate;
+
+    @Column(name = "end_date", nullable = false)
+    private LocalDate endDate;
+
+    @Column(name = "pickup_location", nullable = false, length = 150)
+    private String pickupLocation;
+
+    @Column(name = "dropoff_location", nullable = false, length = 150)
+    private String dropoffLocation;
+
+    @Column(name = "customer_phone_number", nullable = false, length = 20)
+    private String customerPhoneNumber;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "trip_type", length = 30)
+    private TripType tripType;
+
+    @Column(name = "passenger_count", nullable = false)
+    private Integer passengerCount;
+
+    @Column(name = "final_agreed_amount")
+    private Integer finalAgreedAmount;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "booking_status", nullable = false, length = 30)
+    private BookingStatus bookingStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false, length = 30)
+    private PaymentStatus paymentStatus;
+
+    @Column(name = "rejection_reason", length = 500)
+    private String rejectionReason;
+
+    @Column(name = "notes", columnDefinition = "TEXT")
+    private String notes;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
+
+Do NOT add:
+passengers
+phoneNumber
+dropLocation
+dailyRate
+totalAmount
+totalDays
+transmission
+imageUrl
+
+to Booking entity.
+
+==========================================================
+4. FIX BookingRequest
+==========================================================
+
+BookingRequest must use:
+
+{
+    "vehicleId": 18,
+    "startDate": "2026-09-01",
+    "endDate": "2026-09-05",
+    "pickupLocation": "Pune",
+    "dropoffLocation": "Mumbai Airport",
+    "customerPhoneNumber": "9123456789",
+    "tripType": "OUTSTATION",
+    "passengerCount": 4,
+    "notes": "Pickup at 10 AM"
+}
+
+Required validation:
+
+vehicleId -> @NotNull
+startDate -> @NotNull
+endDate -> @NotNull
+pickupLocation -> @NotBlank
+dropoffLocation -> @NotBlank
+customerPhoneNumber -> valid Indian mobile number
+passengerCount -> @NotNull + @Min(1)
+
+Do not accept legacy request fields:
+
+passengers
+phoneNumber
+dropLocation
+
+==========================================================
+5. FIX BookingResponse
+==========================================================
+
+BookingResponse must expose:
+
+id
+bookingReference
+customerId
+customerName
+customerEmail
+customerPhoneNumber
+vehicleId
+vehicleName
+vehicleLicensePlate
+driverId
+driverName
 driverPhoneNumber
+startDate
+endDate
+pickupLocation
+dropoffLocation
+tripType
+passengerCount
+finalAgreedAmount
+bookingStatus
+paymentStatus
+rejectionReason
+notes
+createdAt
 
-driverPhoneNumber must remain null until a driver is assigned.
+Do not expose legacy names.
 
-==================================================
-6. TESTS
-==================================================
+==========================================================
+6. FIX BOOKING MAPPER
+==========================================================
+
+Ensure MapStruct maps:
+
+passengerCount -> passengerCount
+customerPhoneNumber -> customerPhoneNumber
+dropoffLocation -> dropoffLocation
+
+If nested customer/vehicle/driver mappings require explicit mappings, configure them properly.
+
+Do not create manual duplicate fields only for old names.
+
+==========================================================
+7. FIX BOOKING SERVICE
+==========================================================
+
+When creating a booking, the service MUST explicitly persist:
+
+booking.setCustomer(...)
+booking.setVehicle(...)
+booking.setStartDate(request.getStartDate())
+booking.setEndDate(request.getEndDate())
+booking.setPickupLocation(request.getPickupLocation())
+booking.setDropoffLocation(request.getDropoffLocation())
+booking.setCustomerPhoneNumber(request.getCustomerPhoneNumber())
+booking.setTripType(request.getTripType())
+booking.setPassengerCount(request.getPassengerCount())
+booking.setNotes(request.getNotes())
+
+Initial values:
+
+bookingStatus = PENDING
+paymentStatus = PENDING
+driver = null
+finalAgreedAmount = null
+rejectionReason = null
+
+Do not set any legacy fields.
+
+==========================================================
+8. IMPORTANT: DATABASE IS THE REAL SOURCE OF THE ERROR
+==========================================================
+
+The previous error proves that PostgreSQL contains columns that are not represented by the current Java Entity.
+
+Do NOT rely only on Flyway file contents.
+
+Inspect the ACTUAL PostgreSQL database schema.
+
+Run/read equivalent queries:
+
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_name = 'bookings'
+ORDER BY ordinal_position;
+
+Also inspect constraints:
+
+SELECT
+    tc.constraint_name,
+    tc.constraint_type,
+    kcu.column_name
+FROM information_schema.table_constraints tc
+LEFT JOIN information_schema.key_column_usage kcu
+    ON tc.constraint_name = kcu.constraint_name
+WHERE tc.table_name = 'bookings';
+
+Inspect indexes as well.
+
+==========================================================
+9. IMPORTANT FLYWAY FIX
+==========================================================
+
+The previous V10 migration contains invalid SQL/syntax.
+
+DO NOT blindly keep the previous broken V10.
+
+Create a NEW migration with the next correct Flyway version.
+
+Before creating it, inspect the actual Flyway history table:
+
+SELECT installed_rank, version, description, script, success
+FROM flyway_schema_history
+ORDER BY installed_rank;
+
+Determine the correct next version.
+
+NEVER edit an already-applied Flyway migration.
+
+If V10 was never successfully applied, still do not assume its file is correct.
+Fix the migration strategy according to actual Flyway history.
+
+==========================================================
+10. DATABASE NORMALIZATION MIGRATION
+==========================================================
+
+Create a production-safe migration that results in exactly the canonical schema.
+
+The migration must handle these possible situations:
+
+CASE A:
+Only legacy column exists.
+
+Example:
+passengers exists
+passenger_count does not exist
+
+Then migrate/rename safely to passenger_count.
+
+CASE B:
+Both old and new columns exist.
+
+Example:
+passengers exists
+passenger_count exists
+
+Then copy old data into the canonical column only where appropriate, validate the canonical column, then remove the old column.
+
+CASE C:
+Only canonical column exists.
+
+Do nothing.
+
+Apply the same logic to:
+
+drop_location -> dropoff_location
+
+phone_number -> customer_phone_number
+
+Do NOT use invalid PL/pgSQL syntax.
+
+Make sure every SQL statement is valid PostgreSQL.
+
+==========================================================
+11. REMOVE OBSOLETE BOOKING COLUMNS
+==========================================================
+
+After data migration, remove:
+
+passengers
+phone_number
+drop_location
+daily_rate
+total_amount
+total_days
+transmission
+image_url
+
+BUT IMPORTANT:
+
+phone_number may be a legitimate column in the users table.
+
+Do NOT delete users.phone_number.
+
+Only remove bookings.phone_number if it is obsolete.
+
+Similarly:
+
+vehicle_images.image_url may be legitimate.
+
+Do NOT delete vehicle_images.image_url.
+
+Only remove bookings.image_url if it exists and is obsolete.
+
+==========================================================
+12. NULL DATA SAFETY
+==========================================================
+
+Before adding NOT NULL constraints to:
+
+dropoff_location
+customer_phone_number
+passenger_count
+
+check existing rows.
+
+Run equivalent checks:
+
+SELECT COUNT(*) FROM bookings
+WHERE dropoff_location IS NULL;
+
+SELECT COUNT(*) FROM bookings
+WHERE customer_phone_number IS NULL;
+
+SELECT COUNT(*) FROM bookings
+WHERE passenger_count IS NULL;
+
+If existing rows contain NULL values, DO NOT blindly execute:
+
+ALTER COLUMN ... SET NOT NULL
+
+Instead determine a safe migration strategy based on the existing data and domain.
+
+Do not silently invent fake customer information.
+
+If data cannot be safely migrated, report the exact rows that require resolution rather than corrupting data.
+
+==========================================================
+13. FINAL DATABASE SCHEMA
+==========================================================
+
+The final bookings table MUST contain exactly these application columns:
+
+id
+booking_reference
+customer_id
+vehicle_id
+driver_id
+start_date
+end_date
+pickup_location
+dropoff_location
+customer_phone_number
+trip_type
+passenger_count
+final_agreed_amount
+booking_status
+payment_status
+rejection_reason
+notes
+created_at
+updated_at
+
+Foreign keys:
+
+customer_id -> users(id)
+vehicle_id -> vehicles(id)
+driver_id -> users(id)
+
+driver_id must remain nullable because a driver is assigned later.
+
+==========================================================
+14. SEARCH ENTIRE CODEBASE AGAIN
+==========================================================
+
+After implementing the fix, search the entire Java/resources/test codebase for:
+
+passengers
+phone_number
+drop_location
+daily_rate
+dailyRate
+total_amount
+totalAmount
+total_days
+totalDays
+transmission
+image_url
+imageUrl
+
+Expected result:
+
+Booking-related code must contain ZERO obsolete references.
+
+Exception:
+- User.phoneNumber is allowed.
+- vehicle_images.image_url is allowed if part of vehicle image functionality.
+
+Also verify there are no old DTO fields, mapper methods, repository queries, JPQL queries, native SQL queries, JSON properties, test payloads or test assertions using legacy names.
+
+==========================================================
+15. FIX TESTS
+==========================================================
 
 Update/add tests for:
 
-1. Customer response does not expose Driver-specific fields.
-2. Customer signup response does not expose Driver-specific fields.
-3. Unverified customer cannot login.
-4. Verified customer can login.
-5. email_verified=true in DB is correctly recognized by login.
-6. Driver functionality is not broken.
-7. Owner functionality is not broken.
-8. Booking customerPhoneNumber remains independent from User.phoneNumber.
-9. BookingResponse still contains driverPhoneNumber.
-10. Existing OTP verification and resend OTP functionality still works.
+1. Booking creation success
+2. passengerCount persisted
+3. customerPhoneNumber persisted
+4. dropoffLocation persisted
+5. driver initially null
+6. bookingStatus = PENDING
+7. paymentStatus = PENDING
+8. invalid passengerCount
+9. missing dropoffLocation
+10. invalid customerPhoneNumber
+11. booking response mapping
+12. legacy fields are not accepted
+13. database integration test against PostgreSQL if test infrastructure supports it
+
+Do not only use Mockito tests to claim database schema is correct.
+
+==========================================================
+16. TEST REAL DATABASE SCHEMA
+==========================================================
+
+After migrations execute, verify the ACTUAL PostgreSQL database again.
+
+Run:
+
+SELECT column_name
+FROM information_schema.columns
+WHERE table_name = 'bookings'
+ORDER BY ordinal_position;
+
+Then verify:
+
+- passengers does not exist
+- drop_location does not exist
+- bookings.phone_number does not exist
+- daily_rate does not exist
+- total_amount does not exist
+- total_days does not exist
+- transmission does not exist
+- bookings.image_url does not exist
+
+And verify:
+
+- passenger_count exists
+- dropoff_location exists
+- customer_phone_number exists
+
+Also verify their NOT NULL constraints.
+
+==========================================================
+17. ACTUAL API TEST
+==========================================================
+
+After migration and application restart, test:
+
+POST /api/bookings
+
+Request:
+
+{
+    "vehicleId": 18,
+    "startDate": "2026-09-01",
+    "endDate": "2026-09-05",
+    "pickupLocation": "Pune",
+    "dropoffLocation": "Mumbai Airport",
+    "customerPhoneNumber": "9123456789",
+    "tripType": "OUTSTATION",
+    "passengerCount": 4,
+    "notes": "Pickup at 10 AM"
+}
+
+Use a valid CUSTOMER JWT.
+
+Expected:
+
+201 Created
+
+{
+    "success": true,
+    "message": "Booking request submitted successfully",
+    "data": {
+        "id": "...",
+        "bookingReference": "BK-...",
+        "customerId": 1,
+        "customerName": "...",
+        "customerEmail": "...",
+        "customerPhoneNumber": "9123456789",
+        "vehicleId": 18,
+        "vehicleName": "...",
+        "vehicleLicensePlate": "...",
+        "driverId": null,
+        "driverName": null,
+        "driverPhoneNumber": null,
+        "startDate": "2026-09-01",
+        "endDate": "2026-09-05",
+        "pickupLocation": "Pune",
+        "dropoffLocation": "Mumbai Airport",
+        "tripType": "OUTSTATION",
+        "passengerCount": 4,
+        "finalAgreedAmount": null,
+        "bookingStatus": "PENDING",
+        "paymentStatus": "PENDING",
+        "rejectionReason": null,
+        "notes": "Pickup at 10 AM",
+        "createdAt": "..."
+    }
+}
+
+==========================================================
+18. VERIFY DATABASE ROW AFTER API CALL
+==========================================================
+
+Immediately after successful booking creation, query the actual row:
+
+SELECT
+    id,
+    booking_reference,
+    customer_id,
+    vehicle_id,
+    driver_id,
+    start_date,
+    end_date,
+    pickup_location,
+    dropoff_location,
+    customer_phone_number,
+    trip_type,
+    passenger_count,
+    final_agreed_amount,
+    booking_status,
+    payment_status,
+    rejection_reason,
+    notes,
+    created_at,
+    updated_at
+FROM bookings
+WHERE id = <created_booking_id>;
+
+Confirm:
+
+dropoff_location = 'Mumbai Airport'
+customer_phone_number = '9123456789'
+passenger_count = 4
+
+and there is NO attempt to insert into:
+
+drop_location
+passengers
+phone_number
+
+==========================================================
+19. DO NOT USE ddl-auto TO HIDE THE PROBLEM
+==========================================================
+
+Do NOT solve this by simply changing:
+
+spring.jpa.hibernate.ddl-auto=create
+or
+spring.jpa.hibernate.ddl-auto=create-drop
+
+Do not destroy the existing database.
+
+This is a Flyway-managed production-style application.
+
+Keep schema management through Flyway.
+
+==========================================================
+20. RUN FULL BUILD
+==========================================================
 
 Run:
 
 .\mvnw.cmd clean test
 
-Do not stop at compilation.
-All existing tests must pass.
+Then start the application normally.
 
-At the end provide:
+Verify Flyway migration succeeds.
 
-1. Exact files modified
-2. Exact code changes
-3. Whether Driver-specific DB fields were kept or removed and why
-4. Root cause of the email verification issue
-5. Final Customer signup response JSON
-6. Final Login request/response JSON
-7. Test count and result
+Verify application starts without schema errors.
+
+Verify the real PostgreSQL schema.
+
+Verify POST /api/bookings works.
+
+==========================================================
+21. FINAL REPORT
+==========================================================
+
+At the end provide a concise but complete report containing:
+
+A. Actual root cause found
+B. Actual PostgreSQL bookings schema BEFORE
+C. Actual PostgreSQL bookings schema AFTER
+D. Flyway migration version created
+E. Exact obsolete columns removed
+F. Exact canonical columns retained
+G. Java files changed
+H. DTO changes
+I. Mapper changes
+J. Service changes
+K. Tests added/updated
+L. Maven test result
+M. Actual API request tested
+N. Actual API response received
+O. Actual database row verified
+P. Any remaining legacy references found
+
+IMPORTANT:
+Do not say "fixed" merely because Maven tests pass.
+
+The fix is complete ONLY when:
+
+1. Flyway succeeds.
+2. Application starts.
+3. Actual PostgreSQL schema is canonical.
+4. Legacy booking columns are removed.
+5. Java mappings match PostgreSQL.
+6. POST /api/bookings succeeds.
+7. passenger_count is actually persisted.
+8. dropoff_location is actually persisted.
+9. customer_phone_number is actually persisted.
+10. No obsolete Booking references remain.
+11. Full test suite passes.
+
+Do not modify unrelated modules.
+Do not duplicate existing services/repositories/entities.
+Do not create unnecessary new architecture.
+Preserve the existing project architecture and naming conventions except where required for this canonical Booking cleanup.

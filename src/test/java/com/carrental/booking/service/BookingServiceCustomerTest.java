@@ -215,6 +215,8 @@ class BookingServiceCustomerTest {
         assertEquals("Alice Customer", response.getCustomerName());
         assertEquals(100L, response.getVehicleId());
         assertEquals("Toyota Camry", response.getVehicleName());
+        assertEquals("Downtown NY", response.getPickupLocation());
+        assertEquals("Uptown NY", response.getDropoffLocation());
         assertEquals(BookingStatus.PENDING, response.getBookingStatus());
         assertEquals(PaymentStatus.PENDING, response.getPaymentStatus());
         assertNull(response.getDriverId());
@@ -223,8 +225,81 @@ class BookingServiceCustomerTest {
         assertNotNull(response.getBookingReference());
         assertTrue(response.getBookingReference().startsWith("BK-"));
 
+        verify(bookingRepository).save(argThat(b -> "Downtown NY".equals(b.getPickupLocation()) && "Uptown NY".equals(b.getDropoffLocation())));
         verify(notificationService).createNotification(eq(customer), anyString(), anyString(), any());
         verify(notificationService).createNotification(eq(owner), anyString(), anyString(), any());
+    }
+
+    @Test
+    @DisplayName("Should verify that dropoffLocation from BookingRequest is saved in Booking entity and returned in BookingResponse")
+    void testBookingCreationPersistsDropoffLocation() {
+        BookingRequest request = BookingRequest.builder()
+                .vehicleId(100L)
+                .startDate(LocalDate.now().plusDays(1))
+                .endDate(LocalDate.now().plusDays(3))
+                .pickupLocation("Pune")
+                .dropoffLocation("Mumbai Airport")
+                .customerPhoneNumber("9123456789")
+                .tripType(TripType.OUTSTATION)
+                .passengerCount(4)
+                .notes("Pickup at 10 AM")
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(customer));
+        when(vehicleRepository.findById(100L)).thenReturn(Optional.of(vehicle));
+        when(bookingRepository.existsConflictingBooking(eq(100L), any(LocalDate.class), any(LocalDate.class))).thenReturn(false);
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(i -> {
+            Booking b = i.getArgument(0);
+            b.setId(600L);
+            return b;
+        });
+
+        BookingResponse response = bookingService.createBooking(1L, request);
+
+        assertNotNull(response);
+        assertEquals("Pune", response.getPickupLocation());
+        assertEquals("Mumbai Airport", response.getDropoffLocation());
+        assertEquals("9123456789", response.getCustomerPhoneNumber());
+        assertEquals(TripType.OUTSTATION, response.getTripType());
+        assertEquals(4, response.getPassengerCount());
+
+        verify(bookingRepository).save(argThat(b ->
+                "Pune".equals(b.getPickupLocation()) &&
+                "Mumbai Airport".equals(b.getDropoffLocation()) &&
+                "9123456789".equals(b.getCustomerPhoneNumber()) &&
+                Integer.valueOf(4).equals(b.getPassengerCount())
+        ));
+    }
+
+    @Test
+    @DisplayName("Should verify that passengerCount is persisted in Booking entity and returned in BookingResponse")
+    void testBookingCreationPersistsPassengerCount() {
+        BookingRequest request = BookingRequest.builder()
+                .vehicleId(100L)
+                .startDate(LocalDate.now().plusDays(2))
+                .endDate(LocalDate.now().plusDays(4))
+                .pickupLocation("Pune")
+                .dropoffLocation("Mumbai Airport")
+                .customerPhoneNumber("9876543210")
+                .tripType(TripType.OUTSTATION)
+                .passengerCount(4)
+                .notes("4 Passengers traveling")
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(customer));
+        when(vehicleRepository.findById(100L)).thenReturn(Optional.of(vehicle));
+        when(bookingRepository.existsConflictingBooking(eq(100L), any(LocalDate.class), any(LocalDate.class))).thenReturn(false);
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(i -> {
+            Booking b = i.getArgument(0);
+            b.setId(700L);
+            return b;
+        });
+
+        BookingResponse response = bookingService.createBooking(1L, request);
+
+        assertNotNull(response);
+        assertEquals(4, response.getPassengerCount());
+        verify(bookingRepository).save(argThat(b -> Integer.valueOf(4).equals(b.getPassengerCount())));
     }
 
     @Test

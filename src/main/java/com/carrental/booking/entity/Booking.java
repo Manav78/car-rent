@@ -67,14 +67,14 @@ public class Booking {
     @Column(name = "dropoff_location", nullable = false, length = 150)
     private String dropoffLocation;
 
-    @Column(name = "customer_phone_number", length = 20)
+    @Column(name = "customer_phone_number", nullable = false, length = 20)
     private String customerPhoneNumber;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "trip_type", length = 30)
     private TripType tripType;
 
-    @Column(name = "passenger_count")
+    @Column(name = "passenger_count", nullable = false)
     private Integer passengerCount;
 
     @Column(name = "final_agreed_amount")

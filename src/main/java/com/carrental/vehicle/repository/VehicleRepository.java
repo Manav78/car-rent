@@ -24,7 +24,7 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     long countByStatus(VehicleStatus status);
 
     @Query("SELECT v FROM Vehicle v WHERE v.status = com.carrental.vehicle.enums.VehicleStatus.AVAILABLE " +
-           "AND (:city IS NULL OR TRIM(:city) = '' OR LOWER(v.location) LIKE LOWER(CONCAT('%', TRIM(:city), '%'))) " +
+           "AND (CAST(:city AS string) IS NULL OR CAST(:city AS string) = '' OR LOWER(v.location) LIKE LOWER(CONCAT('%', CAST(:city AS string), '%'))) " +
            "AND (:vehicleType IS NULL OR v.vehicleType = :vehicleType) " +
            "AND (:seatingCapacity IS NULL OR v.seatingCapacity >= :seatingCapacity)")
     List<Vehicle> searchAvailableVehicles(@Param("city") String city,

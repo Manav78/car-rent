@@ -41,4 +41,15 @@ BEGIN
     ) THEN
         ALTER TABLE bookings ALTER COLUMN final_agreed_amount TYPE INTEGER USING final_agreed_amount::INTEGER;
     END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'bookings' AND column_name = 'dropoff_location'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'bookings' AND column_name = 'drop_location'
+    ) THEN
+        ALTER TABLE bookings RENAME COLUMN dropoff_location TO drop_location;
+    END IF;
 END $$;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS drop_location VARCHAR(150);
