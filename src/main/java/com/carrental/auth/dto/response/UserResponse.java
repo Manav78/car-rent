@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -22,10 +21,6 @@ public class UserResponse {
     private String email;
     private String phoneNumber;
     private Role role;
-    private Boolean willingToDrive;
-    private String drivingLicenseNumber;
-    private LocalDate licenseExpiryDate;
     private boolean emailVerified;
-    private boolean enabled;
     private LocalDateTime createdAt;
 }

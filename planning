@@ -1,0 +1,275 @@
+Audit and fix the current Customer/Auth implementation based on the following requirements.
+
+IMPORTANT:
+Do not invent new architecture.
+Do not modify Owner/Driver functionality unless required for a shared User/Auth dependency.
+Do not remove database columns blindly.
+First inspect the existing code, entities, DTOs, mappers, repositories, security flow, Flyway migrations, and tests.
+
+==================================================
+1. CUSTOMER RESPONSE CLEANUP
+==================================================
+
+Current customer signup response contains these Driver-specific fields:
+
+- willingToDrive
+- drivingLicenseNumber
+- licenseExpiryDate
+
+Example current response:
+
+{
+  "id": 16,
+  "firstName": "Shivraj",
+  "lastName": "Koshti",
+  "fullName": "Shivraj Koshti",
+  "email": "customer@example.com",
+  "phoneNumber": "9876543210",
+  "role": "ROLE_CUSTOMER",
+  "willingToDrive": false,
+  "drivingLicenseNumber": null,
+  "licenseExpiryDate": null,
+  "emailVerified": false,
+  "enabled": true,
+  "createdAt": "..."
+}
+
+These Driver-specific fields MUST NOT be exposed in Customer signup/auth/customer responses.
+
+Customer response should contain only relevant customer/user fields, such as:
+
+- id
+- firstName
+- lastName
+- fullName
+- email
+- phoneNumber
+- role
+- emailVerified
+- createdAt
+
+Inspect:
+
+- User.java
+- CustomerProfile.java
+- CustomerResponse.java
+- CustomerSignupRequest/Response if present
+- AuthMapper.java
+- CustomerMapper.java
+- AuthServiceImpl.java
+- CustomerServiceImpl.java
+- AuthController.java
+- CustomerController.java
+
+Remove the Driver-specific fields from CUSTOMER DTO responses and MapStruct mappings.
+
+IMPORTANT:
+Do NOT delete willingToDrive, drivingLicenseNumber, or licenseExpiryDate from User.java/database until you verify whether Owner/Driver module currently uses them.
+If they are required by Driver functionality, keep them internally but do not expose them through Customer DTOs.
+If they are completely unused across the entire application, report that separately before deleting them.
+
+==================================================
+2. EMAIL VERIFICATION BUG
+==================================================
+
+There is an issue with email verification/login.
+
+A customer was created with:
+
+emailVerified = false
+
+Then the database value was manually changed to:
+
+email_verified = true
+
+But the application still behaves as if the email is unverified and asks for email verification.
+
+Investigate the COMPLETE authentication flow.
+
+Trace:
+
+POST /api/auth/login
+        ↓
+AuthenticationManager
+        ↓
+AuthenticationProvider
+        ↓
+UserDetailsServiceImpl
+        ↓
+UserDetailsImpl
+        ↓
+enabled/account status
+        ↓
+email verification logic
+        ↓
+JWT generation
+
+Inspect:
+
+- User.java
+- UserDetailsImpl.java
+- UserDetailsServiceImpl.java
+- AuthServiceImpl.java
+- AuthService.java
+- AuthController.java
+- SecurityConfig.java
+- AuthenticationProvider configuration
+- Password authentication flow
+- emailVerified field
+- enabled field
+- getAuthorities()
+- isEnabled()
+- any email verification checks
+
+Find the EXACT reason why setting email_verified=true directly in DB does not allow login.
+
+Do not simply remove email verification protection.
+
+Expected business rule:
+
+- emailVerified=false → login must be rejected with:
+  "Account is disabled. Please verify your email first."
+
+- emailVerified=true → login must be allowed and JWT tokens must be generated, assuming password and account status are valid.
+
+Do not use enabled=true as a substitute for emailVerified.
+emailVerified and enabled are separate concepts unless the existing architecture explicitly combines them.
+
+If UserDetailsImpl.isEnabled() currently depends on emailVerified, verify that it reads the CURRENT database value through the freshly loaded User entity.
+
+If AuthServiceImpl separately checks emailVerified, ensure it checks the freshly loaded User entity and not a stale object/cache/value.
+
+Also inspect whether Hibernate/JPA first-level cache, second-level cache, transaction scope, or an old User object could explain stale emailVerified values.
+
+Do not add caching changes unless actually necessary.
+
+==================================================
+3. MANUAL DATABASE TEST
+==================================================
+
+After fixing the code, verify this exact scenario:
+
+A. Create new customer:
+
+POST /api/auth/signup/customer
+
+{
+  "firstName": "Shivraj",
+  "lastName": "Koshti",
+  "email": "customer@example.com",
+  "password": "Password@123",
+  "confirmPassword": "Password@123",
+  "phoneNumber": "9876543210"
+}
+
+Expected:
+
+emailVerified=false
+
+B. Try login before verification.
+
+Expected:
+
+403
+
+{
+  "success": false,
+  "message": "Account is disabled. Please verify your email first."
+}
+
+C. Set email_verified=true directly in the database ONLY for testing.
+
+D. Try login again with the same credentials.
+
+Expected:
+
+200
+
+JWT accessToken + refreshToken should be generated.
+
+E. Verify that no OTP verification is requested after email_verified=true.
+
+==================================================
+4. CUSTOMER SIGNUP RESPONSE
+==================================================
+
+The final customer signup response should NOT contain:
+
+- willingToDrive
+- drivingLicenseNumber
+- licenseExpiryDate
+
+It should look conceptually like:
+
+{
+  "success": true,
+  "message": "Customer registered successfully. Please check your email for verification.",
+  "data": {
+    "id": 16,
+    "firstName": "Shivraj",
+    "lastName": "Koshti",
+    "fullName": "Shivraj Koshti",
+    "email": "customer@example.com",
+    "phoneNumber": "9876543210",
+    "role": "ROLE_CUSTOMER",
+    "emailVerified": false,
+    "createdAt": "..."
+  }
+}
+
+==================================================
+5. DO NOT CHANGE BOOKING PHONE LOGIC
+==================================================
+
+Keep these as two separate concepts:
+
+User.phoneNumber
+    = signup/account mobile number
+
+Booking.customerPhoneNumber
+    = mobile number provided specifically for that booking
+
+The customer may provide a different phone number during booking.
+
+Do NOT replace Booking.customerPhoneNumber with User.phoneNumber.
+
+BookingResponse should continue to contain:
+
+customerPhoneNumber
+driverPhoneNumber
+
+driverPhoneNumber must remain null until a driver is assigned.
+
+==================================================
+6. TESTS
+==================================================
+
+Update/add tests for:
+
+1. Customer response does not expose Driver-specific fields.
+2. Customer signup response does not expose Driver-specific fields.
+3. Unverified customer cannot login.
+4. Verified customer can login.
+5. email_verified=true in DB is correctly recognized by login.
+6. Driver functionality is not broken.
+7. Owner functionality is not broken.
+8. Booking customerPhoneNumber remains independent from User.phoneNumber.
+9. BookingResponse still contains driverPhoneNumber.
+10. Existing OTP verification and resend OTP functionality still works.
+
+Run:
+
+.\mvnw.cmd clean test
+
+Do not stop at compilation.
+All existing tests must pass.
+
+At the end provide:
+
+1. Exact files modified
+2. Exact code changes
+3. Whether Driver-specific DB fields were kept or removed and why
+4. Root cause of the email verification issue
+5. Final Customer signup response JSON
+6. Final Login request/response JSON
+7. Test count and result

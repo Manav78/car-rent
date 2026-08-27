@@ -1,0 +1,7278 @@
+================= ITEM 40 ================
+Abstract art featuring a striking contrast of orange gradients on a blue canvas, overlaid with the white ChatGPT logo.
+
+================= ITEM 227 ================
+हो. **Customer vehicle filter करेल** हे स्पष्टपणे ठेवून, आधीच्या सर्व corrections समाविष्ट करून हा **updated analysis-only prompt** वापर.
+
+```text
+You are working on an existing Car Rental Application backend.
+
+IMPORTANT:
+Do NOT start writing or modifying code yet.
+
+First, analyze the entire existing backend project and prepare a detailed implementation plan for the CUSTOMER MODULE.
+
+Do NOT create duplicate entities, repositories, services, DTOs, mappers, security components, notification systems, or database tables if equivalent functionality already exists.
+
+Follow the existing project architecture, naming conventions, DTO structure, MapStruct usage, exception handling, validation, JWT/Spring Security implementation, Email implementation and FCM implementation.
+
+Do NOT modify existing Owner, Driver, Admin, or Authentication functionality unless it is strictly required for Customer functionality.
+
+==================================================
+CUSTOMER MODULE
+==================================================
+
+The Customer module should support:
+
+1. Customer Profile
+2. Vehicle Discovery
+3. Vehicle Filtering
+4. Vehicle Details
+5. Booking Request
+6. Booking Details/Status
+7. Completed Trip History
+8. Notifications
+9. Customer Cancellation API preparation
+10. Proper JWT-based authorization
+
+==================================================
+1. CUSTOMER PROFILE
+==================================================
+
+Customer registration requires:
+
+- Name
+- Mobile Number
+- Email
+- Password
+- Confirm Password
+
+Mobile Number is mandatory.
+
+Customer should be able to:
+- View own profile
+- Update own profile
+- View own account information
+
+Customer must only access their own profile.
+
+==================================================
+2. VEHICLE DISCOVERY
+==================================================
+
+Customer should be able to view eligible vehicles available on the platform.
+
+Customer should be able to search/filter vehicles.
+
+Vehicle search/filter may include:
+
+- City
+- Vehicle Type
+- Brand
+- Model
+- Seating Capacity
+- Fuel Type
+- AC / Non-AC
+- Price per KM
+- Availability
+- Trip Type where applicable
+
+City is a FILTER/SEARCH criterion.
+
+Example:
+
+Customer selects:
+City = Mumbai
+
+The system should return eligible vehicles associated with Mumbai.
+
+Customer can instead select:
+City = Pune
+
+The system should return eligible Pune vehicles.
+
+IMPORTANT:
+
+Vehicle city is ONLY used for vehicle search/filtering and vehicle information.
+
+Vehicle city MUST NOT restrict the Customer's pickup location.
+
+There is NO rule such as:
+
+Vehicle city = Mumbai
+Pickup city must = Mumbai
+
+This validation must NOT be implemented.
+
+Example:
+
+Vehicle city = Mumbai
+Customer pickup = Pune
+
+This is allowed.
+
+The Customer decides which vehicle they want to book based on availability, price, specifications and their requirements.
+
+==================================================
+3. VEHICLE FILTERING
+==================================================
+
+Filtering should be implemented using the existing Vehicle data/model.
+
+Do not create duplicate Vehicle entities or tables.
+
+Customer should be able to combine filters where appropriate.
+
+Example:
+
+City = Mumbai
+Vehicle Type = SUV
+Seating Capacity = 6
+AC = TRUE
+
+The API should return only vehicles satisfying the selected filters and all applicable availability/approval/business rules.
+
+The exact available filters should be based on the existing Vehicle entity and project requirements.
+
+Do NOT invent fields that do not exist unless the analysis identifies them as genuinely required.
+
+==================================================
+4. VEHICLE ELIGIBILITY
+==================================================
+
+Customer should only see vehicles that are eligible for Customer booking.
+
+A vehicle should not be shown as bookable if it fails required platform rules such as:
+
+- Required Admin approval
+- Required active status
+- Existing booking conflict
+- Other existing business rules already implemented in the project
+
+Do not duplicate business rules in multiple layers.
+
+Business rules should primarily be enforced in the service layer.
+
+The backend must always validate eligibility again when creating a booking.
+
+Do not rely only on frontend filtering.
+
+==================================================
+5. VEHICLE DETAILS
+==================================================
+
+Customer should be able to view vehicle details such as:
+
+- Brand
+- Model
+- Vehicle Type
+- Vehicle Number where appropriate
+- Seating Capacity
+- Fuel Type
+- AC / Non-AC
+- Price per KM
+- Features
+- Vehicle Images
+- City
+- Availability information where appropriate
+
+Customer must NOT see private administrative/verification information such as:
+
+- RC documents
+- Internal verification data
+- Admin-only information
+- Other sensitive vehicle documents
+
+Do not expose Entity objects directly from the Controller.
+
+Use Response DTOs.
+
+==================================================
+6. PRICING
+==================================================
+
+Customer should see the vehicle's displayed price/rate per KM.
+
+This displayed price is NOT necessarily the final rental amount.
+
+After the Customer submits a booking request:
+
+Customer ↔ Owner
+
+They communicate and decide the final rental price.
+
+The final agreed amount should be stored with the booking if the existing booking model supports it or if it needs to be added.
+
+Customer-to-Owner rental payment is OUTSIDE the platform.
+
+Do NOT implement a payment gateway unless one already exists in the project.
+
+==================================================
+7. BOOKING REQUEST
+==================================================
+
+Customer should be able to create a booking request for a selected vehicle.
+
+Booking request may contain:
+
+- Vehicle
+- Pickup location
+- Pickup address
+- Pickup date
+- Pickup time
+- Drop location
+- Return date if applicable
+- Number of passengers
+- Trip Type
+- AC / Non-AC preference
+- Customer mobile number
+- Additional trip details
+
+Trip Types:
+
+- LOCAL
+- OUTSTATION
+
+"ALL" may be used as a search/filter option but is NOT a booking Trip Type.
+
+IMPORTANT:
+
+Do NOT add any validation requiring the pickup city to match the vehicle city.
+
+The Customer may choose any eligible vehicle and specify their required pickup location.
+
+==================================================
+8. BOOKING FLOW
+==================================================
+
+Expected flow:
+
+Customer
+   ↓
+Select Vehicle
+   ↓
+Enter Trip Details
+   ↓
+Create Booking Request
+   ↓
+PENDING
+   ↓
+Owner Reviews
+   ↓
+Customer ↔ Owner Communication
+   ↓
+Final Price/Trip Details Agreed
+   ↓
+Owner ACCEPTS or REJECTS
+   ↓
+If REJECTED → Rejection Reason
+   ↓
+If ACCEPTED → Driver Assignment
+   ↓
+Driver Assigned
+   ↓
+CONFIRMED
+
+Customer should be able to view the appropriate booking information/status.
+
+Do not invent additional booking states if the existing project already has a defined state model.
+
+Analyze the existing Booking/Trip status model first.
+
+==================================================
+9. DRIVER INFORMATION
+==================================================
+
+After Driver assignment/booking confirmation, Customer should be able to view appropriate Driver information required for the trip, such as:
+
+- Driver Name
+- Driver Mobile Number
+- Relevant Driver details
+
+Customer must NOT see:
+
+- Driver license documents
+- Driver verification documents
+- Admin-only Driver information
+
+Driver is a GLOBAL platform resource.
+
+IMPORTANT DRIVER RULE:
+
+A Driver is NOT permanently owned by an Owner.
+
+Any eligible Driver may be used by any Owner.
+
+Driver's current city does NOT restrict which Owner can use the Driver.
+
+Driver location is only useful for:
+- Current location information
+- Search/filtering
+- Operational information
+
+Owner may select an eligible Driver from another city.
+
+When an Owner views the Driver list, priority should be:
+
+1. Drivers previously added by that Owner
+2. Drivers previously used by that Owner
+3. Other eligible Drivers
+
+This priority does NOT restrict the Owner from selecting any other eligible Driver.
+
+==================================================
+10. VEHICLE REPLACEMENT
+==================================================
+
+If a confirmed vehicle becomes unavailable/problematic:
+
+Owner communicates with Customer.
+
+The replacement decision is made between Owner and Customer.
+
+After replacement:
+
+- Updated vehicle information should be stored
+- Customer should receive the appropriate notification
+- Trip/booking data must remain consistent
+
+Do not silently replace a confirmed vehicle without updating the Customer.
+
+==================================================
+11. DRIVER REPLACEMENT
+==================================================
+
+If the assigned Driver becomes unavailable:
+
+Owner may assign another eligible Driver.
+
+The new Driver must satisfy existing Driver eligibility rules.
+
+Customer should receive the new Driver details through the notification system.
+
+Do not delete previous trip/booking history because of Driver replacement.
+
+==================================================
+12. CUSTOMER TRIP/HISTORY
+==================================================
+
+Do NOT create separate Customer sections for:
+
+- Upcoming trips
+- Ongoing trips
+- Pending trips
+
+unless such concepts already exist in the current project and are required by existing functionality.
+
+Customer should primarily have:
+
+- Their booking details/status where applicable
+- Completed Trip History
+
+Completed trips should remain available as historical records.
+
+Do not delete completed trip history.
+
+==================================================
+13. CANCELLATION
+==================================================
+
+Owner cancellation is definitely supported by the business requirement.
+
+Customer cancellation is NOT finalized yet.
+
+However, prepare an API/architecture for Customer cancellation so that it can be enabled when the business rule is finalized.
+
+Do NOT invent:
+
+- Cancellation penalties
+- Refund rules
+- Cancellation time limits
+- Mandatory cancellation reasons
+- Final customer cancellation policy
+
+Mark policy-dependent logic as:
+
+TBD / NEEDS BUSINESS CONFIRMATION
+
+The API design should be extensible so the final policy can be added later without major restructuring.
+
+==================================================
+14. NOTIFICATION ARCHITECTURE
+==================================================
+
+IMPORTANT:
+
+The existing project uses:
+
+1. Spring Boot Email
+2. Firebase Cloud Messaging (FCM)
+
+Do NOT create a new notification architecture.
+
+Reuse the existing implementation.
+
+-----------------------------------
+EMAIL
+-----------------------------------
+
+Email should be used for important confirmation-related communication.
+
+After booking/trip confirmation, Customer should receive an email containing relevant confirmed details such as:
+
+- Booking information
+- Vehicle details
+- Driver details
+- Trip details
+- Final agreed amount where applicable
+
+If the existing email system already supports cancellation emails, reuse it appropriately.
+
+Do not create a separate email service if an existing implementation already exists.
+
+-----------------------------------
+FCM PUSH NOTIFICATIONS
+-----------------------------------
+
+FCM should handle operational/application push notifications such as:
+
+- Booking request/status updates
+- Booking accepted
+- Booking rejected + reason
+- Booking confirmed
+- Driver assigned
+- Driver changed
+- Vehicle changed
+- Cancellation
+- Trip updates
+- Other real-time operational events
+
+Reuse the existing FCM implementation.
+
+Do not implement another push notification system.
+
+==================================================
+15. SECURITY
+==================================================
+
+Customer APIs must use the existing JWT/Spring Security implementation.
+
+Do NOT create a second authentication mechanism.
+
+Use the authenticated User from the existing SecurityContext/JWT flow.
+
+Do not trust customerId from request body when it can be obtained from the authenticated user.
+
+Expected principle:
+
+JWT
+ ↓
+SecurityContext
+ ↓
+Authenticated User
+ ↓
+Customer
+ ↓
+Customer-owned resources
+
+Customer must only access their own:
+
+- Profile
+- Bookings
+- Trips
+- Notifications
+
+Example:
+
+GET /customers/bookings/100
+
+If Booking 100 belongs to another Customer:
+
+Do NOT return it.
+
+Return the appropriate authorization/not-found response according to the existing exception/security design.
+
+Customer must not be able to access another Customer's data by modifying an ID in the URL.
+
+==================================================
+16. DTOs
+==================================================
+
+Follow the existing DTO architecture.
+
+Prefer:
+
+- Request DTOs
+- Response DTOs
+
+Do not expose JPA Entities directly from Controllers.
+
+Use existing MapStruct configuration if already present.
+
+Do not introduce ModelMapper if MapStruct is already used.
+
+==================================================
+17. VALIDATION
+==================================================
+
+Analyze existing validation architecture first.
+
+Apply appropriate validation to:
+
+- Customer profile requests
+- Booking requests
+- Filter parameters where required
+
+Do not duplicate validation unnecessarily.
+
+Business validation must be performed server-side.
+
+==================================================
+18. DATABASE / ENTITY ANALYSIS
+==================================================
+
+Before modifying database/entities:
+
+Analyze:
+
+- User
+- Customer
+- Owner
+- Driver
+- Vehicle
+- Booking
+- Trip
+- Notification
+- Subscription
+- Existing relationships
+
+Identify what already exists.
+
+Reuse existing entities/relationships wherever possible.
+
+Do NOT create duplicate entities/tables.
+
+Identify only genuinely missing fields/relationships.
+
+==================================================
+19. REQUIRED CUSTOMER APIs
+==================================================
+
+Before coding, identify the complete required API list.
+
+For every API specify:
+
+- HTTP Method
+- Endpoint
+- Authentication requirement
+- Required role
+- Request DTO
+- Response DTO
+- Validation
+- Service method
+- Repository method/query
+- Business rules
+- Possible exceptions
+- HTTP response status
+
+Expected API categories include:
+
+Customer Profile
+Vehicle Search
+Vehicle Filtering
+Vehicle Details
+Booking Creation
+Customer Booking Details
+Customer Booking History
+Completed Trip History
+Customer Cancellation API preparation
+Customer Notifications
+
+Do not blindly create these endpoints if equivalent endpoints already exist.
+
+Reuse/refactor existing endpoints where appropriate.
+
+==================================================
+20. REPOSITORY REQUIREMENTS
+==================================================
+
+Identify required repository methods for:
+
+- Customer
+- Vehicle
+- Booking
+- Trip
+- Notification
+
+Use Spring Data JPA derived queries/specifications/custom queries according to the existing project architecture.
+
+For vehicle filtering, analyze whether:
+
+- Derived query methods
+- Specifications
+- Dynamic query approach
+
+is already used or would be most appropriate.
+
+Do not create unnecessarily large numbers of repository methods.
+
+==================================================
+21. SERVICE LAYER
+==================================================
+
+Business logic should be implemented in the Service layer.
+
+Controller should remain thin.
+
+Service should handle:
+
+- Customer authorization checks
+- Vehicle eligibility
+- Availability checks
+- Booking creation
+- Booking ownership checks
+- Customer booking access
+- Cancellation preparation
+- Notification triggering where appropriate
+
+Follow the existing Service/ServiceImpl architecture if present.
+
+==================================================
+22. CONTROLLER
+==================================================
+
+Controllers should:
+
+- Receive requests
+- Validate DTOs
+- Call Services
+- Return appropriate Response DTOs
+
+Do not place business logic in Controllers.
+
+Follow existing ResponseEntity/API response conventions.
+
+==================================================
+23. IMPORTANT BUSINESS RULES
+==================================================
+
+The following rules must be respected:
+
+1. Customer mobile number is mandatory.
+2. Customer can search/filter vehicles.
+3. City is a vehicle search/filter criterion.
+4. Vehicle city does NOT restrict pickup location.
+5. Customer can choose any eligible vehicle.
+6. Customer sees the vehicle's displayed rate per KM.
+7. Final rental price is decided by Customer and Owner.
+8. Rental payment is outside the platform.
+9. Customer creates booking requests.
+10. Owner accepts or rejects booking requests.
+11. Owner rejection requires a reason.
+12. Driver assignment happens after Owner acceptance.
+13. Booking becomes confirmed after Driver assignment.
+14. Driver is a global platform resource.
+15. Driver is not permanently owned by an Owner.
+16. Any eligible Driver may be used by any Owner.
+17. Driver location is not an ownership restriction.
+18. Customer cannot assign Driver.
+19. Customer cannot approve Vehicle/Driver.
+20. Customer cannot start/end the trip.
+21. Customer can view appropriate confirmed Driver/Vehicle details.
+22. Customer cannot view private verification documents.
+23. Driver replacement should notify Customer.
+24. Vehicle replacement should update Customer.
+25. Customer has completed trip history.
+26. Customer cancellation policy is TBD.
+27. Owner cancellation is supported.
+28. No live Driver tracking.
+29. No rating/review functionality.
+30. Backend must enforce all business rules.
+
+==================================================
+24. WHAT YOU MUST DO NOW
+==================================================
+
+DO NOT WRITE OR MODIFY CODE.
+
+First produce a detailed analysis containing:
+
+A. Existing project architecture
+
+B. Existing Customer-related implementation
+
+C. Existing User/Customer relationship
+
+D. Existing Vehicle entity and fields
+
+E. Existing Booking entity and lifecycle
+
+F. Existing Trip entity and lifecycle
+
+G. Existing Driver model
+
+H. Existing JWT/Spring Security flow
+
+I. Existing Email notification implementation
+
+J. Existing FCM notification implementation
+
+K. Existing DTO/MapStruct architecture
+
+L. Existing validation architecture
+
+M. Existing exception handling
+
+N. Existing repositories
+
+O. Existing services
+
+P. Existing controllers
+
+Q. APIs that can be reused
+
+R. APIs that are missing
+
+S. Required database/entity changes
+
+T. Required Customer DTOs
+
+U. Required Customer repository methods
+
+V. Required Customer service methods
+
+W. Required Customer controller endpoints
+
+X. Vehicle filtering implementation approach
+
+Y. Booking implementation approach
+
+Z. Security/authorization concerns
+
+AA. Notification integration points
+
+AB. Customer cancellation API design with policy marked TBD
+
+AC. Complete implementation order
+
+AD. Risks/conflicts with existing Owner/Driver/Admin functionality
+
+AE. Any unclear requirement that requires confirmation
+
+IMPORTANT:
+
+Do not make assumptions when the existing project already contains relevant functionality.
+
+If something cannot be determined from the existing project, explicitly write:
+
+"TBD / NEEDS CONFIRMATION"
+
+After producing the analysis, STOP.
+
+Do not implement anything until I approve the analysis and implementation plan.
+```
+
+### Final flow आपण AI कडून implement करवताना असा ठेवू
+
+```text
+Existing Backend
+      ↓
+AI Analysis
+      ↓
+We Verify Analysis
+      ↓
+Customer Profile
+      ↓
+Vehicle Search + Filters
+      ↓
+Vehicle Details
+      ↓
+Booking Request
+      ↓
+Booking Details
+      ↓
+Driver/Vehicle Updates
+      ↓
+Completed History
+      ↓
+FCM + Email integration
+      ↓
+Cancellation API (policy TBD)
+      ↓
+Testing
+```
+
+**विशेषतः Vehicle Filter साठी AI ने existing `Vehicle` fields पाहूनच filters ठरवायचे आहेत; आपल्या अंदाजाने नवीन fields तयार करायचे नाहीत.**
+
+================= ITEM 294 ================
+हो, हे तीन important corrections आहेत. त्यामुळे मागच्या prompt मधले काही rules **remove/modify** करायचे.
+
+### Final Customer requirements
+
+#### 1. Email vs Push Notification
+
+**Email notification फक्त important confirmation details साठी Spring Boot मधून.**
+
+उदा. Booking confirm झाल्यावर:
+
+```text
+Booking Confirmed
+      ↓
+Spring Boot Email
+      ↓
+Customer Email
+      ↓
+Trip + Vehicle + Driver details
+```
+
+Cancellation झाल्यावरही email देऊ शकतो, पण बाकी real-time application notifications **FCM Push Notification** मधून जातील.
+
+```text
+Spring Boot
+   └── Email
+       └── Confirmation / important details
+
+FCM
+   └── Push Notifications
+       ├── Booking request/status
+       ├── Accepted/Rejected
+       ├── Driver assigned
+       ├── Driver changed
+       ├── Vehicle changed
+       ├── Cancellation
+       └── Other trip updates
+```
+
+AI ला **नवीन notification system बनवायला सांगायचे नाही**. Existing email/FCM implementation असेल तर ते reuse करायचे.
+
+---
+
+### 2. Pickup city restriction पूर्णपणे remove
+
+माझ्या आधीच्या prompt मधला हा भाग:
+
+> Vehicle city = Mumbai → Pickup Mumbai only
+
+❌ **पूर्णपणे काढायचा.**
+
+Customer ला कोणती vehicle आवडली आणि तिचा rate परवडला तर तो ती vehicle book करू शकतो.
+
+म्हणजे:
+
+```text
+Vehicle Location = Mumbai
+
+Customer:
+Pickup = Pune
+
+→ Allowed
+```
+
+किंवा:
+
+```text
+Vehicle Location = Pune
+
+Customer:
+Pickup = Mumbai
+
+→ Allowed
+```
+
+**Vehicle city ही फक्त vehicle search/filter साठी information आहे; booking restriction नाही.**
+
+Customer स्वतः ठरवेल कोणती vehicle book करायची.
+
+---
+
+### 3. Customer history
+
+Customer ला:
+
+❌ Ongoing  
+❌ Upcoming  
+❌ Pending trips अशा वेगळ्या history categories नकोत.
+
+Customer साठी मुख्यतः:
+
+```text
+My Bookings
+     │
+     ├── Current/Existing booking details
+     │
+     └── Completed Trips
+```
+
+म्हणजे Customer च्या history मध्ये **completed trips** राहतील.
+
+आणि त्याच्या bookings ची माहिती आवश्यकतेनुसार दाखवायची.
+
+---
+
+## त्यामुळे Customer module चा simplified scope
+
+```text
+CUSTOMER
+│
+├── Profile
+│
+├── Vehicle Discovery
+│   ├── All Vehicles
+│   ├── Search by City
+│   ├── Filters
+│   └── Vehicle Details
+│
+├── Booking
+│   ├── Create Booking
+│   ├── View Booking
+│   └── Booking Status
+│
+├── Trip
+│   ├── Confirmed/Current Booking Details
+│   └── Completed Trip History
+│
+├── Notifications
+│   ├── FCM Push
+│   └── Email for confirmation/details
+│
+└── Cancellation
+    └── Customer cancellation API
+        (policy TBD)
+```
+
+### Vehicle search
+
+City filter राहील:
+
+```text
+Mumbai → Mumbai vehicles
+Pune → Pune vehicles
+```
+
+पण **booking करताना city mismatch validation नाही.**
+
+### Booking
+
+```text
+Customer
+   ↓
+Vehicle select
+   ↓
+Trip details
+   ↓
+Booking Request
+   ↓
+Owner
+   ↓
+Accept / Reject
+   ↓
+Driver Assign
+   ↓
+Confirmed
+```
+
+### Notifications
+
+```text
+Booking Confirmed
+      ├── Email → confirmation + trip details
+      └── FCM → push notification
+
+Other updates
+      └── FCM → push notification
+```
+
+---
+
+## AI prompt मध्ये हे exact changes add कर
+
+आधीच्या prompt मधील संबंधित sections replace करून:
+
+```text
+IMPORTANT CORRECTIONS:
+
+1. NOTIFICATION ARCHITECTURE
+
+The project uses two notification mechanisms:
+
+A. Spring Boot Email
+B. Firebase Cloud Messaging (FCM) Push Notifications
+
+Do NOT create a new notification architecture.
+
+Use the existing email implementation for important confirmation-related emails.
+
+After booking/trip confirmation, the Customer should receive an email containing the relevant confirmed trip details, such as:
+- Booking information
+- Vehicle details
+- Driver details
+- Confirmed trip information
+- Final agreed amount, if applicable
+
+FCM should handle application push notifications for operational events such as:
+- Booking status changes
+- Booking accepted/rejected
+- Driver assignment
+- Driver replacement
+- Vehicle replacement
+- Cancellation
+- Other real-time trip updates
+
+Reuse the existing Spring Boot email and FCM implementation if already present.
+
+--------------------------------------------------
+
+2. VEHICLE CITY
+
+IMPORTANT:
+Vehicle city MUST NOT restrict the Customer's pickup city.
+
+There is NO rule such as:
+"Vehicle city = Mumbai → pickup must be Mumbai."
+
+The Customer may choose any eligible vehicle and provide their desired pickup location.
+
+Vehicle city is used for:
+- Vehicle information
+- City-based vehicle search/filter
+
+Vehicle city is NOT a booking restriction.
+
+Do NOT add pickup-city-versus-vehicle-city validation.
+
+--------------------------------------------------
+
+3. CUSTOMER HISTORY
+
+Do NOT create separate Customer sections for:
+- Upcoming trips
+- Ongoing trips
+- Pending trips
+
+Customer history should primarily maintain completed trips and booking records/details where applicable.
+
+Customer should be able to view:
+- Their booking details/status where applicable
+- Completed trip history
+
+Do not invent additional Customer trip-history categories unless they already exist in the project.
+
+--------------------------------------------------
+
+4. CUSTOMER VEHICLE SELECTION
+
+The Customer is free to select any eligible vehicle.
+
+The system should not reject a booking merely because the Customer's pickup location differs from the vehicle's registered/current city.
+
+The displayed vehicle rate per KM is informational. The Customer and Owner communicate and finalize the actual rental price after the booking request.
+
+--------------------------------------------------
+
+5. CANCELLATION
+
+Owner cancellation is definitely supported.
+
+Customer cancellation is not finalized as a business rule yet.
+
+However, design/prepare a Customer cancellation API in an extensible way.
+
+Do NOT invent:
+- cancellation penalties
+- cancellation time limits
+- refund rules
+- mandatory cancellation reasons
+
+Mark those rules as TBD.
+```
+
+**आता हा corrected prompt वापरायचा.** आधी AI कडून फक्त analysis घ्यायचा, code नाही. मग त्याचा analysis आपण इथे verify करून **Customer implementation चा Phase 1** सुरू करू.
+
+================= ITEM 319 ================
+pan emailnotification fakt springboot madhun ahe ani push notification FCM madhun ahe tyamule email madhe fakt confirmation zalyavar details miltil ani cancal zalyavar bakiche push notification FCM manage karel IMPORTANT: Pickup city must match the selected vehicle's operating city.  Example: Vehicle city = Mumbai Pickup city = Mumbai → allowed Pickup city = Pune → not allowed    he kahi nahi te customer chi icha konti book karayachi tyana rate parvadla tar the kartil ani histroy madhe ongoing ,upcoming vagere nahi fakt completed ani tyanchi booking asel tar tevadhech
+
+================= ITEM 357 ================
+हो. आता आपण **Customer implementation AI model कडून करवून घेण्यासाठी आधी एक proper execution plan तयार करू**, आणि लगेच code generate करायला सांगणार नाही.
+
+तुझ्या project मध्ये backend आधीपासून आहे आणि Customer module implement करायचा आहे, त्यामुळे AI ला prompt देताना त्याला **existing project समजून घे → requirements map कर → existing architecture follow कर → मग feature-by-feature implement कर** असा instruction देणे महत्त्वाचे आहे.
+
+## Customer Module — Implementation Scope
+
+पहिल्या phase मध्ये Customer साठी हे करायचे:
+
+```text
+CUSTOMER
+│
+├── Authentication
+│   ├── Signup
+│   └── Login
+│
+├── Vehicle Discovery
+│   ├── View all available vehicles
+│   ├── Search by city
+│   ├── Filter vehicles
+│   └── Vehicle details
+│
+├── Booking
+│   ├── Create booking request
+│   ├── View booking
+│   ├── View booking status
+│   └── View confirmed trip
+│
+├── Trip
+│   ├── Upcoming trips
+│   ├── Ongoing trips
+│   ├── Completed trips
+│   └── Trip history
+│
+├── Cancellation
+│   └── Customer cancellation API
+│       (policy TBD)
+│
+└── Notifications
+    └── Booking/trip updates
+```
+
+---
+
+# AI ला आपण एकदम complete code generate करायला सांगणार नाही
+
+पहिल्यांदा AI ला **existing backend analyse करून Customer module चा implementation plan तयार करायला सांगू.**
+
+हे खूप महत्त्वाचे आहे कारण तुझ्या project मध्ये आधीच:
+
+- User
+- Owner
+- Driver
+- Vehicle
+- Booking/Trip
+- Security
+- JWT
+- MapStruct
+- Services
+- Repositories
+
+यापैकी काही implementation असू शकते.
+
+AI ने नवीन duplicate entities/services बनवू नयेत.
+
+---
+
+# STEP 1 — हा Prompt AI ला आधी दे
+
+तू हा prompt Gemini/Antigravity/Cursor सारख्या AI coding agent ला देऊ शकतोस:
+
+```text
+You are working on an existing Car Rental Application backend.
+
+IMPORTANT:
+Do NOT start writing code yet.
+
+First, analyze the entire existing backend project and understand its current architecture, entities, relationships, security flow, DTO structure, MapStruct usage, repositories, services, controllers, exception handling, validation, JWT authentication, and database design.
+
+The backend is a centralized backend used by:
+1. Customer
+2. Owner
+3. Driver
+4. Super Admin
+
+I now want to implement the CUSTOMER MODULE.
+
+Before making any code changes, prepare a detailed implementation plan based on the EXISTING project.
+
+Do NOT create duplicate entities, repositories, services, DTOs, or security components if equivalent components already exist.
+
+Do NOT change existing Owner, Driver, Admin, or Authentication functionality unless it is strictly required for Customer functionality.
+
+Follow the existing project architecture and coding conventions.
+
+==================================================
+CUSTOMER MODULE REQUIREMENTS
+==================================================
+
+The Customer should be able to:
+
+1. CUSTOMER PROFILE
+- View own profile
+- Update own profile
+- View own basic account information
+
+2. VEHICLE DISCOVERY
+Customer should be able to:
+- View available vehicles
+- Search vehicles by city
+- Filter vehicles
+- View vehicle details
+
+Vehicle search is CITY BASED.
+
+Example:
+Customer selects Mumbai → show eligible Mumbai vehicles.
+Customer selects Pune → show eligible Pune vehicles.
+
+Vehicle location and Customer location are not GPS based.
+
+Customer should be able to see:
+- Vehicle brand
+- Vehicle model
+- Vehicle type
+- Seating capacity
+- Fuel type
+- AC / Non-AC
+- Price per KM
+- Vehicle features
+- Vehicle images
+- Vehicle city
+- Availability
+
+Customer must NOT see private administrative/verification documents such as:
+- RC documents
+- Driver license documents
+- Other admin-only documents
+
+Only vehicles satisfying the required business rules should be shown.
+
+A vehicle should be considered available only when appropriate approval, active status and booking-conflict rules are satisfied.
+
+3. BOOKING REQUEST
+
+Customer should be able to create a booking request.
+
+Booking request may contain:
+- Vehicle
+- Pickup city
+- Pickup address
+- Drop location
+- Pickup date
+- Pickup time
+- Return date if applicable
+- Number of passengers
+- Trip type
+- AC / Non-AC preference
+- Customer mobile number
+- Additional trip details
+
+Trip types:
+- LOCAL
+- OUTSTATION
+
+"ALL" is only a search/filter option, not a booking trip type.
+
+IMPORTANT:
+Pickup city must match the selected vehicle's operating city.
+
+Example:
+Vehicle city = Mumbai
+Pickup city = Mumbai → allowed
+Pickup city = Pune → not allowed
+
+4. PRICING
+
+Vehicle search displays the vehicle's rate per KM.
+
+However, this displayed rate is NOT necessarily the final rental amount.
+
+After the booking request:
+Customer and Owner communicate and decide the final rental price.
+
+The platform should store the final agreed amount.
+
+Customer-to-Owner rental payment is OUTSIDE the platform.
+
+Do not implement payment gateway unless an existing payment system already exists.
+
+5. BOOKING FLOW
+
+Expected booking flow:
+
+Customer submits booking request
+        ↓
+PENDING
+        ↓
+Owner reviews request
+        ↓
+Owner communicates with Customer
+        ↓
+Final price/details agreed
+        ↓
+Owner ACCEPTS or REJECTS
+        ↓
+If rejected → rejection reason required
+        ↓
+If accepted → Driver assignment
+        ↓
+Driver assigned
+        ↓
+Booking becomes CONFIRMED
+
+Customer should be able to see appropriate booking statuses.
+
+6. DRIVER INFORMATION
+
+After booking confirmation / Driver assignment, Customer should be able to see appropriate Driver details such as:
+- Driver name
+- Driver mobile number
+- Driver details required for the confirmed trip
+
+Customer must NOT see private Driver verification documents.
+
+If Owner changes the Driver after confirmation:
+- New Driver details should be updated
+- Customer should receive notification
+- Trip/booking history must remain consistent
+
+7. VEHICLE REPLACEMENT
+
+If the confirmed vehicle becomes unavailable:
+- Owner communicates with Customer
+- Replacement decision is made
+- Customer receives updated vehicle information/notification
+
+Customer should see the latest confirmed vehicle information.
+
+8. TRIP
+
+Customer should be able to view:
+- Upcoming trips
+- Confirmed trips
+- Ongoing trips
+- Completed trips
+- Trip history
+
+Trip start is performed by Driver using OTP verification.
+
+Customer should not start/end the trip.
+
+9. CANCELLATION
+
+Owner cancellation is definitely supported.
+
+Customer cancellation is NOT finalized as a business rule yet.
+
+However, prepare the backend architecture/API so a Customer cancellation endpoint can exist without hardcoding a final cancellation policy.
+
+Do NOT invent cancellation penalties or rules.
+
+Use a configurable/extendable design and clearly mark policy-dependent logic as TBD.
+
+10. NOTIFICATIONS
+
+Customer should receive notifications for important events such as:
+- Booking request submitted
+- Booking accepted
+- Booking rejected + reason
+- Booking confirmed
+- Driver assigned
+- Driver changed
+- Vehicle changed
+- Trip updates
+- Trip started/completed
+- Cancellation/update notifications where applicable
+
+11. SECURITY
+
+Customer APIs must be protected using the existing JWT/Spring Security architecture.
+
+Do NOT create a second authentication system.
+
+Use the existing authenticated user identity from the SecurityContext/JWT.
+
+Do NOT trust customerId directly from request body when it can be obtained from the authenticated user.
+
+Example principle:
+
+Authenticated JWT
+      ↓
+SecurityContext
+      ↓
+Current User
+      ↓
+Customer Profile
+      ↓
+Customer-owned resources
+
+Customer must only access:
+- Their own profile
+- Their own bookings
+- Their own trips
+- Their own notifications
+
+Customer must NOT access another customer's booking/trip data by changing an ID in the URL.
+
+12. API DESIGN
+
+Before coding, identify all required APIs.
+
+For each API specify:
+- HTTP method
+- URL
+- Authentication requirement
+- Required role
+- Request DTO
+- Response DTO
+- Validation
+- Service method
+- Repository queries
+- Business rules
+- Possible exceptions
+- HTTP response status
+
+13. DTOs
+
+Follow the existing project DTO convention.
+
+Prefer separate:
+- Request DTO
+- Response DTO
+
+Do not expose entities directly from controllers.
+
+Use the existing MapStruct configuration if already present.
+
+14. DATABASE
+
+Before modifying the database:
+- Inspect existing entities and relationships
+- Identify which existing tables can be reused
+- Identify missing fields
+- Identify missing relationships
+- Identify whether Customer profile already exists
+- Identify how Booking and Trip are currently modeled
+
+Do NOT create duplicate tables for concepts that already exist.
+
+15. BUSINESS RULES
+
+Important rules:
+
+- Customer can search vehicles by city.
+- Customer cannot see unapproved vehicles.
+- Customer cannot see unavailable/conflicting vehicles.
+- Customer cannot book another Customer's booking.
+- Customer cannot modify Owner/Driver data.
+- Customer cannot assign Driver.
+- Customer cannot approve Vehicle/Driver.
+- Customer cannot start/end trip.
+- Customer can only access their own booking/trip history.
+- Final rental amount is agreed between Customer and Owner.
+- Rental payment is outside the platform.
+- Driver is a global platform resource and is NOT permanently owned by one Owner.
+- Any eligible Driver may be used by any Owner.
+- Driver's location is only used as current-location information/filtering and is NOT an ownership restriction.
+- Customer does not get live Driver tracking.
+- No rating/review functionality is required currently.
+
+==================================================
+WHAT YOU MUST DO NOW
+==================================================
+
+DO NOT WRITE OR MODIFY CODE YET.
+
+First produce:
+
+A. Existing architecture analysis
+
+B. Existing entities relevant to Customer
+
+C. Existing relationships relevant to Customer
+
+D. Existing authentication/JWT flow relevant to Customer
+
+E. Existing APIs that can be reused
+
+F. Missing entities/fields/relationships
+
+G. Required Customer APIs
+
+H. Required DTOs
+
+I. Required repository methods
+
+J. Required service methods
+
+K. Required controller endpoints
+
+L. Required validation
+
+M. Required exception handling
+
+N. Required database changes
+
+O. Security/authorization considerations
+
+P. Complete Customer implementation order
+
+Q. Potential conflicts with existing Owner/Driver/Admin functionality
+
+R. Any requirement that is still ambiguous or TBD
+
+IMPORTANT:
+Do not make assumptions where the existing code or requirements are unclear.
+
+If something is missing, explicitly write:
+"TBD / NEEDS CONFIRMATION"
+
+After this analysis, STOP.
+
+Wait for my approval before implementing anything.
+```
+
+---
+
+## हा prompt का चांगला आहे?
+
+कारण आपण AI ला सांगतोय:
+
+```text
+Existing Project
+      ↓
+Understand
+      ↓
+Analyze
+      ↓
+Find Reusable Code
+      ↓
+Find Missing Things
+      ↓
+Prepare API Plan
+      ↓
+STOP
+      ↓
+Our Approval
+      ↓
+Implementation
+```
+
+त्यामुळे AI अचानक:
+
+```text
+CustomerEntity
+CustomerRepository
+CustomerService
+CustomerController
+BookingEntity
+TripEntity
+...
+```
+
+सगळं नवीन create करून existing project खराब करणार नाही.
+
+---
+
+# STEP 2 नंतर आपण काय करू?
+
+AI ने analysis दिल्यावर आपण त्याला **एकदम complete implementation करू देणार नाही.**
+
+आपला execution order असा ठेवू:
+
+### Phase 1 — Customer Profile
+
+```text
+Customer
+ ↓
+Entity
+ ↓
+DTO
+ ↓
+Mapper
+ ↓
+Repository
+ ↓
+Service
+ ↓
+Controller
+ ↓
+Security
+ ↓
+Test
+```
+
+### Phase 2 — Vehicle Discovery
+
+```text
+GET vehicles
+GET vehicle/{id}
+GET vehicles?city=Pune
+Filters
+Availability
+```
+
+### Phase 3 — Booking Request
+
+```text
+Booking Request DTO
+       ↓
+Validation
+       ↓
+Booking Service
+       ↓
+Availability check
+       ↓
+Booking creation
+       ↓
+Notification
+```
+
+### Phase 4 — Booking/Trip Tracking
+
+```text
+My Bookings
+Upcoming
+Confirmed
+Ongoing
+Completed
+History
+```
+
+### Phase 5 — Driver/Vehicle Updates
+
+```text
+Driver assigned
+Driver changed
+Vehicle changed
+Notifications
+```
+
+### Phase 6 — Cancellation
+
+आत्ता API architecture ठेवू, पण **business policy TBD** असल्यामुळे cancellation rules hardcode करणार नाही.
+
+---
+
+## एक महत्त्वाची गोष्ट
+
+तू AI ला prompt देण्याआधी **existing backend ची पूर्ण structure/कोड त्याला access आहे याची खात्री कर**.
+
+कारण Customer implementation मध्ये सर्वात महत्त्वाचा भाग नवीन code लिहिणे नाही; तर:
+
+> **Existing User + Customer + Vehicle + Booking + Trip + JWT + Owner/Driver architecture कशी आहे हे समजून त्यावर Customer module बसवणे.**
+
+तू आधी वरचा **analysis-only prompt** run कर.
+
+AI ने जे analysis दिले ते इथे paste कर. मग आपण **त्याच्या analysis मधली प्रत्येक गोष्ट check करून**, कुठे चुकीचे assumption आहे ते काढून, **final implementation plan** बनवू. त्यानंतरच actual coding prompt तयार करू.
+
+================= ITEM 368 ================
+yes ata mala customer cha implementation karayach ahe jas ki sagale vehical see karane ,tyanche details baghane ,trip book karane .ani trip cancel customer karel he fix nahi pan apan api karun thevu pan owner nakki cancel karu shakto tar mala plan de mhanaje ai model execute karu shakto  
+mala prompt madhe explain karn sang ,first tyala prepare karu ani mag ak complete karu
+
+================= ITEM 432 ================
+हो, आता तुझा point clear झाला. **Location हा Driver च्या ownership/eligibility साठी नाही; फक्त list/filter साठी आहे.** त्यामुळे माझ्या आधीच्या "Owner association end" किंवा "Driver transfer" logic ची गरज नाही.
+
+### Final Driver concept
+
+Driver हा **global platform resource** आहे.
+
+```text
+                    DRIVER
+                      │
+          ┌───────────┼───────────┐
+          │           │           │
+       Owner A      Owner B      Owner C
+       Pune         Mumbai       Kolhapur
+          │           │           │
+          └────── Driver can work ──────┘
+```
+
+Driver आज Pune मध्ये असेल तर Pune मधल्या Owner सोबत काम करू शकतो.
+
+नंतर Mumbai ला shift झाला तर Mumbai मधल्या Owner सोबत काम करू शकतो.
+
+पुन्हा Pune ला आला तर पुन्हा Pune मधल्या Owner सोबत काम करू शकतो.
+
+**System मध्ये Driver ची location बदलल्यामुळे Owner relationship delete/transfer होणार नाही.**
+
+---
+
+## Driver Location चा उपयोग काय?
+
+फक्त:
+
+### 1. Driver profile information
+
+```text
+Current City: Pune
+Current Locality: Wakad
+```
+
+### 2. Owner search/filter
+
+Owner म्हणतो:
+
+> मला Pune मधले Drivers बघायचे आहेत.
+
+तर filter:
+
+```text
+City = Pune
+```
+
+पण याचा अर्थ:
+
+> "फक्त Pune Owner चा Driver"
+
+असा अजिबात नाही.
+
+**कोणताही Owner कोणताही eligible Driver वापरू शकतो.**
+
+---
+
+# Owner ला Driver List — Priority
+
+हा तुझा मुख्य requirement आहे.
+
+Owner ला Drivers दाखवताना:
+
+```text
+1️⃣ Owner ने पूर्वी ADD केलेले Drivers
+          ↓
+2️⃣ Owner ने पूर्वी USE केलेले Drivers
+          ↓
+3️⃣ बाकीचे Eligible Drivers
+```
+
+### Example
+
+समजा Owner Mumbai मध्ये आहे.
+
+System मध्ये 100 Drivers आहेत.
+
+Owner ने पूर्वी add केलेले:
+
+```text
+Raj
+Amit
+```
+
+पूर्वी trip मध्ये use केलेले:
+
+```text
+Vijay
+Suresh
+```
+
+बाकी:
+
+```text
+Rahul
+Prakash
+Akash
+...
+```
+
+तर list:
+
+```text
+┌───────────────────────────────┐
+│ Drivers                       │
+├───────────────────────────────┤
+│ ⭐ Raj                        │
+│ ⭐ Amit                       │
+│                               │
+│ Previously Used               │
+│ Vijay                         │
+│ Suresh                        │
+│                               │
+│ Other Drivers                 │
+│ Rahul                         │
+│ Prakash                       │
+│ Akash                         │
+└───────────────────────────────┘
+```
+
+**Driver ची current city ही priority ठरवणार नाही.**
+
+---
+
+# मग Driver History कशी ठेवायची?
+
+इथे एक correction:
+
+आपल्याला **"Owner सोडला / association ended"** अशी history concept ठेवण्याची गरज नाही.
+
+आपल्याला मुख्यतः **Driver च्या actual work/trip history** ची गरज आहे.
+
+उदा.:
+
+```text
+Driver: Raj
+
+Trip History
+────────────────────────────
+Trip 101
+Owner: Owner A
+City: Pune
+Date: 10 Aug
+
+Trip 205
+Owner: Owner B
+City: Mumbai
+Date: 25 Aug
+
+Trip 310
+Owner: Owner C
+City: Kolhapur
+Date: 02 Sep
+```
+
+म्हणून `Trip` मध्ये:
+
+```text
+trip_id
+driver_id
+owner_id
+vehicle_id
+booking_id
+start_time
+end_time
+status
+```
+
+हे पुरेसे आहे.
+
+यामुळे Raj ने कोणत्या Owner साठी, कोणत्या Vehicle वर, कधी काम केले हे automatically history मध्ये मिळेल.
+
+---
+
+# "Added Drivers" कसे ओळखायचे?
+
+यासाठी मात्र एक छोटा relationship record ठेवणे useful आहे.
+
+```text
+OWNER_DRIVER
+-----------
+owner_id
+driver_id
+first_added_at
+last_used_at
+```
+
+हा **ownership नाही**.
+
+तो फक्त:
+
+> "या Owner ने हा Driver पूर्वी system मध्ये add केला होता"
+
+हे लक्षात ठेवण्यासाठी आहे.
+
+उदा.:
+
+```text
+Owner A → Raj
+first_added_at = Jan 10
+last_used_at = Aug 20
+```
+
+Raj Mumbai ला गेला तरी हा record delete होत नाही.
+
+---
+
+# Final Database Concept
+
+```text
+USER
+ │
+ ├── CUSTOMER
+ ├── OWNER
+ └── DRIVER
+```
+
+Driver independent आहे.
+
+```text
+DRIVER
+  │
+  ├── Driver Profile
+  ├── Documents
+  ├── Verification
+  ├── Current City/Locality
+  └── Availability
+```
+
+Owner ने कोणाला पूर्वी add केले यासाठी:
+
+```text
+OWNER_DRIVER
+```
+
+आणि Driver ने केलेल्या actual कामासाठी:
+
+```text
+TRIP
+```
+
+---
+
+## अतिशय महत्त्वाचा फरक
+
+```text
+OWNER_DRIVER
+     ↓
+"Owner ने हा Driver पूर्वी add केला होता"
+
+TRIP
+     ↓
+"Driver ने या Owner साठी प्रत्यक्ष काम केले"
+```
+
+म्हणून **Owner-Driver relationship म्हणजे ownership नाही.**
+
+---
+
+## Location बदलल्यावर
+
+```text
+Raj
+Current City = Pune
+       ↓
+Owner X ला list मध्ये दिसतो
+       ↓
+Raj Mumbai ला shift
+       ↓
+Current City = Mumbai
+       ↓
+Mumbai filter मध्ये दिसतो
+       ↓
+Raj पुन्हा Pune ला येतो
+       ↓
+Current City = Pune
+```
+
+**Raj चा Driver account, documents, approval, previous Owners आणि trip history यापैकी काहीही delete/transfer होत नाही.**
+
+---
+
+### त्यामुळे SRS मध्ये final rule असा ठेवू:
+
+> **A Driver is an independent platform resource and is not owned by any Owner. Any Owner may use any eligible Driver regardless of the Driver's current city or the Owner's city. Driver location is maintained only as current location information and as an optional search/filter criterion.**
+
+> **When displaying Drivers to an Owner, the system shall prioritize Drivers previously added by that Owner, followed by Drivers previously used by that Owner, followed by other eligible Drivers. This prioritization does not restrict the Owner from selecting any other eligible Driver.**
+
+हे आता तुझ्या actual requirement शी match होतं. **Driver transfer/owner सोडणे हा concept SRS मधून काढू.**
+
+================= ITEM 443 ================
+owner sodla as nahi aaj driver pune ithe ahe tar to titlya owner barobar kam karel nantar to mumbai la shift zala tar to titlya owner shi kam karel parat mumbai ala tar titlya owner shi kam karel as nahi ki pune ithe ahe mhanaje punyatalech use kartil konihi use karel pan owner la driver show kartana priority madhech show karayache
+
+
+================= ITEM 529 ================
+हो. **Driver history आणि Subscription हे अजून properly finalize झालेले नाहीत**, त्यामुळे आत्ता SRS मध्ये त्यांना final मानू नये. दोन्हीचे design आधी ठरवूया.
+
+## 1. Driver History — माझी recommendation
+
+Driver ची history फक्त `Driver` table मध्ये ठेवू नये. Driver एकापेक्षा जास्त Owner सोबत काम करू शकतो, त्यामुळे **association history + trip history** वेगळी ठेवणे best आहे.
+
+### A. Driver Master
+
+Driver ची permanent information:
+
+```text
+DRIVER
+------
+id
+user_id
+name
+mobile
+email
+license_number
+license_expiry
+current_city
+current_locality
+status
+inactive_reason
+created_at
+updated_at
+```
+
+हा record **कधीही Owner सोडल्यामुळे delete होणार नाही.**
+
+---
+
+### B. Driver-Owner History
+
+कोणत्या Owner ने Driver कधी use केला हे:
+
+```text
+DRIVER_OWNER_HISTORY
+--------------------
+id
+driver_id
+owner_id
+started_at
+ended_at
+status
+```
+
+उदा.:
+
+```text
+Raj Driver
+
+Owner A
+Jan → Mar
+ENDED
+
+Owner B
+Apr → Present
+ACTIVE
+
+Owner C
+May → Present
+ACTIVE
+```
+
+यामुळे Driver एकाच वेळी multiple Owners सोबत associated राहू शकतो.
+
+---
+
+### C. Driver Trip History
+
+Actual trips साठी `Booking/Trip` मध्ये Driver ID ठेवू:
+
+```text
+TRIP
+----
+id
+booking_id
+driver_id
+vehicle_id
+owner_id
+start_time
+end_time
+status
+```
+
+मग Raj ने किती trips केल्या, कोणत्या Owner साठी केल्या, कोणत्या vehicle वर केल्या हे सहज मिळेल.
+
+उदा.:
+
+```text
+Raj's Driver History
+
+Owner A
+ ├── Trip #101
+ ├── Trip #108
+ └── Trip #115
+
+Owner B
+ ├── Trip #201
+ └── Trip #208
+```
+
+**यासाठी वेगळी `DriverTripHistory` table आवश्यक नाही.** `Trip` हा historical record म्हणूनच काम करेल.
+
+---
+
+# 2. Driver ने Owner सोडला तर काय?
+
+समजा:
+
+```text
+Raj
+Owner A सोबत associated
+```
+
+Raj Owner A सोडतो.
+
+आपण:
+
+❌ Driver delete करणार नाही  
+❌ Driver documents delete करणार नाही  
+❌ Driver verification delete करणार नाही  
+❌ Previous trips delete करणार नाही
+
+फक्त:
+
+```text
+DRIVER_OWNER_HISTORY
+
+Owner A
+ended_at = date
+status = ENDED
+```
+
+नंतर Owner B Raj ला associate करतो:
+
+```text
+DRIVER_OWNER_HISTORY
+
+Owner A → ENDED
+Owner B → ACTIVE
+```
+
+म्हणजे **Driver Master कायम**, association बदलत राहतील.
+
+---
+
+# 3. मग Owner च्या Driver list मध्ये history कशी वापरणार?
+
+आपण आधी ठरवल्याप्रमाणे:
+
+```text
+1. Owner ने Add केलेले Drivers
+2. Previously Used Drivers
+3. Remaining Eligible Drivers
+```
+
+हे database मधून काढता येईल.
+
+### Priority 1
+
+`DRIVER_OWNER_HISTORY` मध्ये current Owner ची association आहे आणि Owner ने तो Driver add केला आहे.
+
+### Priority 2
+
+Current Owner ने Driver पूर्वी वापरला आहे पण आता active association नाही.
+
+### Priority 3
+
+बाकी eligible Drivers.
+
+यामुळे UI ordering आणि history दोन्ही maintain होतात.
+
+---
+
+# 4. पण "Added" आणि "Used" मध्ये difference ठेवायचा का?
+
+**हो, ठेवणे चांगले आहे.**
+
+उदा.:
+
+Owner A ने Raj ला add केला:
+
+```text
+Added ✓
+Used ✗
+```
+
+नंतर Raj ची trip झाली:
+
+```text
+Added ✓
+Used ✓
+```
+
+Raj Owner A सोबत association end झाल्यावर:
+
+```text
+Previously Associated/Used
+```
+
+मध्ये जाईल.
+
+यामुळे तुझ्या तीन-level sorting ला exact support मिळतो.
+
+---
+
+# 5. आता Subscription — हेही आधी finalize करूया
+
+इथे दोन वेगळ्या entities ठेवणे योग्य:
+
+```text
+SUBSCRIPTION_PLAN
+```
+
+आणि
+
+```text
+OWNER_SUBSCRIPTION
+```
+
+### Subscription Plan
+
+Admin define करेल:
+
+```text
+SUBSCRIPTION_PLAN
+-----------------
+id
+name
+duration
+price
+vehicle_limit
+driver_limit
+status
+```
+
+उदा. conceptually:
+
+```text
+Basic
+├── Duration
+├── Price
+├── Vehicle Limit
+└── Driver Limit
+```
+
+Actual numbers आपण अजून ठरवलेले नाहीत.
+
+---
+
+### Owner Subscription
+
+Owner ने कोणता plan कधी घेतला हे:
+
+```text
+OWNER_SUBSCRIPTION
+------------------
+id
+owner_id
+plan_id
+start_date
+end_date
+status
+```
+
+उदा.:
+
+```text
+Owner A
+
+Basic
+Start: 01 Aug
+End: 30 Aug
+Status: ACTIVE
+```
+
+नंतर renewal:
+
+```text
+Owner A
+
+Basic
+01 Aug → 30 Aug   EXPIRED
+
+Premium
+01 Sep → 30 Nov   ACTIVE
+```
+
+म्हणून subscription history कधीही delete होत नाही.
+
+---
+
+# 6. Subscription limit कशी enforce करायची?
+
+समजा plan मध्ये:
+
+```text
+Vehicle Limit = X
+Driver Limit = Y
+```
+
+Owner नवीन vehicle add करतो:
+
+```text
+Current active vehicles < X
+        ↓
+       YES
+        ↓
+Vehicle addition allowed
+```
+
+जर limit reached:
+
+```text
+Current active vehicles = X
+        ↓
+New Vehicle
+        ↓
+BLOCK
+```
+
+Same Driver साठी:
+
+```text
+Active/usable Driver count < plan limit
+        ↓
+Add/associate Driver allowed
+```
+
+पण इथे एक **महत्त्वाचा प्रश्न** आहे.
+
+कारण आता Driver हा global resource आहे.
+
+जर Owner B ने आधीपासून system मध्ये असलेला Raj Driver associate केला, तर:
+
+> **तो Driver Owner B च्या subscription `driver_limit` मध्ये count होईल का?**
+
+माझ्या मते **हो**.
+
+उदा.:
+
+```text
+Owner A Plan:
+Driver Limit = 5
+
+Owner A currently has 5 active Driver associations
+        ↓
+Cannot add/associate another Driver
+```
+
+पण Raj स्वतः platform वर एकच Driver आहे. तो Owner A आणि Owner B दोघांकडे associated असू शकतो.
+
+म्हणून limit **Driver master वर नाही**, तर **Owner-Driver active associations वर** लागू करायची.
+
+---
+
+# 7. Subscription expiry
+
+आपण आधी ठरवलेले rule ठेवू:
+
+```text
+ACTIVE SUBSCRIPTION
+       ↓
+Operational activities ✓
+```
+
+Expiry:
+
+```text
+EXPIRED
+   │
+   ├── Profile ✓
+   ├── History ✓
+   ├── Existing confirmed trips ✓
+   ├── Existing ongoing trips ✓
+   │
+   └── New operational activities ✗
+```
+
+पण Owner च्या existing Driver associations/history delete होणार नाहीत.
+
+---
+
+## आता फक्त 3 subscription decisions pending आहेत
+
+### Q1. Plans कोण create करणार?
+
+माझी recommendation:
+
+**Only Super Admin**
+
+Admin:
+
+- Plan create
+- Price set
+- Duration set
+- Vehicle limit set
+- Driver limit set
+- Activate/deactivate plan
+
+---
+
+### Q2. Subscription payment
+
+Owner subscription घेताना **platform वर payment करणार का?**
+
+उदा.:
+
+```text
+Owner
+ ↓
+Select Plan
+ ↓
+Payment
+ ↓
+Success
+ ↓
+Subscription ACTIVE
+```
+
+की payment आत्ता SRS मध्ये ठेवायचे नाही?
+
+---
+
+### Q3. Driver limit
+
+माझी recommendation:
+
+> **Driver limit = Owner च्या active Driver associations ची संख्या.**
+
+Global Driver account एकदाच count होणार नाही.
+
+उदा.:
+
+```text
+Plan Driver Limit = 5
+
+Owner A:
+Raj
+Amit
+Vijay
+Suresh
+Rahul
+        ↓
+5 associations → limit reached
+
+Raj simultaneously Owner B सोबत associated
+        ↓
+Owner B च्या limit मध्ये Raj count होईल
+```
+
+हे तीन answers मिळाले की **Driver History + Subscription पूर्णपणे lock** करू शकतो.
+
+================= ITEM 588 ================
+हो, आता हे **finalize** करूया.
+
+तुझ्या requirement नुसार Driver हा कोणत्याही Owner साठी वापरता येईल. Driver ची permanent ownership कोणत्याही Owner कडे नसेल.
+
+## Final Driver model
+
+```text
+                    DRIVER MASTER
+                         │
+          ┌──────────────┼──────────────┐
+          │              │              │
+       Owner A         Owner B        Owner C
+       can use         can use        can use
+          │              │              │
+          └──────────────┴──────────────┘
+```
+
+Driver system मध्ये एकदाच verify होईल आणि त्याची identity/document/verification/history कायम राहील.
+
+Owner सोडला म्हणून Driver delete होणार नाही.
+
+---
+
+## Owner ला Driver list कशी दिसेल?
+
+Owner जेव्हा **Assign Driver** करेल, तेव्हा list ची priority अशी असेल:
+
+### 1. Owner ने स्वतः Add केलेले Drivers — TOP
+
+```text
+My Added Drivers
+----------------
+Raj
+Amit
+Suresh
+```
+
+हे Drivers त्या Owner ने system मध्ये पूर्वी add केलेले आहेत.
+
+---
+
+### 2. Previously Used Drivers
+
+Owner ने स्वतः add केलेले नसले तरी त्या Owner च्या previous trips मध्ये वापरलेले Drivers.
+
+```text
+Previously Used Drivers
+----------------------
+Vijay
+Rahul
+```
+
+---
+
+### 3. Remaining Eligible Drivers
+
+बाकीचे eligible Drivers.
+
+```text
+Other Available Drivers
+-----------------------
+Prakash
+Akash
+Sameer
+```
+
+म्हणजे complete ordering:
+
+```text id="7z1j8x"
+┌─────────────────────────────┐
+│ 1. My Added Drivers         │
+├─────────────────────────────┤
+│ 2. Previously Used Drivers  │
+├─────────────────────────────┤
+│ 3. Remaining Drivers        │
+└─────────────────────────────┘
+```
+
+---
+
+## Filters
+
+Owner ला मोठी Driver list असेल तर filters असतील:
+
+- **City**
+- **Locality**
+- **Availability**
+- **Status**
+- **License validity** / eligibility
+
+उदा.:
+
+```text
+City: Pune
+Locality: Wakad
+Availability: Active
+```
+
+मग त्या criteria ला match होणारे Drivers दिसतील.
+
+**पण filter केल्यावरही priority ordering कायम राहील.**
+
+उदा. Pune मध्ये:
+
+```text
+My Added
+    Raj
+    Amit
+
+Previously Used
+    Vijay
+
+Remaining
+    Rahul
+    Suresh
+```
+
+---
+
+## Important: Driver location ≠ Owner location
+
+उदा.:
+
+```text
+Owner:
+Kolhapur
+
+Driver:
+Pune
+```
+
+हे perfectly valid आहे.
+
+Owner Kolhapurचा असला तरी Pune मधला eligible Driver assign करू शकतो.
+
+Driver city फक्त **search/filter आणि operational information** साठी आहे; ती permanent ownership restriction नाही.
+
+---
+
+## Database model
+
+यासाठी मला हा design final योग्य वाटतो:
+
+```text
+USER
+ │
+ ├── OWNER
+ │
+ └── DRIVER
+```
+
+आणि:
+
+```text
+DRIVER_OWNER_ASSOCIATION
+-------------------------
+id
+driver_id
+owner_id
+status
+created_at
+ended_at
+```
+
+पण `driver.owner_id` **Driver table मध्ये ठेवणार नाही**.
+
+कारण:
+
+```text
+Driver Raj
+   │
+   ├── Owner A → ACTIVE
+   ├── Owner B → ACTIVE
+   └── Owner C → ACTIVE
+```
+
+हे possible आहे.
+
+आणि प्रत्येक Owner सोबतचा association/history independent राहील.
+
+---
+
+## एक critical rule
+
+Driver कोणत्याही Owner साठी वापरता येतो, **पण एकाच वेळेला conflicting trips करू शकत नाही.**
+
+उदा.:
+
+```text
+Raj
+
+10 AM - 2 PM → Owner A Trip
+10 AM - 1 PM → Owner B Trip
+```
+
+❌ Owner B ला Raj assign करता येणार नाही.
+
+पण:
+
+```text
+10 AM - 2 PM → Owner A
+4 PM - 8 PM  → Owner B
+```
+
+✅ दोन्ही valid.
+
+म्हणून Driver assignment करताना system:
+
+**Driver status + availability + existing trip conflict + license validity**
+
+check करेल.
+
+---
+
+### SRS मध्ये final wording
+
+> **Drivers are independent platform resources and are not permanently owned by any Owner. Any eligible Driver may be used by any Owner. Driver verification, documents, identity and historical records are maintained independently of Owner associations. Owner-Driver associations are maintained separately for tracking and history.**
+
+> **When an Owner views the Driver assignment list, Drivers previously added by that Owner shall be displayed first, followed by Drivers previously used by that Owner, followed by other eligible Drivers. The list shall support filtering by city, locality and availability.**
+
+> **A Driver may be associated with multiple Owners simultaneously, subject to availability and prevention of conflicting trip assignments.**
+
+हा change केल्यावर **Driver ownership हा concept पूर्णपणे SRS मधून काढायचा**, आणि `DriverOwnerAssociation` हा independent relationship ठेवायचा.
+
+================= ITEM 601 ================
+ho driver la kontahi owner use karel pan owner la driver list show hotana tyane add kelele driver chi order he top la asel mag previously used ani mag remaining as akru
+
+================= ITEM 671 ================
+हो. हा change **महत्त्वाचा आहे** आणि माझ्या आधीच्या SRS मधील:
+
+> `Driver belongs to one Owner`
+
+हा rule **remove करायला हवा**.
+
+तुझ्या नवीन requirement नुसार Driver हा **independent reusable resource** असेल. एखाद्या Owner ने Driver ला system मध्ये add/verify केले म्हणून Driver कायमचा त्या Owner चा होणार नाही.
+
+### योग्य model
+
+```text
+                    DRIVER
+                      │
+          ┌───────────┴───────────┐
+          │                       │
+      Owner A                  Owner B
+      added him                uses him
+          │                       │
+          └───────────┬───────────┘
+                      │
+                  Owner C
+                  uses him
+```
+
+म्हणजे Driver ची **ownership नाही**, फक्त **association / assignment history** असेल.
+
+---
+
+# 1. Driver system मधून delete करायचा नाही
+
+उदाहरण:
+
+```text
+Owner A
+   ↓
+Adds Driver Raj
+   ↓
+Admin validates Raj
+   ↓
+Raj becomes APPROVED
+```
+
+नंतर Raj Owner A सोडतो.
+
+❌ Raj delete करू नये.
+
+त्याऐवजी:
+
+```text
+Owner A
+   ↓
+Driver association ended
+   ↓
+Raj remains in Driver Master
+   ↓
+Raj can be associated with Owner B
+```
+
+त्यामुळे Raj चे:
+
+- License verification
+- License expiry
+- Name
+- Mobile
+- Email
+- Approval history
+- Documents
+- Previous trip history
+
+सगळे preserve राहतील.
+
+---
+
+# 2. पण एक problem आहे — Driver Pune मध्ये आणि Owner Kolhapur मध्ये
+
+तुझा प्रश्न अगदी valid आहे.
+
+जर Owner Kolhapur चा आहे आणि Driver Pune मध्ये आहे तर Driver ला Kolhapur owner कसा वापरणार?
+
+इथे **Owner ची location आणि Driver ची location वेगळी concepts** ठेवायची.
+
+उदा.:
+
+```text
+Owner:
+Kolhapur
+
+Driver:
+Pune
+```
+
+याचा अर्थ असा नाही की Driver फक्त Pune Owner साठीच काम करू शकतो.
+
+Driver च्या profile मध्ये:
+
+```text
+Driver Current City = Pune
+```
+
+असेल.
+
+Owner ला driver search करताना location filter वापरता येईल.
+
+---
+
+# 3. Owner ला Drivers कसे दाखवायचे?
+
+तुझी idea योग्य आहे.
+
+Owner जेव्हा:
+
+**Add/Assign Driver**
+
+करतो तेव्हा system त्याला **सर्व eligible Drivers** दाखवेल.
+
+पण sorting अशी:
+
+```text
+┌──────────────────────────────────┐
+│ Available Drivers                │
+├──────────────────────────────────┤
+│ Your recently added drivers      │ ← TOP
+│ Your previously used drivers     │
+│                                  │
+│ Other available drivers          │
+└──────────────────────────────────┘
+```
+
+आणि filters:
+
+- City / Locality
+- Availability
+- Driver status
+- Experience (जर ठेवला तर)
+- License validity
+
+---
+
+# 4. पण "Your drivers" permanently owner चे नसतील
+
+हा distinction खूप important आहे.
+
+UI मध्ये आपण:
+
+> **My Drivers**
+
+असं permanently म्हणू नये.
+
+कारण Driver Owner चा नाही.
+
+त्याऐवजी:
+
+### `Recently Used / Added Drivers`
+
+किंवा
+
+### `Previously Associated Drivers`
+
+असं ठेवणं technically आणि business-wise योग्य आहे.
+
+उदा.:
+
+```text
+Owner A
+
+Previously Associated
+---------------------
+Raj
+Amit
+Suresh
+
+Other Available Drivers
+-----------------------
+Vijay
+Rahul
+Prakash
+```
+
+---
+
+# 5. Driver association table ठेवणे best आहे
+
+इथे database design महत्त्वाचा आहे.
+
+आपण:
+
+```text
+Driver
+```
+
+आणि
+
+```text
+Owner
+```
+
+मध्ये direct permanent relationship ठेवणार नाही.
+
+त्याऐवजी:
+
+```text
+USER
+ │
+ ├── OWNER
+ │
+ └── DRIVER
+```
+
+आणि एक वेगळी table:
+
+```text
+DRIVER_OWNER_ASSOCIATION
+```
+
+### Example
+
+| id | driver_id | owner_id | start_date | end_date | status |
+|---|---|---|---|---|---|
+| 1 | D101 | O10 | Jan 2026 | Mar 2026 | ENDED |
+| 2 | D101 | O25 | Apr 2026 | NULL | ACTIVE |
+
+यामुळे Raj ने Owner A सोडला तरी:
+
+```text
+Driver D101
+      │
+      ├── Owner A
+      │     └── ENDED
+      │
+      └── Owner B
+            └── ACTIVE
+```
+
+**Driver record delete होत नाही.**
+
+---
+
+# 6. पण Driver एकाच वेळी अनेक Owner वापरू शकतो का?
+
+इथे एक business rule आपण निश्चित करायला हवा.
+
+तू म्हणतोयस:
+
+> "driver kontahi owner use karu shakto"
+
+याचे दोन अर्थ होऊ शकतात.
+
+### Option A — Sequential
+
+एक Driver एका वेळी **एकाच Owner साठी active association** मध्ये असेल.
+
+```text
+Driver Raj
+   ↓
+Owner A
+   ↓
+Leaves
+   ↓
+Owner B
+```
+
+म्हणजे employment/association transfer.
+
+### Option B — Multiple Owners
+
+Driver एकाच वेळी अनेक Owners साठी available असू शकतो.
+
+```text
+             Raj
+          /   |   \
+         /    |    \
+    Owner A Owner B Owner C
+```
+
+आणि Driver प्रत्येक Owner ची वेगवेगळी trip accept/perform करू शकतो.
+
+**तुझ्या "कोणताही Owner use करू शकतो" या requirement वरून मला Option B जास्त योग्य वाटतो.**
+
+पण त्यासाठी association table मध्ये:
+
+```text
+driver_id
+owner_id
+status
+start_date
+end_date
+```
+
+असे multiple active associations allow करता येतील.
+
+---
+
+# 7. Driver location कशी handle करायची?
+
+Driver profile मध्ये:
+
+```text
+Current City
+Current Locality
+```
+
+ठेवू शकतो.
+
+उदा.:
+
+```text
+Driver:
+Name: Raj
+City: Pune
+Locality: Wakad
+Status: ACTIVE
+```
+
+Owner Kolhapur मध्ये असून Driver Pune मध्ये असला तरी system मध्ये Driver उपलब्ध दिसू शकतो.
+
+Owner filter:
+
+```text
+City:
+[ Pune ▼ ]
+
+Availability:
+[ Active ▼ ]
+```
+
+मग Pune चे Drivers दिसतील.
+
+---
+
+# 8. पण Owner Driver ला trip साठी select करताना location काय?
+
+इथे आणखी एक important rule:
+
+**Driver location हा search/filter आहे; hard restriction नाही.**
+
+उदा.:
+
+```text
+Owner = Kolhapur
+
+Driver = Pune
+```
+
+Owner Pune Driver select करू शकतो.
+
+पण actual trip assignment करताना Driver availability आणि trip requirements validate होतील.
+
+---
+
+# 9. Driver verification पुन्हा करायची गरज नाही
+
+हा model वापरण्याचा मोठा फायदा:
+
+Raj ने पहिल्यांदा system मध्ये entry केली:
+
+```text
+Driver Registration
+      ↓
+Documents
+      ↓
+License Verification
+      ↓
+Admin Approval
+      ↓
+APPROVED
+```
+
+नंतर:
+
+```text
+Owner A → Owner B
+```
+
+झाले तरी:
+
+❌ पुन्हा license verification नको  
+❌ पुन्हा documents upload नको  
+❌ नवीन Driver account नको
+
+फक्त:
+
+```text
+Driver ↔ Owner association
+```
+
+create/update होईल.
+
+**पण Driver चा license expire झाला असेल तर system त्याला assignment साठी eligible ठेवणार नाही.**
+
+म्हणजे approval एकदा झाले म्हणून तो कायम eligible नाही.
+
+---
+
+# 10. मला final architecture असा योग्य वाटतो
+
+```text
+                    USER
+                     │
+             ┌───────┴───────┐
+             │               │
+          OWNER            DRIVER
+             │               │
+             │               │
+             │       Driver Master Data
+             │               │
+             │               │
+             └───────┬───────┘
+                     │
+           DRIVER_OWNER_ASSOCIATION
+                     │
+          ┌──────────┼──────────┐
+          │          │          │
+       Owner A    Owner B    Owner C
+```
+
+Vehicle मात्र अजूनही:
+
+```text
+Owner → Vehicle
+```
+
+असेच राहू शकते.
+
+कारण तुझी requirement specifically Driver बद्दल बदलली आहे.
+
+---
+
+# 11. SRS मध्ये बदल
+
+आधीचा:
+
+> "Driver belongs to one Owner."
+
+❌ **Remove.**
+
+त्याऐवजी:
+
+> **A Driver is an independent platform user/resource and is not permanently owned by any Owner. A Driver may be associated with one or more Owners through Driver-Owner associations. Ending an association must not delete the Driver's account, verification records, documents, or historical trip data.**
+
+आणि:
+
+> **Owners shall be able to view eligible Drivers across the platform. Drivers previously associated with the current Owner should be prioritized at the top of the list, while filters such as city/locality and availability shall allow Owners to find other eligible Drivers.**
+
+आणि:
+
+> **Driver location is maintained independently from Owner location. An Owner may use an eligible Driver from another city, subject to Driver availability and trip requirements.**
+
+---
+
+### एक गोष्ट मात्र final करण्याआधी मला तुझ्याकडून confirm हवी आहे:
+
+**Driver एकाच वेळी multiple Owners साठी available असू शकतो का?**
+
+उदा.:
+
+```text
+Raj Driver
+   │
+   ├── Owner A — ACTIVE
+   ├── Owner B — ACTIVE
+   └── Owner C — ACTIVE
+```
+
+आणि जर Raj ला Owner A ची trip आणि Owner B ची trip **एकाच वेळेला नसतील**, तर दोन्ही Owners त्याला वापरू शकतील?
+
+**जर हो**, तर हा model सर्वात flexible आहे आणि `DriverOwnerAssociation` many-to-many ठेवू.
+
+**जर नाही**, तर Driver एका वेळी फक्त एका Owner कडे active राहील आणि Owner बदलताना association transfer होईल.
+
+================= ITEM 713 ================
+thoda change ahe driverchi ownership maintain nahi karayachi mhanaje kontatari owner tyala add karel pan to driver kontahi owner use karu shakto ashi requirement ahe mhanaje jyaveli to driver tithun sodel tevha tyache details system madhun delete nahi karayache tyache details fakt transfer karayache ahe mhanaje te validation che steps vachatil pan he kas karayach karan driver jar pune madhe asel ani owner kolhapur cha asel tar kas shaky hoil apan as karu shakto ki owner la sagaale driver show hotana tyane je add kele ahet te top la show karayache ani filter option dyaycha mhanaje locality nusar show hoil filter hoil
+
+
+================= ITEM 785 ================
+हो. आता requirements lock झाल्या आहेत. खाली **final SRS v2.0** चा consolidated draft देतो. यात आपण discussion मध्ये final केलेले rulesच घेतले आहेत; cancellation आणि exact subscription limits/pricing हे TBD ठेवले आहेत.
+
+:::writing{variant="document" id="58321" title="Car Rental Application — Software Requirements Specification v2.0"}
+# CAR RENTAL APPLICATION
+## Software Requirements Specification (SRS)
+
+**Version:** 2.0  
+**System:** Car Rental Application  
+**Platforms:** Customer Mobile App, Owner & Driver Mobile App, Super Admin Web App  
+**Backend:** Centralized REST API  
+**Business Model:** Owner Subscription  
+**Rental Payment:** Customer-to-Owner rental payment is outside the platform
+
+---
+
+# 1. Introduction
+
+## 1.1 Purpose
+
+The Car Rental Application connects Customers with Vehicle Owners and Drivers through a centralized backend. Super Admins manage verification, approvals, subscriptions and platform-level administration.
+
+The system supports:
+
+- Customer registration and vehicle search
+- Owner registration and subscription
+- Vehicle management
+- Driver management
+- Vehicle and Driver approval
+- Booking requests
+- Owner-Customer communication
+- Final agreed rental price recording
+- Driver assignment
+- Trip execution
+- Trip history
+- Notifications
+- Subscription management
+- Role-based access control
+
+## 1.2 Platforms
+
+| Platform | Users | Responsibility |
+|---|---|---|
+| Customer Mobile App | Customer | Search vehicles, request bookings, view confirmed trips and history |
+| Owner & Driver Mobile App | Owner, Driver, Owner+Driver | Manage vehicles, drivers, bookings and trips |
+| Super Admin Web App | Super Admin | Approvals, subscriptions, monitoring and administration |
+
+## 1.3 Centralized Architecture
+
+All three applications communicate with one centralized backend and one central database.
+
+```text
+Customer Mobile App
+        │
+Owner & Driver Mobile App
+        │
+Super Admin Web App
+        │
+        ▼
+┌─────────────────────┐
+│   Central Backend   │
+│     REST APIs       │
+└──────────┬──────────┘
+           │
+           ▼
+       Database
+```
+
+The backend is responsible for authentication, authorization and enforcement of business rules.
+
+---
+
+# 2. Roles
+
+The system contains four primary roles/capabilities:
+
+1. Customer
+2. Owner
+3. Driver
+4. Super Admin
+
+A single User identity may have Owner and Driver capabilities simultaneously.
+
+Therefore a person can be:
+
+- Owner only
+- Driver capability
+- Owner + Driver
+
+Driver self-registration is not supported.
+
+---
+
+# 3. Owner Registration
+
+## 3.1 Required Fields
+
+Owner registration requires:
+
+- Full Name
+- Mobile Number
+- Email
+- Password
+- Confirm Password
+- OTP Verification
+
+OTP verification is mandatory.
+
+## 3.2 Registration Flow
+
+```text
+Owner enters registration details
+        ↓
+Validation
+        ↓
+OTP verification
+        ↓
+Owner account created
+        ↓
+Owner Login
+```
+
+Subscription is not required merely to create/login to the account.
+
+An active subscription is required for subscription-dependent operational activities.
+
+---
+
+# 4. Owner Subscription
+
+## 4.1 Subscription Requirement
+
+An Owner must have an active subscription to use subscription-dependent operational features of the platform.
+
+## 4.2 Subscription Flow
+
+```text
+Owner Registration
+       ↓
+OTP Verification
+       ↓
+Login
+       ↓
+Select Subscription
+       ↓
+Active Subscription
+       ↓
+Operational Features
+```
+
+## 4.3 Subscription Plan
+
+Each subscription plan shall support:
+
+- Plan name
+- Duration
+- Price
+- Maximum vehicle limit
+- Maximum driver limit
+- Status
+
+Exact plan durations, prices and limits are **TBD**.
+
+## 4.4 Subscription Expiry
+
+When the subscription expires:
+
+### Accessible
+
+- Profile
+- Historical records
+- Existing confirmed trips
+- Existing ongoing trips
+
+### Restricted
+
+- New subscription-dependent operational activities
+- New vehicle/driver operational usage
+- Other operations defined as subscription-dependent
+
+Historical data must remain accessible.
+
+---
+
+# 5. Owner as Driver
+
+An Owner may choose to work as a Driver.
+
+This can happen:
+
+- During registration
+- Later from Profile
+
+Driver capability requires:
+
+- Driving License Number
+- License Front Image
+- License Back Image
+- License Expiry Date
+
+Driver functionality becomes available only after required Super Admin approval.
+
+An Owner with Driver capability may assign and operate their own trip as the Driver.
+
+---
+
+# 6. Driver Management
+
+## 6.1 Driver Creation
+
+Only an Owner can create a Driver account.
+
+```text
+Owner
+  ↓
+Add Driver
+  ↓
+Driver Account
+  ↓
+Credentials
+  ↓
+Super Admin Approval
+  ↓
+Driver Login
+```
+
+Driver does not register independently.
+
+## 6.2 Driver Information
+
+Driver information includes:
+
+- Name
+- Profile Photo
+- Mobile Number
+- Email
+- Password
+- Confirm Password
+- License Number
+- License Expiry Date
+- License Front Image
+- License Back Image
+
+## 6.3 Driver Credentials
+
+The Owner provides the Driver's login credentials.
+
+After login, the Driver may change their password.
+
+## 6.4 Driver Approval
+
+Driver status:
+
+```text
+PENDING_APPROVAL
+       ↓
+APPROVED
+       ↓
+ACTIVE / INACTIVE
+```
+
+Rejected Driver:
+
+```text
+PENDING_APPROVAL
+       ↓
+REJECTED
+       ↓
+RESUBMISSION
+       ↓
+PENDING_APPROVAL
+```
+
+Rejection reason is mandatory.
+
+---
+
+# 7. Driver Availability
+
+Driver approval and Driver availability are separate concepts.
+
+## 7.1 Availability
+
+A Driver can set their own availability:
+
+- ACTIVE
+- INACTIVE
+
+### ACTIVE
+
+The Driver may appear in Driver Assignment.
+
+### INACTIVE
+
+The Driver must not appear in the Driver Assignment selection.
+
+The Driver must provide an inactive reason.
+
+Example:
+
+```text
+Status: INACTIVE
+Reason: On Leave
+```
+
+The inactive reason is visible to the Owner.
+
+## 7.2 Busy Driver
+
+If a Driver is already assigned to a booking/trip for the requested period, the Driver must not be available for another conflicting assignment.
+
+The Driver should not appear as an assignable Driver.
+
+## 7.3 Driver Restrictions
+
+Driver cannot:
+
+- Accept/reject Customer booking requests
+- Assign another Driver
+- Approve vehicles
+- Approve Drivers
+
+Driver can:
+
+- View assigned trips
+- Start assigned trips
+- End assigned trips
+- View trip history
+- Change own password
+- Manage own availability
+
+---
+
+# 8. Vehicle Management
+
+## 8.1 Vehicle Information
+
+Owner can add:
+
+- Vehicle Brand
+- Vehicle Model
+- Vehicle Number
+- Vehicle Type
+- Model Year
+- Seating Capacity
+- Fuel Type
+- Registration Date
+- Vehicle City
+- Rate per KM
+- AC Rate per KM
+- Vehicle Features
+- Front Image
+- Back Image
+- Left Image
+- Right Image
+- Interior Image
+- RC Front Image
+- RC Back Image
+
+## 8.2 Vehicle Ownership
+
+Every vehicle belongs to one Owner.
+
+A vehicle belonging to one Owner cannot be managed by another Owner.
+
+## 8.3 Vehicle City
+
+Every vehicle has an operating/pickup city.
+
+Example:
+
+```text
+Vehicle City = Mumbai
+```
+
+For that vehicle, the Customer pickup city must be Mumbai.
+
+---
+
+# 9. Vehicle Approval
+
+New vehicles require Super Admin approval before becoming operational.
+
+```text
+DRAFT
+  ↓
+PENDING_APPROVAL
+  ↓
+APPROVED
+  ↓
+ACTIVE / INACTIVE
+```
+
+Rejected vehicle:
+
+```text
+PENDING_APPROVAL
+  ↓
+REJECTED
+  ↓
+Owner Correction
+  ↓
+RESUBMITTED
+  ↓
+PENDING_APPROVAL
+```
+
+Rejection reason is mandatory.
+
+Customer can see only vehicles that are:
+
+- Approved
+- Active
+- Available for the requested period
+
+---
+
+# 10. Vehicle Availability
+
+Vehicle availability depends on:
+
+1. Approval status
+2. Owner active/inactive status
+3. Existing booking/trip conflict
+4. Owner's operational decision
+
+If a vehicle is already booked for the requested period, it must not be shown as available to the Customer.
+
+After trip completion, the Owner may make the vehicle available again.
+
+If the vehicle is under servicing or unavailable for another reason, the Owner can keep it inactive.
+
+---
+
+# 11. Customer Registration
+
+Customer registration requires:
+
+- Full Name
+- Mobile Number
+- Email
+- Password
+- Confirm Password
+
+Mobile Number is mandatory.
+
+Customer uses the account to:
+
+- Search vehicles
+- View vehicle details
+- Submit booking requests
+- View booking status
+- View confirmed trip details
+- Receive notifications
+- View trip history
+
+---
+
+# 12. Vehicle Search
+
+Vehicle search is **city-based**.
+
+The Customer selects a city.
+
+Example:
+
+```text
+Customer selects Mumbai
+        ↓
+Mumbai vehicles
+```
+
+or:
+
+```text
+Customer selects Pune
+        ↓
+Pune vehicles
+```
+
+The system displays vehicles available in the selected city.
+
+Search/filter options may include:
+
+- City
+- Vehicle Type
+- Brand/Model
+- Seating Capacity
+- Fuel Type
+- AC/Non-AC
+- Pricing
+- Availability
+- Trip Type
+
+`All` is a search/filter option, not a booking Trip Type.
+
+There is no live GPS-based vehicle search.
+
+---
+
+# 13. Vehicle Details
+
+Customer can view:
+
+- Vehicle Images
+- Vehicle Name
+- Brand
+- Model
+- Vehicle Type
+- Seating Capacity
+- Fuel Type
+- AC/Non-AC
+- Rate per KM
+- Features
+- City
+- Availability
+
+Customer cannot view:
+
+- RC documents
+- License documents
+- Verification documents
+- Other private administrative documents
+
+---
+
+# 14. AC / Non-AC
+
+Customer can select AC/Non-AC preference.
+
+If a vehicle is Non-AC, the system must clearly identify it as:
+
+**Non-AC**
+
+If the vehicle supports AC, the applicable AC option/rate may be displayed.
+
+---
+
+# 15. Booking Request
+
+Customer selects a vehicle and enters:
+
+- Pickup City
+- Pickup Address
+- Drop Location
+- Pickup Date
+- Pickup Time
+- Return Date, if applicable
+- Number of Passengers
+- Trip Type
+- AC/Non-AC preference
+- Customer Mobile Number
+- Additional Trip Details
+
+## 15.1 Trip Type
+
+Booking Trip Types:
+
+- Local
+- Outstation
+
+Search filter:
+
+- All
+- Local
+- Outstation
+
+## 15.2 Pickup City Rule
+
+The pickup city must match the vehicle's operating city.
+
+Example:
+
+```text
+Vehicle City = Mumbai
+
+Pickup = Mumbai ✓
+Pickup = Pune ✗
+```
+
+---
+
+# 16. Booking Workflow
+
+The final booking lifecycle is:
+
+```text
+PENDING
+   ↓
+Owner Review
+   ↓
+Owner ↔ Customer Communication
+   ↓
+Trip Details / Final Price Agreed
+   ↓
+ACCEPTED
+   ↓
+Driver Assignment
+   ↓
+CONFIRMED
+   ↓
+TRIP_STARTED
+   ↓
+TRIP_COMPLETED
+```
+
+## 16.1 Pending
+
+Customer submits the booking request.
+
+The booking enters `PENDING`.
+
+## 16.2 Owner-Customer Communication
+
+The Owner contacts the Customer using the Customer's booking contact number.
+
+The Owner and Customer discuss:
+
+- Trip details
+- Availability
+- Final rental price
+- Other necessary trip arrangements
+
+## 16.3 Accepted
+
+After the Owner accepts the booking:
+
+```text
+PENDING → ACCEPTED
+```
+
+Rejection:
+
+```text
+PENDING → REJECTED
+```
+
+Rejection reason is mandatory.
+
+## 16.4 Final Agreed Price
+
+The displayed vehicle rate is not necessarily the final rental amount.
+
+The Customer and Owner agree on the final rental amount outside the platform communication/payment process.
+
+The final agreed amount must be stored with the booking.
+
+Example:
+
+```text
+Vehicle Rate = ₹X/km
+
+Customer ↔ Owner
+
+Final Agreed Amount = ₹Y
+
+Booking.agreedAmount = ₹Y
+```
+
+The platform stores the agreed amount but does not process Customer-to-Owner rental payment.
+
+---
+
+# 17. Driver Assignment
+
+After the Owner accepts the booking and the trip details/final price are agreed, the Owner assigns a Driver.
+
+The Driver must:
+
+- Be approved
+- Be active
+- Not be inactive
+- Not have a conflicting trip
+- Belong to the same Owner
+
+Any approved Driver may operate any vehicle belonging to that Owner. There is no vehicle-specific Driver restriction.
+
+## 17.1 Confirmation
+
+```text
+ACCEPTED
+    ↓
+Driver Assigned
+    ↓
+CONFIRMED
+```
+
+The booking becomes `CONFIRMED` after Driver assignment.
+
+---
+
+# 18. Vehicle/Driver Booking Conflict
+
+A Driver or Vehicle already booked for the requested period must not be available for another conflicting assignment.
+
+## Driver
+
+```text
+Driver A
+   ↓
+Already assigned
+   ↓
+Not shown in assignment
+```
+
+## Vehicle
+
+```text
+Vehicle A
+   ↓
+Already booked
+   ↓
+Not shown as available
+```
+
+This prevents double assignment and double booking.
+
+---
+
+# 19. Confirmed Trip Information
+
+After confirmation, Customer can view:
+
+- Driver Name
+- Driver Mobile Number
+- Vehicle Name/Model
+- Vehicle Number
+- Confirmed trip details
+- Final agreed rental amount
+
+Customer cannot view Driver verification documents.
+
+---
+
+# 20. Trip Start
+
+The Driver starts the trip using an OTP verification process.
+
+```text
+Driver selects Start Trip
+        ↓
+System generates OTP
+        ↓
+Customer receives OTP
+        ↓
+Customer provides OTP to Driver
+        ↓
+Driver enters OTP
+        ↓
+System validates OTP
+        ↓
+TRIP_STARTED
+```
+
+The system records:
+
+- Booking
+- Driver
+- Vehicle
+- Start time
+
+---
+
+# 21. Trip Completion
+
+After the journey is completed, the Driver selects:
+
+**End Trip**
+
+The system records:
+
+- End time
+- Booking
+- Driver
+- Vehicle
+
+Status changes:
+
+```text
+TRIP_STARTED
+      ↓
+TRIP_COMPLETED
+```
+
+---
+
+# 22. Vehicle Replacement
+
+If the confirmed vehicle becomes unavailable/problematic:
+
+```text
+Confirmed Trip
+      ↓
+Vehicle Problem
+      ↓
+Owner Contacts Customer
+      ↓
+Replacement Discussed
+      ↓
+Decision
+      ↓
+New Vehicle
+      ↓
+Customer Notification
+```
+
+The Owner must not silently replace the confirmed vehicle.
+
+The Customer must be informed and the replacement decision must be communicated.
+
+---
+
+# 23. Driver Replacement
+
+If the assigned Driver becomes unavailable:
+
+```text
+Confirmed Trip
+      ↓
+Driver Unavailable
+      ↓
+Owner Assigns Another Approved/Active Driver
+      ↓
+Customer Notification
+      ↓
+New Driver Details
+```
+
+The replacement Driver must satisfy all normal Driver assignment rules.
+
+Customer receives the new Driver details through notification.
+
+---
+
+# 24. Cancellation
+
+Cancellation is supported as a possible booking/trip state.
+
+However, the detailed cancellation policy is currently:
+
+**TBD**
+
+The following are yet to be defined:
+
+- Who can cancel
+- When cancellation is allowed
+- Cancellation reason
+- Cancellation penalty
+- Cancellation after confirmation
+- Cancellation after trip start
+
+---
+
+# 25. Trip History
+
+## Customer
+
+Customer can view:
+
+- Pending bookings
+- Accepted/confirmed bookings
+- Ongoing trips
+- Completed trips
+- Cancelled trips
+- Booking history
+
+## Owner
+
+Owner can view:
+
+- Pending requests
+- Accepted bookings
+- Confirmed trips
+- Upcoming trips
+- Ongoing trips
+- Completed trips
+- Cancelled records
+- Vehicle history
+- Driver history
+
+## Driver
+
+Driver can view:
+
+- Assigned trips
+- Upcoming trips
+- Ongoing trips
+- Completed trips
+- Trip history
+
+---
+
+# 26. Notifications
+
+The system shall provide notifications for important events.
+
+## Owner
+
+- Vehicle approval/rejection
+- Driver approval/rejection
+- New booking request
+- Booking accepted/rejected
+- Driver assignment
+- Vehicle/Driver changes
+- Trip updates
+- Subscription expiry
+
+## Driver
+
+- Account approval/rejection
+- Trip assignment
+- Trip changes
+- Replacement/cancellation notifications
+- Trip reminders
+- Trip updates
+
+## Customer
+
+- Booking submitted
+- Booking accepted
+- Booking rejected + reason
+- Booking confirmed
+- Driver assignment
+- Driver replacement
+- Vehicle replacement
+- Trip started
+- Trip completed
+- Cancellation/update notifications
+
+---
+
+# 27. Subscription Management
+
+Owner can:
+
+- View plans
+- Select plan
+- Subscribe
+- View current plan
+- View expiry date
+- Renew subscription
+- View subscription history
+- Receive expiry notifications
+
+Subscription limits may control:
+
+- Maximum vehicles
+- Maximum Drivers
+
+Exact limits are defined by the selected subscription plan.
+
+---
+
+# 28. Super Admin
+
+Super Admin uses the Web Application.
+
+## Dashboard
+
+Admin can view:
+
+- Total Owners
+- Total Customers
+- Total Vehicles
+- Total Drivers
+- Pending Vehicle Approvals
+- Pending Driver Approvals
+- Active Subscriptions
+- Expired Subscriptions
+- Total Bookings
+- Active Trips
+- Completed Trips
+
+## Vehicle Approval
+
+Admin can:
+
+- View Owner information
+- View vehicle information
+- View RC documents
+- View vehicle images
+- Review specifications
+- Approve vehicle
+- Reject vehicle
+- Provide rejection reason
+
+## Driver Approval
+
+Admin can:
+
+- View Driver information
+- View license information
+- View license documents
+- View Owner relationship
+- Approve Driver
+- Reject Driver
+- Provide rejection reason
+
+## Administration
+
+Admin can:
+
+- Manage subscription plans
+- Monitor users
+- Monitor vehicles
+- Monitor drivers
+- Monitor bookings
+- Manage notifications/settings
+- View approval history
+- View reports/monitoring information
+
+---
+
+# 29. Business Rules
+
+1. Owner must register and verify OTP before using the account.
+2. Customer mobile number is mandatory.
+3. Driver cannot self-register.
+4. Only an Owner can create a Driver.
+5. Driver receives credentials from the Owner.
+6. Driver can change their password.
+7. Owner may also operate as a Driver after approval.
+8. Owner subscription is required for subscription-dependent operational activities.
+9. Subscription is time-based and may impose vehicle and Driver limits.
+10. Existing confirmed/ongoing trips continue after subscription expiry.
+11. Historical records remain accessible after subscription expiry.
+12. Vehicles require Super Admin approval.
+13. Drivers require Super Admin approval.
+14. Rejection reason is mandatory for vehicle/Driver rejection.
+15. Rejected vehicles/Drivers may be resubmitted.
+16. Vehicle belongs to one Owner.
+17. Driver belongs to one Owner.
+18. Owner controls their vehicles and Drivers.
+19. Driver controls their own availability.
+20. Driver inactive status requires a reason.
+21. Inactive Drivers do not appear in Driver assignment.
+22. Busy Drivers do not appear as available for conflicting assignments.
+23. Booked vehicles do not appear as available for conflicting dates/times.
+24. Customer searches vehicles by city.
+25. Vehicle pickup city must match the selected vehicle city.
+26. Customer can search different cities independently.
+27. Booking Trip Types are Local and Outstation.
+28. `All` is a search/filter option.
+29. Customer submits booking requests.
+30. Owner reviews booking requests.
+31. Owner and Customer may communicate before final acceptance.
+32. Owner accepts or rejects the booking.
+33. Booking rejection requires a reason.
+34. Final agreed rental amount is stored in the booking.
+35. Rental payment between Customer and Owner is outside the platform.
+36. Owner assigns an approved and available Driver.
+37. Booking becomes confirmed after Driver assignment.
+38. Driver cannot accept/reject Customer bookings.
+39. Driver can start/end only assigned trips.
+40. Trip Start requires OTP verification.
+41. Customer receives confirmed Driver and Vehicle details.
+42. Driver verification documents are private.
+43. Vehicle replacement requires communication with the Customer.
+44. Driver replacement triggers Customer notification with new Driver details.
+45. No live Driver tracking is provided.
+46. No rating/review system is included.
+47. Cancellation policy is TBD.
+48. One Driver cannot have conflicting trips.
+49. One Vehicle cannot have conflicting bookings.
+50. Backend enforces all business rules.
+
+---
+
+# 30. Role-Based Access
+
+| Feature | Super Admin | Owner | Driver | Owner + Driver | Customer |
+|---|---:|---:|---:|---:|---:|
+| Approve Vehicle | ✓ | — | — | — | — |
+| Approve Driver | ✓ | — | — | — | — |
+| Add Vehicle | — | ✓ | — | ✓ | — |
+| Add Driver | — | ✓ | — | ✓ | — |
+| Manage Own Vehicles | — | ✓ | — | ✓ | — |
+| Manage Own Drivers | — | ✓ | — | ✓ | — |
+| Set Driver Availability | — | — | ✓ | ✓ | — |
+| Accept Booking | — | ✓ | — | ✓ | — |
+| Reject Booking | — | ✓ | — | ✓ | — |
+| Assign Driver | — | ✓ | — | ✓ | — |
+| View Assigned Trips | — | ✓ | ✓ | ✓ | — |
+| Start Trip | — | — | ✓ | ✓ | — |
+| End Trip | — | — | ✓ | ✓ | — |
+| Book Vehicle | — | — | — | — | ✓ |
+| View Trip History | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Manage Subscription | ✓ | ✓ | — | ✓ | — |
+| Approve Users/Entities | ✓ | — | — | — | — |
+
+---
+
+# 31. Core Data Entities
+
+The system should contain the following core entities:
+
+| Entity | Purpose |
+|---|---|
+| User | Common identity and authentication |
+| Role/Capability | Customer, Owner, Driver capabilities |
+| Customer Profile | Customer-specific information |
+| Owner Profile | Owner-specific information |
+| Driver Profile | Driver information and availability |
+| Vehicle | Vehicle information, pricing and availability |
+| Vehicle Document | RC and verification documents |
+| Driver Document | License and verification documents |
+| Subscription | Owner subscription, limits and history |
+| Subscription Plan | Plan duration, price and limits |
+| Booking | Customer request, agreed price and booking status |
+| Trip | Confirmed trip, assignment and timestamps |
+| Notification | User notifications |
+| Approval | Admin approval/rejection records |
+
+---
+
+# 32. High-Level Booking State Model
+
+```text
+                    ┌──────────────┐
+                    │    PENDING   │
+                    └──────┬───────┘
+                           │
+             ┌─────────────┴─────────────┐
+             │                           │
+             ▼                           ▼
+        ┌──────────┐               ┌──────────┐
+        │ REJECTED │               │ ACCEPTED │
+        └──────────┘               └────┬─────┘
+                                        │
+                                 Driver Assigned
+                                        │
+                                        ▼
+                                  ┌───────────┐
+                                  │ CONFIRMED │
+                                  └─────┬─────┘
+                                        │
+                                   OTP Verified
+                                        │
+                                        ▼
+                                 ┌─────────────┐
+                                 │ TRIP_STARTED│
+                                 └──────┬──────┘
+                                        │
+                                    End Trip
+                                        │
+                                        ▼
+                                 ┌───────────────┐
+                                 │TRIP_COMPLETED │
+                                 └───────────────┘
+```
+
+Cancellation remains a separate TBD business rule.
+
+---
+
+# 33. Non-Functional Requirements
+
+## 33.1 Security
+
+The system shall provide:
+
+- Secure authentication
+- Secure password storage
+- Role/capability-based authorization
+- Protected document access
+- OTP verification
+- Customer/Driver privacy
+- Server-side business-rule validation
+
+## 33.2 Reliability
+
+The system shall:
+
+- Prevent double vehicle booking
+- Prevent conflicting Driver assignments
+- Handle booking state transitions consistently
+- Record trip start/end reliably
+- Maintain approval history
+- Maintain subscription history
+- Maintain replacement/change history
+
+## 33.3 Performance
+
+The system should:
+
+- Return city-based vehicle search efficiently
+- Provide prompt booking status updates
+- Handle concurrent users
+- Prevent inconsistent booking/assignment states
+
+## 33.4 Auditability
+
+The system should record:
+
+- Approval decisions
+- Rejection reasons
+- Booking state changes
+- Final agreed rental amount
+- Driver assignments
+- Driver replacements
+- Vehicle replacements
+- Trip start/end timestamps
+- Subscription history
+
+---
+
+# 34. Features Explicitly Outside Current Scope
+
+The following are not part of the current system scope:
+
+- Customer-to-Owner rental payment processing
+- Live Driver GPS tracking
+- Customer-to-Driver rating
+- Customer-to-Owner rating
+- Vehicle reviews
+- Customer access to RC/license documents
+- Driver self-registration
+- Vehicle-specific Driver restrictions
+- GPS-based nearby vehicle search
+
+---
+
+# 35. End-to-End Example
+
+An Owner registers with Name, Mobile Number, Email and Password and completes OTP verification.
+
+The Owner logs in and selects an active subscription.
+
+The Owner adds a Mumbai vehicle with its specifications, pricing and RC documents. The vehicle enters pending approval. Super Admin reviews the vehicle and approves it.
+
+The Owner creates a Driver account and provides the Driver credentials. The Driver's information and license documents are submitted for Super Admin approval. After approval, the Driver can log in and control their own availability.
+
+A Customer selects Mumbai and searches for available vehicles. Only approved, active and non-conflicting vehicles are shown.
+
+The Customer selects a vehicle and submits a booking request with pickup, drop, date, time, passenger and contact information.
+
+The Owner receives the request and contacts the Customer. The Customer and Owner discuss the trip and agree on the final rental amount.
+
+The Owner accepts the request and assigns an approved, active and available Driver. The booking becomes confirmed.
+
+The Customer receives the Driver and Vehicle details.
+
+If the assigned Driver later becomes unavailable, the Owner assigns another approved/active Driver and the Customer receives a notification containing the new Driver details.
+
+If the Vehicle becomes unavailable, the Owner communicates with the Customer and agrees on the replacement arrangement. The Customer receives the updated Vehicle information.
+
+At trip start, the Driver requests the system-generated OTP from the Customer and enters it into the application. After successful verification, the trip becomes `TRIP_STARTED`.
+
+After completing the journey, the Driver selects End Trip and the trip becomes `TRIP_COMPLETED`.
+
+The completed trip remains available in the appropriate Customer, Owner and Driver histories.
+
+Customer-to-Owner rental payment is handled outside the platform. The platform stores the final agreed rental amount but does not process that rental payment.
+
+---
+
+# 36. Final System Summary
+
+The Car Rental Application consists of:
+
+1. Customer Mobile App
+2. Owner & Driver Mobile App
+3. Super Admin Web App
+4. One Central Backend
+5. One Central Database
+
+The core lifecycle is:
+
+```text
+Registration
+    ↓
+Subscription
+    ↓
+Vehicle/Driver Addition
+    ↓
+Admin Approval
+    ↓
+City-Based Vehicle Search
+    ↓
+Booking Request
+    ↓
+Owner-Customer Communication
+    ↓
+Final Price Agreement
+    ↓
+Owner Acceptance
+    ↓
+Driver Assignment
+    ↓
+Booking Confirmation
+    ↓
+OTP-Based Trip Start
+    ↓
+Trip Completion
+    ↓
+Trip History
+```
+
+Owner and Driver capabilities are associated with a common User identity, while vehicles and Drivers belong to their respective Owner.
+
+The platform subscription is paid by Owners. Customer-to-Owner rental payment remains outside the application.
+
+**Open/TBD business items:**
+
+1. Exact subscription plan prices
+2. Subscription duration values
+3. Vehicle limits per plan
+4. Driver limits per plan
+5. Detailed cancellation policy
+:::
+
+हे आता **SRS v2.0 चा consolidated version** आहे. यामध्ये तुझ्या शेवटच्या changes प्रमाणे Driver स्वतः `ACTIVE/INACTIVE` करू शकतो, inactive reason Owner ला दिसतो, city-based vehicle search आहे, आणि booked Driver/Vehicle availability results मधूनच exclude होतात.
+
+================= ITEM 932 ================
+हो, हे changes योग्य आहेत. त्यामुळे मागच्या change list मधले **Driver availability, location search आणि availability rules** आपण आणखी precise करू.
+
+### 10. Driver Active / Inactive — revised
+
+Driver स्वतःचा availability status control करेल.
+
+```text id="9b5k0f"
+Driver
+  │
+  ├── ACTIVE
+  │     ↓
+  │   Driver Assignment मध्ये दिसेल
+  │
+  └── INACTIVE
+        ↓
+      Driver Assignment मध्ये दिसणार नाही
+        ↓
+      Inactive Reason mandatory
+```
+
+उदा. Driver:
+
+> Inactive — आज available नाही / personal work / leave
+
+हा **reason Owner ला दिसेल**, जेणेकरून Owner ला Driver assign का करता येत नाही हे समजेल.
+
+पण Owner/Admin approval status आणि Driver availability वेगळे ठेवणे महत्त्वाचे आहे:
+
+```text id="f8c2kl"
+Approval Status:
+PENDING_APPROVAL → APPROVED → ...
+
+Availability:
+ACTIVE ↔ INACTIVE
+```
+
+म्हणजे Admin ने approved केलेला Driver स्वतः temporarily inactive होऊ शकतो.
+
+---
+
+### 12. Location-based vehicle search — revised
+
+आता requirement स्पष्ट आहे: **customer स्वतः city निवडून vehicles search करेल.**
+
+उदा.:
+
+```text id="v0h4yo"
+Customer
+   ↓
+Select City
+   ↓
+Mumbai
+   ↓
+Mumbai मधील approved + active + available vehicles
+```
+
+किंवा:
+
+```text id="6b1d9a"
+Customer
+   ↓
+Select City
+   ↓
+Pune
+   ↓
+Pune मधील approved + active + available vehicles
+```
+
+म्हणून `Location` म्हणजे **vehicle operating/pickup city**.
+
+Customer Mumbai search करत असेल तर Mumbai मधील vehicles दाखवायचे; Pune search केल्यास Pune मधील vehicles.
+
+आणि आपण आधी ठरवल्याप्रमाणे:
+
+> **Pickup city = Selected vehicle city**
+
+म्हणून Mumbai vehicle साठी Pune pickup request करता येणार नाही.
+
+Current SRS मध्ये Location-based vehicle search आधीच आहे; आपण त्याचा अर्थ आता **city-based search** असा explicitly define करतो. fileciteturn0file0L160-L170
+
+---
+
+### 18 & 19. Driver आणि Vehicle availability — revised
+
+इथे तुझा rule simple ठेवू:
+
+#### Driver already booked
+
+```text id="s5q9bw"
+Driver A
+   ↓
+Already assigned to Trip
+   ↓
+Driver Assignment मध्ये दिसणार नाही
+```
+
+Grey/disabled करण्याची गरज नाही; **available assignment list मधूनच remove** करणे cleaner आहे.
+
+#### Vehicle already booked
+
+```text id="u2e3dn"
+Vehicle A
+   ↓
+Already booked for requested period
+   ↓
+Customer search/result मध्ये दिसणार नाही
+```
+
+म्हणजे Customer ला unavailable vehicle दाखवायचेच नाही.
+
+---
+
+### Final availability rule
+
+```text id="p2s8xk"
+                VEHICLE
+                   │
+        ┌──────────┴──────────┐
+        │                     │
+    APPROVED              NOT APPROVED
+        │                     │
+        ▼                     X
+     ACTIVE
+        │
+        ▼
+Available for requested dates?
+        │
+    ┌───┴────┐
+   YES       NO
+    │         │
+    ▼         X
+  SHOW      HIDE
+```
+
+Driver साठी:
+
+```text id="h7t5om"
+APPROVED
+   ↓
+ACTIVE?
+   │
+ YES ──→ Available + no conflicting trip
+   │
+ NO
+   ↓
+Hide from assignment
+```
+
+आणि **Driver inactive reason Owner ला दिसेल.**
+
+---
+
+### त्यामुळे final business rules मध्ये हे तीन वेगळे concepts राहतील
+
+1. **Admin Approval** — entity system मध्ये operationally eligible आहे का?
+2. **Active/Inactive** — Owner/Driver सध्या available आहे का?
+3. **Booking Conflict** — specific date/time ला vehicle/driver already occupied आहे का?
+
+हे तीन वेगळे ठेवणे आपल्या backend आणि database design साठीही खूप clean राहील.
+
+Current SRS मध्ये driver ला active/available आणि conflicting trip नसण्याची requirement आधीपासून आहे; आपण आता त्यात **Driver-controlled inactive status + reason** explicitly add करत आहोत. fileciteturn0file0L208-L214
+
+================= ITEM 954 ================
+10.ashi karu shakto driver decide active/inactive if inactive not visibal in driver assignement and specify reason to know owner 12.location based search asel jar customer la mumbai madhin car havi asel tar to mumbai search karel ,jar tyala punyatun havi asel tar pune search karel 18,19.jr driver ,car book asel tar show nahi karayachi 
+
+================= ITEM 1293 ================
+हो. आता आपण **current SRS चा section-by-section change review** करू. मी तुझ्या answers ला source of truth मानतो आणि जिथे current SRS तुझ्या नवीन decision शी conflict आहे तिथे स्पष्टपणे सांगतो. Current document 22 sections मध्ये आहे आणि तीन platforms + centralized backend architecture define करतो. fileciteturn0file0L1-L14
+
+# Final SRS — Change List
+
+## 1. Introduction
+
+### 🟢 Keep
+हे ठेवायचे:
+
+- Customer Mobile App
+- Owner & Driver Mobile App
+- Super Admin Web App
+- Centralized Backend
+- Customer, Owner, Driver, Super Admin roles
+- Owner subscription model
+- Customer-to-Owner rental payment platform बाहेर
+
+हे मूलतः योग्य आहे. fileciteturn0file0L17-L34
+
+### 🟡 Modify
+
+Current scope मध्ये booking/trip flow आहे, पण नवीन flow नुसार:
+
+> Customer आणि Owner booking request नंतर contact करून trip details आणि final agreed rental price ठरवतील.
+
+हे scope मध्ये explicitly add करायचे.
+
+---
+
+# 2. System Overview
+
+Current core flow:
+
+`Owner Registration → Subscription → Vehicle → Approval → Driver → Customer → Booking → Owner → Driver → Trip`
+
+fileciteturn0file0L35-L45
+
+### 🔄 Final flow
+
+```text
+Owner Registration
+      ↓
+OTP Verification
+      ↓
+Login
+      ↓
+Choose Subscription
+      ↓
+Active Subscription
+      ↓
+Add Vehicle
+      ↓
+Admin Vehicle Approval
+      ↓
+Add Driver
+      ↓
+Admin Driver Approval
+      ↓
+Customer Search
+      ↓
+Booking Request
+      ↓
+Owner + Customer Contact
+      ↓
+Final Price / Trip Details Agreed
+      ↓
+Owner Accepts
+      ↓
+Driver Assignment
+      ↓
+CONFIRMED
+      ↓
+Trip + OTP
+      ↓
+Completed
+```
+
+### 🔴 Important correction
+
+Subscription **registration च्या आधी mandatory नाही**.
+
+तुझ्या decision नुसार:
+
+> Owner first registers and logs in; subscription is required when the Owner wants to use subscription-dependent operational features.
+
+---
+
+# 3. Roles and Access
+
+Current document Owner, Driver आणि Owner+Driver access define करतो. fileciteturn0file0L46-L52
+
+### 🟢 Keep
+
+- Owner
+- Driver
+- Owner + Driver
+- Customer
+- Super Admin
+
+### 🟡 Modify
+
+Driver स्वतः register करू शकत नाही.
+
+Final:
+
+```text
+Owner
+  ↓
+Add Driver
+  ↓
+Credentials generated/provided
+  ↓
+Driver Login
+```
+
+Driver password नंतर स्वतः change करू शकतो.
+
+---
+
+# 4. Owner Registration
+
+Current fields:
+
+- Full Name
+- Mobile
+- Email
+- Password
+- Confirm Password
+- OTP
+
+fileciteturn0file0L55-L68
+
+### 🟢 Keep exactly
+
+हे final आहे.
+
+OTP verification mandatory.
+
+---
+
+# 5. Owner as Driver
+
+### 🟢 Keep
+
+Owner registration वेळी:
+
+> "Do you want to work as a Driver also?"
+
+Yes/No.
+
+जर Yes:
+
+- License Number
+- License Front
+- License Back
+- Expiry Date
+
+Admin approval नंतर Driver capability active.
+
+Owner नंतर Profile मधूनही Driver म्हणून apply करू शकतो. fileciteturn0file0L63-L68
+
+### 🟡 Add
+
+Owner स्वतः assigned Driver म्हणून काम करू शकतो.
+
+---
+
+# 6. Subscription
+
+Current SRS subscription model सांगतो पण **limits स्पष्ट नाहीत**. fileciteturn0file0L230-L242
+
+### 🆕 Add
+
+Subscription plan मध्ये:
+
+```text
+Plan
+Duration
+Price
+Maximum Vehicles
+Maximum Drivers
+Status
+```
+
+उदा.:
+
+```text
+Basic
+30 Days
+5 Vehicles
+2 Drivers
+
+Premium
+90 Days
+20 Vehicles
+10 Drivers
+```
+
+**Actual numbers अजून आपण ठरवलेले नाहीत**, त्यामुळे final SRS मध्ये example numbers ठेवणार नाही.
+
+### Subscription expiry
+
+```text
+Expired
+ ↓
+Profile ✓
+History ✓
+Existing Confirmed Trips ✓
+Existing Ongoing Trips ✓
+
+New operational activities ✗
+```
+
+---
+
+# 7. Vehicle Management
+
+Current vehicle fields चांगले आहेत. fileciteturn0file0L85-L100
+
+### 🟢 Keep
+
+- Brand
+- Model
+- Vehicle Number
+- Type
+- Model Year
+- Seating Capacity
+- Fuel Type
+- Registration Date
+- RC
+- Rate/km
+- AC Rate/km
+- Features
+- Images
+
+### 🆕 Add
+
+**Vehicle City**
+
+कारण current requirement:
+
+```text
+Vehicle City = Mumbai
+        ↓
+Pickup must be Mumbai
+```
+
+City-based search.
+
+---
+
+# 8. Vehicle Approval
+
+Current status model:
+
+`Draft → Pending Approval → Approved → Active/Inactive`
+
+fileciteturn0file0L101-L115
+
+### 🟢 Keep
+
+### 🆕 Modify rejection
+
+Reject करताना:
+
+> **Rejection Reason mandatory**
+
+नंतर:
+
+```text
+REJECTED
+   ↓
+Owner correction
+   ↓
+RESUBMIT
+   ↓
+PENDING_APPROVAL
+```
+
+---
+
+# 9. Driver Management
+
+Current Driver fields आहेत. fileciteturn0file0L117-L128
+
+### 🟢 Keep
+
+### 🆕 Add
+
+Driver creation:
+
+```text
+Owner
+ ↓
+Add Driver
+ ↓
+Driver Account
+ ↓
+Credentials
+ ↓
+Admin Approval
+ ↓
+Driver Login
+```
+
+Driver self-registration नाही.
+
+---
+
+# 10. Driver Status
+
+### 🟢 Keep
+
+```text
+PENDING_APPROVAL
+APPROVED
+ACTIVE
+INACTIVE
+REJECTED
+```
+
+### Business rule
+
+Owner Driver ला Active/Inactive करू शकतो.
+
+```text
+ACTIVE
+ ↓
+Eligible for assignment
+
+INACTIVE
+ ↓
+Not eligible
+```
+
+---
+
+# 11. Customer
+
+Current customer features broadly correct आहेत. fileciteturn0file0L148-L166
+
+### 🆕 Customer Signup
+
+Mandatory:
+
+```text
+Name
+Mobile Number
+Email
+Password
+Confirm Password
+```
+
+Mobile number mandatory.
+
+---
+
+# 12. Vehicle Search
+
+Current search:
+
+- Vehicle type
+- Brand/model
+- Seating
+- Fuel
+- Location
+- Availability
+- Pricing
+
+fileciteturn0file0L160-L170
+
+### 🟡 Modify location
+
+Location = **City-based**.
+
+Customer Mumbai select करतो:
+
+```text
+Mumbai
+ ↓
+Mumbai vehicles
+```
+
+Pickup location:
+
+```text
+Vehicle City = Mumbai
+Pickup City = Mumbai ✓
+Pickup City = Pune ✗
+```
+
+Live GPS-based nearby search नाही.
+
+---
+
+# 13. AC / Non-AC
+
+### 🆕 Add explicit requirement
+
+Customer booking/search करताना AC/Non-AC preference select करू शकतो.
+
+Vehicle Non-AC असेल तर UI मध्ये:
+
+`Non-AC`
+
+स्पष्ट दिसेल.
+
+---
+
+# 14. Booking Request
+
+Current fields मध्ये pickup/drop/date/time/passengers/trip details आहेत. fileciteturn0file0L181-L191
+
+### 🆕 Add
+
+```text
+Customer Mobile Number
+Pickup Address
+Trip Type
+AC/Non-AC
+```
+
+Trip Type:
+
+- Local
+- Outstation
+
+`All` हा search filter आहे, booking type नाही.
+
+---
+
+# 15. Booking Workflow
+
+हा section सर्वात जास्त बदलणार आहे.
+
+### ❌ Current simplified flow
+
+`PENDING → ACCEPTED → DRIVER ASSIGNED`
+
+### ✅ Final
+
+```text
+PENDING
+   ↓
+Owner reviews
+   ↓
+Owner + Customer contact
+   ↓
+Trip details/final price agreed
+   ↓
+ACCEPTED
+   ↓
+Driver assigned
+   ↓
+CONFIRMED
+   ↓
+TRIP_STARTED
+   ↓
+TRIP_COMPLETED
+```
+
+Reject:
+
+```text
+PENDING
+   ↓
+REJECTED
+   +
+Mandatory Reason
+```
+
+---
+
+# 16. Final Agreed Price
+
+### 🆕 New requirement
+
+Vehicle वर displayed:
+
+`Rate per KM`
+
+Customer आणि Owner contact करून final price ठरवतील.
+
+उदा.:
+
+```text
+Displayed Rate = ₹X/km
+
+Agreed Amount = ₹Y
+
+Booking:
+Agreed Amount = ₹Y
+```
+
+System agreed amount **store करेल**, पण payment process करणार नाही.
+
+---
+
+# 17. Contact Information
+
+### 🆕 Add
+
+Booking मध्ये Customer mobile number उपलब्ध असेल.
+
+Owner Customer शी contact करू शकतो.
+
+Confirmed booking नंतर Customer ला:
+
+```text
+Driver Name
+Driver Mobile
+Vehicle Name
+Vehicle Number
+```
+
+मिळतील.
+
+---
+
+# 18. Driver Assignment
+
+Current rules चांगले आहेत. fileciteturn0file0L208-L214
+
+### 🆕 Additional rules
+
+Driver:
+
+- Approved असावा
+- Active असावा
+- Existing conflicting trip नसावी
+- Same trip साठी दुसरा driver already assigned नसावा
+
+Busy Driver:
+
+`Grey / Disabled / Not selectable`
+
+---
+
+# 19. Vehicle Availability
+
+### 🆕 Explicit rule
+
+Vehicle booked असेल तर overlapping booking साठी:
+
+`Not available / Disabled`
+
+Trip complete झाल्यावर Owner vehicle पुन्हा Active करू शकतो.
+
+Servicing असल्यास:
+
+`INACTIVE`
+
+---
+
+# 20. Trip Management
+
+Current lifecycle आहे. fileciteturn0file0L215-L229
+
+### 🔄 Final lifecycle
+
+```text
+PENDING
+ ↓
+ACCEPTED
+ ↓
+CONFIRMED
+ ↓
+TRIP_STARTED
+ ↓
+TRIP_COMPLETED
+```
+
+Alternative:
+
+```text
+PENDING → REJECTED
+```
+
+Cancellation:
+
+> **TBD**
+
+---
+
+# 21. Start Trip OTP
+
+### 🆕 New requirement
+
+```text
+Driver → Start Trip
+       ↓
+System generates OTP
+       ↓
+Customer receives OTP
+       ↓
+Customer gives OTP
+       ↓
+Driver enters OTP
+       ↓
+OTP verified
+       ↓
+TRIP_STARTED
+```
+
+---
+
+# 22. Vehicle/Driver Replacement
+
+### 🆕 New section
+
+### Driver replacement
+
+```text
+Confirmed Trip
+ ↓
+Driver unavailable
+ ↓
+Owner assigns another approved/active Driver
+ ↓
+Customer notification
+ ↓
+New Driver details
+```
+
+Customer approval required नाही.
+
+### Vehicle replacement
+
+```text
+Confirmed Trip
+ ↓
+Vehicle problem
+ ↓
+Owner contacts Customer
+ ↓
+Discuss replacement
+ ↓
+Decision
+ ↓
+New Vehicle
+ ↓
+Customer notification
+```
+
+Vehicle replacement Customer सोबत communicate केल्याशिवाय silently करता येणार नाही.
+
+---
+
+# 23. Cancellation
+
+### 🟡 Current cancellation references remain
+
+पण detailed policy:
+
+> **TBD**
+
+आत्ता penalty/refund/cancellation time window invent करणार नाही.
+
+---
+
+# 24. Notifications
+
+Current notification events आहेत. fileciteturn0file0L280-L286
+
+### 🆕 Add
+
+Notifications for:
+
+- Vehicle approval/rejection
+- Driver approval/rejection
+- Booking request
+- Booking accepted
+- Booking rejected + reason
+- Driver assignment
+- Booking confirmed
+- Driver replacement
+- Vehicle replacement
+- Trip started
+- Trip completed
+- Subscription expiry
+
+---
+
+# 25. Rating / Review
+
+### 🔴 Remove
+
+तुझ्या decision नुसार:
+
+- No Driver rating
+- No Owner rating
+- No Vehicle review
+
+---
+
+# 26. Live Tracking
+
+### 🔴 Remove
+
+No:
+
+- Live Driver GPS
+- Driver location tracking
+- Distance-to-driver feature
+
+---
+
+# 27. Documents
+
+### 🟢 Keep Admin verification
+
+Admin documents पाहून approval/rejection करेल.
+
+### 🔴 Customer access
+
+Customer ला:
+
+- RC
+- License
+- License images
+- Verification documents
+
+दाखवायचे नाहीत.
+
+---
+
+# 28. Owner / Vehicle / Driver Relationship
+
+हे final SRS मध्ये explicitly दाखवणे आवश्यक आहे.
+
+```text
+USER
+ │
+ ├── Customer Profile
+ │
+ └── Owner Profile
+       │
+       ├── Vehicles
+       │
+       └── Drivers
+```
+
+एक Owner:
+
+- Own vehicles
+- Own drivers
+
+दुसऱ्या Owner चे vehicle/driver वापरू शकत नाही.
+
+Driver self-registration नाही.
+
+Owner + Driver case मध्ये **same User identity** ला दोन्ही capabilities असतील. Current SRS देखील common identity approach recommend करतो. fileciteturn0file0L385-L391
+
+---
+
+# 29. Super Admin
+
+### 🟢 Keep
+
+Admin:
+
+- Vehicle approval
+- Driver approval
+- Subscription plans
+- Monitoring
+- Notifications/settings
+- Reports
+- Approval history
+
+Current SRS मध्ये हे already आहे. fileciteturn0file0L247-L279
+
+### 🆕 Clarification
+
+Admin approval नसलेला:
+
+- Vehicle
+- Driver
+
+**operationally available होणार नाही.**
+
+---
+
+# 30. Architecture
+
+### 🟢 Keep exactly
+
+```text
+       Customer Mobile App
+               │
+               │
+       Owner + Driver App
+               │
+               ▼
+       ┌─────────────────┐
+       │ Central Backend │
+       │    REST API     │
+       └────────┬────────┘
+                │
+                ▼
+           Database
+                ▲
+                │
+       Super Admin Web App
+```
+
+एक centralized backend.
+
+Backend सर्व business rules enforce करेल—authentication, authorization, subscription, approval, booking state, driver assignment आणि trip lifecycle. Current SRS मध्येही backend enforcement स्पष्ट आहे. fileciteturn0file0L322-L326
+
+---
+
+# 31. Data Entities — Important Update
+
+Current SRS entities:
+
+- User
+- Role/Capability
+- Owner Profile
+- Driver Profile
+- Vehicle
+- Vehicle Document
+- Driver Document
+- Subscription
+- Booking
+- Trip
+- Notification
+- Approval
+
+fileciteturn0file0L327-L340
+
+हे mostly keep करायचे.
+
+### 🆕 Booking मध्ये additional data
+
+```text
+Customer contact
+Pickup city/address
+Drop location
+Trip type
+AC/Non-AC
+Displayed rate
+Final agreed amount
+Booking status
+```
+
+### 🆕 Subscription
+
+```text
+Plan
+Duration
+Price
+Vehicle limit
+Driver limit
+Start date
+End date
+Status
+```
+
+### 🆕 Assignment
+
+Booking/Trip मध्ये:
+
+```text
+Owner
+Vehicle
+Driver
+```
+
+relationship स्पष्ट ठेवायचा.
+
+---
+
+# 32. Non-Functional Requirements
+
+Current security/reliability/performance/auditability requirements योग्य आहेत. fileciteturn0file0L341-L363
+
+### 🆕 Add
+
+- OTP verification
+- Secure document access
+- Booking/Driver assignment concurrency control
+- No double booking
+- No conflicting Driver assignment
+- Audit Driver/Vehicle replacement
+- Audit agreed price changes
+
+---
+
+# 33. Status Models — Final
+
+### Vehicle
+
+```text
+DRAFT
+  ↓
+PENDING_APPROVAL
+  ↓
+APPROVED
+  ↓
+ACTIVE ↔ INACTIVE
+
+PENDING_APPROVAL
+  ↓
+REJECTED
+  ↓
+RESUBMITTED
+```
+
+### Driver
+
+```text
+PENDING_APPROVAL
+  ↓
+APPROVED
+  ↓
+ACTIVE ↔ INACTIVE
+
+PENDING_APPROVAL
+  ↓
+REJECTED
+  ↓
+RESUBMITTED
+```
+
+### Booking
+
+```text
+PENDING
+  │
+  ├──→ REJECTED
+  │
+  ↓
+ACCEPTED
+  ↓
+CONFIRMED
+  ↓
+TRIP_STARTED
+  ↓
+TRIP_COMPLETED
+```
+
+Cancellation:
+
+`TBD`
+
+---
+
+# 34. काय remove करायचे?
+
+Current SRS मधून स्पष्टपणे हे remove करणे योग्य:
+
+❌ Live tracking  
+❌ Rating/Review  
+❌ Customer document access  
+❌ Rental payment processing  
+❌ `All` as booking Trip Type  
+❌ Driver self-registration  
+
+Rental payment already platform boundary बाहेर आहे, त्यामुळे ते तसेच ठेवायचे. fileciteturn0file0L42-L45
+
+---
+
+## Final assessment
+
+माझ्या मते आता **business-level SRS final करण्यासाठी requirements पुरेशा आहेत.**
+
+फक्त एक गोष्ट आपण SRS मध्ये **TBD** ठेवत आहोत:
+
+> **Cancellation Policy**
+
+आणि subscription plan चे **actual vehicle/driver limits आणि duration/prices** अजून business data म्हणून define करायचे आहेत; ते आपण arbitrary numbers ने भरू नये.
+
+बाकी architecture, roles, signup, subscription, approval, vehicle, driver, booking, agreed price, assignment, OTP, trip, replacement, notifications आणि city-based operation यांचे decisions आता clear आहेत.
+
+**Current SRS च्या तुलनेत हा final change set आहे.** पुढचा step म्हणजे याच आधारावर **SRS v2.0 पूर्ण document तयार करणे**, ज्यात जुन्या document मधील useful sections ठेवून conflicting requirements replace केल्या जातील.
+
+================= ITEM 1353 ================
+Perfect. आता **Q23–Q27 सुद्धा final** झाले.
+
+### Finalized requirements
+
+**23. Final agreed price — YES, save करायचा**
+
+Customer ला vehicle चा advertised rate/km दिसेल. Booking request झाल्यानंतर Customer आणि Owner contact करून final rental price ठरवतील.
+
+मग system मध्ये:
+
+```text
+Vehicle Rate: ₹15/km
+        ↓
+Customer ↔ Owner discussion
+        ↓
+Final Agreed Amount: ₹5,000
+        ↓
+Saved with Booking
+```
+
+Platform **payment process करणार नाही**, पण agreed amount booking/trip record मध्ये store करेल.
+
+---
+
+**24. Contact details**
+
+Customer booking करताना त्याचा mobile number देईल.
+
+Booking मध्ये:
+
+- Customer name
+- Customer mobile number
+- Pickup address
+- Trip details
+
+असतील.
+
+Owner कडे booking करणाऱ्या Customer चा contact number उपलब्ध असेल आणि Owner Customer शी contact करून trip/final price discuss करेल.
+
+---
+
+**25. Confirmed trip नंतर Customer ला Driver/Vehicle details**
+
+YES.
+
+Customer ला:
+
+- Driver Name
+- Driver Mobile Number
+- Vehicle Name/Model
+- Vehicle Number
+
+दिसतील.
+
+पण:
+
+- Driving License Number
+- License images
+- RC documents
+- Other verification documents
+
+Customer ला दिसणार नाहीत.
+
+---
+
+**26. Vehicle replacement**
+
+Confirmed trip मध्ये vehicle बदलायची गरज पडली तर:
+
+```text
+Original Vehicle
+       ↓
+Vehicle Problem
+       ↓
+Owner contacts Customer
+       ↓
+Discuss replacement
+       ↓
+Decision/Customer agreement
+       ↓
+New Vehicle assigned
+       ↓
+Customer notification
+```
+
+Notification मध्ये नवीन vehicle ची details असतील.
+
+---
+
+**27. Driver replacement**
+
+Driver बदलल्यास:
+
+```text
+Driver A
+   ↓
+Unavailable / Problem
+   ↓
+Owner assigns Driver B
+   ↓
+Customer notification
+   ↓
+New Driver details
+```
+
+Customer ला नवीन Driver ची details notification मध्ये मिळतील.
+
+तुझ्या requirement नुसार **Driver replacement साठी Customer ची prior approval आवश्यक नाही**, पण Customer ला updated information/notification मिळेल.
+
+---
+
+## आता SRS चा business flow जवळपास complete आहे
+
+आपला final booking flow असा दिसतो:
+
+```text
+                    CUSTOMER
+                       │
+                       ▼
+                Search Vehicle
+                       │
+                       ▼
+               Select Vehicle
+                       │
+                       ▼
+              Enter Trip Details
+                       │
+                       ▼
+               Booking Request
+                       │
+                       ▼
+                    PENDING
+                       │
+                       ▼
+              OWNER RECEIVES REQUEST
+                       │
+                       ▼
+             Owner ↔ Customer Contact
+                       │
+              ┌────────┴────────┐
+              │                 │
+           Reject             Accept
+              │                 │
+              ▼                 ▼
+          REJECTED           ACCEPTED
+          + Reason              │
+                                │
+                        Final Price Decided
+                                │
+                                ▼
+                         Save Agreed Price
+                                │
+                                ▼
+                         Driver Assignment
+                                │
+                                ▼
+                            CONFIRMED
+                                │
+                                ▼
+                       Driver/Vehicle Details
+                         → Customer
+                                │
+                                ▼
+                       Customer Notification
+                                │
+                                ▼
+                         Start Trip + OTP
+                                │
+                                ▼
+                         TRIP_STARTED
+                                │
+                                ▼
+                          End Trip
+                                │
+                                ▼
+                        TRIP_COMPLETED
+                                │
+                                ▼
+                           Trip History
+```
+
+हा flow सध्याच्या SRS मधील basic lifecycle पेक्षा अधिक precise आहे आणि तुझ्या नवीन decisions ना reflect करतो. fileciteturn0file0L181-L205 fileciteturn0file0L215-L229
+
+### एक शेवटचा important point
+
+आता **business requirements पुरेसे clear आहेत**. त्यामुळे मला अजून random questions विचारण्याची गरज नाही.
+
+पुढचा योग्य step म्हणजे मी current SRS चे **section-by-section review** करतो:
+
+- 🟢 **Keep as it is**
+- 🟡 **Modify**
+- 🔴 **Remove**
+- 🆕 **Add new requirement**
+
+आणि त्यात विशेषतः **User/Owner/Driver relationship, subscription limits, booking statuses, agreed price, city restriction, vehicle/driver replacement, OTP, cancellation TBD आणि notifications** properly integrate करू.
+
+त्यानंतर final SRS तयार करण्याआधी एकदा तुला **"Final SRS Change List"** दाखवू, म्हणजे चुकीची assumption राहणार नाही.
+
+================= ITEM 1366 ================
+23.save karu 24.customer booking kartana tyacha number deil ani booking koni keli ahe tyacha pan number asel ani owner contact karel .25.yes 26.for changing vehical owner and customer communicate and then decision will be givrn and notification is given 27.yes and notification is given with new driver details
+
+================= ITEM 1429 ================
+हो. आता Q17–Q22 मुळे **booking/location/cancellation flow** अजून स्पष्ट झाला आहे. Current SRS मधील booking flow मध्ये Customer request → Owner decision → Driver assignment → Trip असा मुख्य flow आहे; आपण आता त्यात **Owner-Customer confirmation** हा explicit business step add करणार आहोत. fileciteturn0file0L181-L205
+
+### Final decisions
+
+**17. Location — City based + pickup same city**
+
+जर vehicle `Mumbai` मध्ये registered/available असेल तर त्या vehicle साठी pickup location **Mumbai मध्येच** असावी.
+
+उदा.:
+
+```text
+Vehicle Location = Mumbai
+
+Customer:
+Pickup = Mumbai       ✓
+Pickup = Pune         ✗
+```
+
+म्हणजे सध्या inter-city pickup नाही.
+
+Drop location मात्र Local/Outstation trip type नुसार वेगळी असू शकते.
+
+---
+
+### 18–19. Booking confirmation flow
+
+तुझ्या actual business flow नुसार मला हा flow best वाटतो:
+
+```text
+Customer
+   │
+   │ Booking Request
+   ▼
+PENDING
+   │
+   ▼
+Owner receives request
+   │
+   │ Customer ↔ Owner contact
+   │
+   │ Trip details + final price + availability
+   ▼
+Owner accepts request
+   │
+   ▼
+ACCEPTED
+   │
+   │ Owner confirms Driver
+   ▼
+Driver Assigned
+   │
+   ▼
+CONFIRMED
+   │
+   ▼
+Driver/Owner starts trip
+   │
+   ▼
+TRIP_STARTED
+   │
+   ▼
+TRIP_COMPLETED
+```
+
+इथे **platform final rental price calculate करत नाही**. Customer आणि Owner contact करून final price ठरवतात. त्यामुळे `ACCEPTED` म्हणजे Owner ने request स्वीकारली; `CONFIRMED` म्हणजे Driver assign होऊन trip operationally confirmed झाली.
+
+### Driver assignment time limit
+
+मी **fixed time limit ठेवणार नाही**.
+
+कारण तुझ्या business flow मध्ये Owner आणि Customer आधी contact करून trip details/final price fix करतात. त्यानंतरच Driver assign होतो.
+
+---
+
+## 20. Customer cancellation
+
+तू "suggest or TBD" म्हटले आहेस.
+
+माझी recommendation:
+
+### आत्ता SRS मध्ये **TBD** ठेवू.
+
+कारण cancellation rules मध्ये पुढे business decisions लागतील:
+
+- cancellation किती वेळ आधी?
+- Owner accept करण्याआधी?
+- Accept केल्यानंतर?
+- Confirmed झाल्यानंतर?
+- Trip सुरू झाल्यावर?
+- cancellation charges आहेत का?
+
+आणि सध्या rental payment platform वर होत नसल्यामुळे cancellation penalty/payment handling देखील वेगळा business decision आहे. Current SRS स्पष्टपणे सांगतो की Customer → Owner rental payment platform वर होत नाही. fileciteturn0file0L42-L45
+
+म्हणून final SRS मध्ये:
+
+> **Cancellation Policy: To Be Defined (TBD)**
+
+ठेवणे योग्य.
+
+---
+
+## 21. Owner cancellation / trip update
+
+तुझ्या requirement नुसार **Owner ला confirmed trip मध्ये operational changes handle करता आले पाहिजेत.**
+
+उदा. Driver ला problem:
+
+```text
+Confirmed Trip
+      ↓
+Assigned Driver unavailable
+      ↓
+Owner selects another approved/available Driver
+      ↓
+Customer gets notification
+      ↓
+Trip continues
+```
+
+Vehicle ला problem:
+
+```text
+Confirmed Trip
+      ↓
+Vehicle unavailable/problem
+      ↓
+Owner contacts Customer
+      ↓
+Alternative arrangement
+      ↓
+Customer confirmation
+```
+
+पण इथे एक important rule मी suggest करतो:
+
+**Owner स्वतःहून Customer ची confirmed trip silently बदलू नये.**
+
+म्हणजे:
+
+- Driver बदल → allowed, Customer ला notification
+- Vehicle बदल → Customer confirmation आवश्यक
+- Pickup/time/date बदल → Customer confirmation आवश्यक
+
+यामुळे confirmed booking अचानक बदलल्याने Customer ला problem होणार नाही.
+
+---
+
+## 22. Trip Type
+
+Final:
+
+### Booking Trip Type
+
+- **Local**
+- **Outstation**
+
+### Search Filter
+
+- **All**
+- **Local**
+- **Outstation**
+
+`All` हा Trip Type नसून filter आहे.
+
+---
+
+# आता एक महत्त्वाची गोष्ट दिसली
+
+आपल्या discussion नुसार current SRS मध्ये **"Booking Confirmed" चा अर्थ थोडा बदलतो**.
+
+Current SRS:
+
+```text
+PENDING
+ ↓
+ACCEPTED
+ ↓
+DRIVER_ASSIGNED
+ ↓
+TRIP_STARTED
+```
+
+fileciteturn0file0L215-L224
+
+पण तुझ्या actual business requirement नुसार:
+
+```text
+PENDING
+   ↓
+Owner + Customer discuss
+   ↓
+ACCEPTED
+   ↓
+Driver Assigned
+   ↓
+CONFIRMED
+   ↓
+TRIP_STARTED
+   ↓
+TRIP_COMPLETED
+```
+
+म्हणून final SRS मध्ये हे explicitly define करणे आवश्यक आहे.
+
+---
+
+# आता माझ्याकडे फक्त 5 final questions आहेत
+
+हे answer केल्यावर **business-side requirements complete** मानू शकतो.
+
+### Q23. Final price
+
+Customer आणि Owner contact करून final price ठरवतील.
+
+तो final price **application मध्ये save करायचा आहे का?**
+
+उदा.:
+
+```text
+Displayed Rate = ₹15/km
+
+Customer ↔ Owner
+Final agreed price = ₹5,000
+
+System:
+Final Agreed Amount = ₹5,000
+```
+
+की application ला final price चा काही संबंधच नाही?
+
+**माझी recommendation:** save करावा, पण **payment process करू नये**. त्यामुळे history/report मध्ये "Agreed Amount" दिसू शकतो.
+
+---
+
+### Q24. Customer-Owner contact
+
+Customer आणि Owner contact कसे करणार?
+
+**A. App मध्ये phone number show करणे**
+
+**B. App मध्ये Call button → registered mobile वर call**
+
+**C. Chat feature**
+
+**D. फक्त phone number share**
+
+माझी recommendation: सुरुवातीला **Call/phone only**, chat नको.
+
+---
+
+### Q25. Driver details
+
+Booking `CONFIRMED` झाल्यावर Customer ला:
+
+- Driver Name
+- Driver Mobile Number
+- Vehicle Number
+- Vehicle Name/Model
+
+हे दाखवायचे?
+
+माझ्या मते **Yes**.
+
+पण:
+
+- License Number
+- License images
+- Personal documents
+
+कधीही दाखवायचे नाहीत.
+
+---
+
+### Q26. Owner vehicle बदलतो तेव्हा
+
+Confirmed trip साठी:
+
+`Car A → Car B`
+
+Customer confirmation mandatory ठेवू का?
+
+**माझी strong recommendation: Yes.**
+
+कारण Customer ने specific vehicle निवडलेले आहे.
+
+---
+
+### Q27. Owner Driver बदलतो तेव्हा
+
+`Driver A → Driver B`
+
+Customer confirmation:
+
+**A. Required**
+
+**B. Not required, only notification**
+
+माझ्या मते **B** — जर Driver फक्त operational replacement असेल आणि booking चे बाकी details unchanged असतील.
+
+---
+
+हे 5 answer दिल्यावर मी **SRS च्या current 22 sections वर एक "Final Change List"** तयार करेन—कुठल्या section मध्ये काय बदलायचे, कुठे नवीन requirement add करायची आणि कोणते current statements remove/modify करायचे. त्यानंतरच आपण final SRS बनवू.
+
+================= ITEM 1442 ================
+17.mumbai madhe asel tar pickup pan mumbai madhech hoil 18.suggest 19.flow asa ahe ki booking request kelyavar owner,customer contct karun fix kartil ani fix asel tar driver assign hoil ani trip confirm hoil  20.suggest or TBD 21.suggest nahitar owner reupdate jaru shkel trip mhanaje car kiva driver la problem asel tar to driver change krel ani car la problem asel tar customer shi contact karel  22.ok  
+
+================= ITEM 1544 ================
+हो. आता requirements अजून clear झाले. तुझ्या answers वरून काही important business rules lock झाले आहेत. विशेषतः **booking → accepted → driver assigned → confirmed** हा distinction SRS मध्ये स्पष्ट करायला हवा.
+
+### Finalized points
+
+**1. Owner signup — mandatory**
+
+```text
+Name
+Mobile Number
+Email
+Password
+Confirm Password
+OTP Verification
+```
+
+OTP verification नंतर Owner account तयार होईल.
+
+**2. Customer signup**
+
+Mobile Number **mandatory** आहे.
+
+**3. Subscription**
+
+Flow:
+
+```text
+Owner Signup
+    ↓
+OTP Verification
+    ↓
+Login
+    ↓
+Owner can see/use profile
+    ↓
+Choose Subscription
+    ↓
+Active Subscription
+    ↓
+Operational features available
+```
+
+म्हणजे subscription signup ची prerequisite नाही; पण platform ची operational functionality वापरण्यासाठी active subscription आवश्यक आहे.
+
+**4. Subscription expiry**
+
+```text
+Subscription Expired
+        ↓
+Profile       → Accessible
+History       → Accessible
+Existing confirmed trip → Continue
+Existing ongoing trip    → Continue
+New operational actions → Blocked
+```
+
+हे current SRS मधील historical access rule शी consistent आहे. fileciteturn0file0L240-L246
+
+**5. Driver availability**
+
+Owner Driver add करेल आणि Driver `Active/Inactive` कधी ठेवायचा हे Owner ठरवेल.
+
+```text
+ACTIVE
+   ↓
+Can be assigned
+
+INACTIVE
+   ↓
+Cannot be assigned
+```
+
+**6. Driver assignment**
+
+एका Driver ला एका वेळेला एकच active trip.
+
+जर Driver already assigned असेल तर तो दुसऱ्या booking साठी:
+
+```text
+Not shown
+     OR
+Shown as Grey / Disabled
+```
+
+आणि select करता येणार नाही.
+
+**7. Vehicle availability**
+
+Same rule vehicle साठी.
+
+Vehicle booked असेल तर दुसऱ्या overlapping booking साठी:
+
+```text
+Not available
+     OR
+Grey / Disabled
+```
+
+Trip complete झाल्यावर Owner vehicle पुन्हा Active/Available करू शकतो.
+
+Owner servicing किंवा इतर कारणासाठी vehicle inactive ठेवू शकतो.
+
+**8. Multiple bookings**
+
+Customer अनेक वेगवेगळ्या vehicles साठी booking requests करू शकतो.
+
+उदा.:
+
+```text
+Customer
+ ├── Car A → Booking
+ ├── Car B → Booking
+ └── Car C → Booking
+```
+
+पण **एकाच vehicle साठी overlapping booking allowed नाही.**
+
+**9. Booking status — हे आता खूप clear झाले**
+
+आपण हा flow ठेवू:
+
+```text
+Customer
+   ↓
+Booking Request
+   ↓
+PENDING
+   ↓
+Owner Accept
+   ↓
+ACCEPTED
+   ↓
+Owner Assign Driver
+   ↓
+CONFIRMED
+   ↓
+Driver Start Trip
+   ↓
+TRIP_STARTED
+   ↓
+Driver End Trip
+   ↓
+TRIP_COMPLETED
+```
+
+Reject:
+
+```text
+PENDING
+   ↓
+REJECTED
+   ↓
+Mandatory Rejection Reason
+```
+
+हा distinction current SRS मध्ये थोडा अस्पष्ट आहे; final SRS मध्ये `ACCEPTED` आणि `CONFIRMED` वेगळे स्पष्ट करू. Current SRS मध्ये `ACCEPTED → DRIVER_ASSIGNED → TRIP_STARTED` असा lifecycle आहे. fileciteturn0file0L215-L224
+
+**10. Owner can drive**
+
+Owner + Driver असेल तर:
+
+```text
+Customer Booking
+      ↓
+Owner Accept
+      ↓
+Owner assigns himself
+      ↓
+CONFIRMED
+      ↓
+Owner starts trip as Driver
+```
+
+हे allowed.
+
+**11. Vehicle-driver restriction**
+
+कोणताही approved/active Driver कोणतेही eligible vehicle चालवू शकतो.
+
+Vehicle-specific Driver restriction नाही.
+
+**12. Start Trip OTP**
+
+System OTP generate करेल.
+
+Flow:
+
+```text
+Driver → Start Trip
+           ↓
+      System generates OTP
+           ↓
+      Customer receives OTP
+           ↓
+Customer gives OTP to Driver
+           ↓
+Driver enters OTP
+           ↓
+OTP verified
+           ↓
+TRIP_STARTED
+```
+
+**13. Super Admin**
+
+Admin स्वतः signup करणार नाही.
+
+Admin account pre-created/default administration mechanism ने तयार होईल.
+
+**14. Approval**
+
+तुझ्या answer नुसार एक important correction:
+
+Owner/Driver/Vehicle **create करण्यावर restriction नाही**, पण operationally usable होण्यासाठी Admin approval आवश्यक.
+
+म्हणजे:
+
+```text
+Owner
+  ↓
+Registered
+
+Vehicle
+  ↓
+Added
+  ↓
+Pending Approval
+  ↓
+Admin Approve
+  ↓
+Operational
+```
+
+Driver साठीही same.
+
+Current SRS मध्ये vehicle आणि driver approval requirement आधीपासून आहे. fileciteturn0file0L101-L115 fileciteturn0file0L128-L138
+
+**15. Notifications**
+
+तू सांगितलेला rule मी असा घेईन:
+
+> Platform मध्ये जे notification mechanism technically/free उपलब्ध असेल ते वापरायचे.
+
+पण final SRS मध्ये आपण **"notification" functional requirement** ठेवू; specific provider/service नंतर technical design मध्ये ठरवू.
+
+Events current SRS प्रमाणे Owner, Driver आणि Customer ला मिळतील. fileciteturn0file0L280-L286
+
+---
+
+# Q16 — Location बद्दल माझी recommendation
+
+तू म्हणतोस **city-based location**.
+
+मला वाटते हे initial version साठी best आहे.
+
+Vehicle add करताना Owner:
+
+```text
+City
+State
+```
+
+देईल.
+
+Customer search करताना:
+
+```text
+Select City
+      ↓
+Approved + Active vehicles
+      ↓
+त्या City मधील vehicles
+```
+
+उदा.:
+
+```text
+Customer City = Mumbai
+
+Search Result:
+
+Mumbai
+ ├── Swift
+ ├── Ertiga
+ ├── Innova
+ └── Creta
+```
+
+**Live GPS / distance calculation / map-based nearby vehicle search सध्या ठेवू नये**, कारण तू आधीच live driver tracking नको असे सांगितले आहेस. त्यामुळे first version simpler आणि implementation-friendly राहील.
+
+---
+
+## पण आता 6 शेवटचे business questions
+
+आता आपण जवळजवळ final SRS वर आलो आहोत.
+
+### Q17. Vehicle location
+
+Owner vehicle add करताना **एक City** select करेल, बरोबर?
+
+उदा.:
+
+`Mumbai`
+
+नंतर Customer Mumbai search करेल.
+
+की Owner ला:
+
+`Mumbai, Pune, Nashik`
+
+अशा multiple operating cities ठेवता याव्यात?
+
+---
+
+### Q18. Customer booking after Owner Accept
+
+Owner ने booking accept केली पण अजून Driver assign केलेला नाही.
+
+Customer ला status काय दाखवायचा?
+
+माझा suggestion:
+
+```text
+PENDING
+   ↓
+ACCEPTED
+   ↓
+"Driver Assignment Pending"
+   ↓
+CONFIRMED
+```
+
+---
+
+### Q19. Owner accept केल्यानंतर Driver किती वेळात assign करावा?
+
+काही time limit हवी का?
+
+उदा.:
+
+`Owner must assign Driver within 30 minutes`
+
+की कोणतीही limit नाही?
+
+---
+
+### Q20. Customer cancellation
+
+हा अजून एक major TBD आहे.
+
+Customer:
+
+- PENDING booking cancel करू शकतो?
+- ACCEPTED booking cancel करू शकतो?
+- CONFIRMED booking cancel करू शकतो?
+- TRIP_STARTED झाल्यावर cancel करू शकतो?
+
+तू rules नंतर ठरवणार असशील तर आपण SRS मध्ये **Cancellation Policy — TBD** ठेवू शकतो.
+
+---
+
+### Q21. Owner cancellation
+
+Owner ने booking accept केली आणि नंतर काही कारणाने cancel करायची असेल तर allowed?
+
+जर allowed असेल तर reason mandatory?
+
+---
+
+### Q22. Trip type
+
+तू `Local / Outstation / All` म्हटले.
+
+मी suggest करतो:
+
+**Booking मध्ये:**
+
+- Local
+- Outstation
+
+**Vehicle search मध्ये:**
+
+- All
+- Local
+- Outstation
+
+म्हणजे `All` booking type नसून **search filter** असेल.
+
+हे logically clean आहे.
+
+---
+
+हे 6 answers दिल्यावर **business requirements जवळजवळ complete** होतील. मग पुढचा step मी असा घेईन:
+
+**Current SRS → काय ठेवायचे / काय बदलायचे / काय delete करायचे / काय नवीन add करायचे**
+
+आणि त्यानंतरच final SRS structure lock करू.
+
+================= ITEM 1559 ================
+1.ho Name, Mobile, Email, Password, Confirm Password + OTP   required. 2. Mobile Number signup वेळी mandatory आहे  3.login kelyanantar subscription ghuve jar platform use karnar asel tar  4.**existing confirmed/ongoing trips continue**, फक्त नवीन operational actions block 5.owner driver add karel konta karayacha to owner tharvel. 6.for a single trip single driver driver assign asel tar show honar nahi kiva grey kela jail mhanaje select honar nahi .6.same as 5 book asel tar show honar nahi  8.aka vehical la ak booking,multiple booking if car is different  9.booking accept kelyavar accept hoil pan driver assign kele ki confirm hoil 10.owner can drive 11.anyone can use any car no restrication 12.otp system generate karel 13.yes 14.joparyant owner,driver,car admin through approve honar nahi toparyant te add honar nahi  15.je frree ahe te notification  16.city based location mhanaje customer chi city nusar je asel te tari pan suggest
+
+================= ITEM 1680 ================
+Perfect. आता requirements बऱ्यापैकी clear झाले आहेत. तुझ्या answers नुसार मी **नवीन assumptions न घालता** requirements lock करत आहे. SRS मध्ये सध्या Owner subscription, vehicle/driver approval, booking lifecycle आणि तीन-platform architecture आधीपासून आहेत. fileciteturn0file0L38-L52
+
+### आत्तापर्यंत final झालेले decisions
+
+1. **Driver account**
+   - Driver स्वतः signup करू शकत नाही.
+   - फक्त Owner Driver add करेल.
+   - Owner Driver ला login credentials (`email/ID + password`) देईल.
+   - Driver login केल्यानंतर password change करू शकतो.
+   - Driver approval नंतरच त्याला trip assign करता येईल.
+
+2. **Owner subscription**
+   - New Owner साठी subscription mandatory.
+   - Subscription **time-based + limits-based** असेल.
+   - Limits मध्ये कमीतकमी:
+     - किती Vehicles add करू शकतो
+     - किती Drivers add करू शकतो
+   - Subscription expire झाल्यावर profile/history accessible राहील पण new operational activities restricted राहतील. हे current SRS च्या existing rule शी जुळते. fileciteturn0file0L230-L242
+
+3. **Rental pricing**
+   - Customer ला vehicle चा **per-KM rate** दिसेल.
+   - Booking request मध्ये final rental amount system calculate/process करणार नाही.
+   - Booking झाल्यावर Customer आणि Owner contact करून final price ठरवतील.
+   - Customer → Platform rental payment नाही.
+
+4. **AC / Non-AC**
+   - Customer booking/search करताना AC किंवा Non-AC निवडू शकतो.
+   - Vehicle Non-AC असेल तर ते स्पष्टपणे **Non-AC** म्हणून दाखवले जाईल.
+   - AC vehicle असल्यास AC option उपलब्ध असेल.
+
+5. **Booking**
+   - Customer booking request submit करेल.
+   - Owner ला request मिळेल.
+   - Owner:
+     - Accept
+     - Reject
+   - Reject करताना **reason mandatory** ठेवू.
+   - Accept झाल्यावर Driver ला trip assign करण्याची प्रक्रिया सुरू होईल.
+   - Driver ला आवश्यक trip/customer details मिळतील.
+
+6. **Customer details**
+   Booking मध्ये:
+   - Pickup location
+   - Drop location
+   - Pickup date
+   - Pickup time
+   - Return date, if applicable
+   - Number of passengers
+   - Mobile number
+   - Address
+   - Additional details
+
+7. **Trip type**
+   
+   तुझ्या requirement नुसार आपण initial options:
+   - Local
+   - Outstation
+   - All
+   
+   ठेवू शकतो.
+
+   पण इथे एक छोटा clarification लागेल: **"All" हा actual Trip Type नसून search/filter option असावा**, booking type नाही. हा distinction final SRS मध्ये ठेवणे योग्य आहे.
+
+8. **Trip Start**
+   - Driver trip सुरू करताना **customer confirmation/OTP** घेईल.
+   - त्यानंतर Start Trip.
+   - End Trip केल्यावर trip completed.
+
+9. **Cancellation**
+   
+   तू सांगितले आहेस की cancellation rules अजून confirm नाहीत. त्यामुळे **आत्ता SRS मध्ये cancellation capability ठेवू, पण detailed cancellation rules TBD ठेवू**. Existing SRS मध्ये cancellation terminal state आहे. fileciteturn0file0L215-L224
+
+10. **Driver information**
+   - Booking accept झाल्यावर Driver assignment होईल.
+   - Customer ला confirmation नंतर permitted Driver details मिळतील.
+   - License/document details Customer ला कधीही दाखवायचे नाहीत.
+
+11. **No live tracking**
+   - GPS/live Driver tracking नाही.
+
+12. **No rating/review**
+   - Customer → Driver rating नाही.
+   - Customer → Owner/Vehicle rating नाही.
+
+13. **Documents**
+   - Customer ला RC/License documents दाखवायचे नाहीत.
+   - Admin documents verify करेल आणि approval/rejection देईल.
+   - त्यामुळे customer-facing document access requirement ठेवण्याची गरज नाही.
+
+14. **Vehicle ownership**
+   - प्रत्येक Vehicle एका Owner चीच.
+   - दुसरा Owner तो vehicle वापरू/add करू शकत नाही.
+
+15. **Driver ownership**
+   - प्रत्येक Driver एका Owner शी associated.
+   - दुसऱ्या Owner साठी तो Driver assign करता येणार नाही.
+
+16. **Vehicle availability**
+   Vehicle:
+   - Approved
+   - Active
+   - Available
+   
+   असेल तरच customer ला booking साठी दिसेल.
+
+   Booking झाल्यावर ते त्या booking period साठी unavailable.
+
+   Trip complete झाल्यानंतर automatically available होण्याची eligibility येईल, **पण Owner final availability control करेल**.
+
+   उदा.:
+
+   `Trip Completed → Owner decides Available / Inactive`
+
+   जर servicing चालू असेल तर Owner vehicle inactive ठेवू शकतो.
+
+17. **Rejection + Resubmission**
+   - Admin vehicle/driver reject करू शकतो.
+   - Rejection reason mandatory.
+   - Owner correction करून पुन्हा submit करू शकतो.
+   - म्हणजे:
+
+```text
+PENDING_APPROVAL
+       ↓
+   REJECTED
+       ↓
+Correction
+       ↓
+RESUBMITTED
+       ↓
+PENDING_APPROVAL
+       ↓
+   APPROVED
+```
+
+18. **Backend**
+   - Customer App
+   - Owner & Driver App
+   - Super Admin Web
+
+   या तिन्हींसाठी **एकच Central Backend + एक Database**.
+
+---
+
+## आता अजून काही critical questions आहेत
+
+हे questions final SRS करण्याआधी answer करणे खूप important आहे.
+
+### Q1. Owner signup
+
+आपण आधी ठरवले होते:
+
+```text
+Owner Signup
+↓
+Name
+Email
+Password
+```
+
+की आता Mobile Number + OTP पण ठेवायचा?
+
+Current SRS मध्ये Name, Mobile, Email, Password, Confirm Password + OTP आहे. fileciteturn0file0L55-L68
+
+**तुला कोणते final हवे?**
+
+---
+
+### Q2. Customer signup
+
+Customer signup मध्ये काय fields?
+
+माझा suggestion:
+
+```text
+Name
+Email
+Password
+Confirm Password
+Mobile Number
+```
+
+पण Mobile Number signup वेळी mandatory आहे का booking वेळीच पुरेसे आहे?
+
+---
+
+### Q3. Owner subscription कधी घ्यायचे?
+
+Flow:
+
+```text
+Owner Signup
+      ↓
+Login
+      ↓
+Choose Subscription
+      ↓
+Payment
+      ↓
+Active Owner
+```
+
+की:
+
+```text
+Owner Signup
+      ↓
+Subscription Payment
+      ↓
+Account Active
+```
+
+**माझा recommendation:** Signup आधी पूर्ण होऊ द्यावा → Login करू द्यावा → Subscription घ्यायला सांगावे. त्यामुळे account तयार झालेला राहतो, पण operational features locked असतात.
+
+---
+
+### Q4. Subscription expire झाल्यावर existing bookings?
+
+उदा.:
+
+Owner subscription आज expire झाले.
+
+पण त्याची booking आधीच confirmed आहे आणि उद्या trip आहे.
+
+ती trip:
+
+**A. Continue होऊ द्यायची**
+
+की
+
+**B. Automatically cancel करायची?**
+
+माझ्या मते **A — existing confirmed/ongoing trips continue**, फक्त नवीन operational actions block करणे safer आहे.
+
+---
+
+### Q5. Driver availability
+
+Driver साठीही Owner ने manually:
+
+`ACTIVE / INACTIVE`
+
+करता यायला हवे का?
+
+उदा. Driver:
+
+```text
+ACTIVE → assignment possible
+INACTIVE → assignment not possible
+```
+
+---
+
+### Q6. Driver एकाच वेळी दोन bookings?
+
+उदा.:
+
+```text
+10 AM - 2 PM → Booking A
+11 AM - 3 PM → Booking B
+```
+
+Booking B साठी तो Driver assign करता कामा नये.
+
+हे obvious आहे, पण SRS मध्ये **time-overlap validation** म्हणून explicitly टाकू का?
+
+Current SRS already says conflicting trips असलेला Driver assign करता येणार नाही. fileciteturn0file0L208-L214
+
+---
+
+### Q7. Vehicle booking overlap
+
+हेही same:
+
+```text
+Car A
+10 AM - 2 PM → Booking 1
+
+Car A
+11 AM - 3 PM → Booking 2
+```
+
+दुसरी booking allowed नसावी.
+
+**Yes/No?**
+
+---
+
+### Q8. Customer booking एकाच vehicle साठी multiple pending requests करू शकतो?
+
+उदा. Customer ने:
+
+```text
+Car A → Pending
+Car B → Pending
+Car C → Pending
+```
+
+अशा multiple requests केल्या तर allowed?
+
+की एकाच वेळेस एकच active booking request?
+
+---
+
+### Q9. Owner booking accept केल्यानंतर Driver assign न केल्यास?
+
+उदा.:
+
+```text
+Customer → Booking
+        ↓
+Owner → ACCEPT
+        ↓
+Driver → Not assigned
+```
+
+Status `ACCEPTED` राहील का?
+
+की Owner ला accept करतानाच Driver select करणे mandatory?
+
+---
+
+### Q10. Owner स्वतः Driver असेल तर
+
+हा important case आहे.
+
+```text
+Owner + Driver
+       ↓
+Customer Booking
+       ↓
+Owner Accept
+       ↓
+Owner स्वतःलाच Driver म्हणून Assign
+```
+
+**Allowed?**
+
+माझ्या मते **Yes**, कारण तू Owner ला Driver capability दिली आहेस.
+
+---
+
+### Q11. Vehicle आणि Driver compatibility
+
+Owner कडे:
+
+```text
+Car A → 5 Seater
+Car B → 7 Seater
+
+Driver X
+```
+
+Driver कोणत्याही vehicle वर assign होऊ शकतो?
+
+की काही vehicle-specific restriction असणार?
+
+---
+
+### Q12. Customer booking confirmation
+
+तू OTP confirmation सांगितलेस.
+
+OTP कोण generate करणार?
+
+```text
+Driver clicks Start Trip
+        ↓
+System sends OTP to Customer
+        ↓
+Customer tells OTP to Driver
+        ↓
+Driver enters OTP
+        ↓
+Trip Started
+```
+
+की booking confirm झाल्यावर आधीच OTP generate होईल?
+
+---
+
+### Q13. Admin account
+
+Super Admin:
+
+- स्वतः signup करणार नाही
+- Default/admin account backend/database/configuration मधून तयार असेल
+
+हेच ठेवायचे?
+
+---
+
+### Q14. Admin ला Owner reject/suspend करण्याचा अधिकार?
+
+Current SRS मध्ये Admin vehicle/driver approval आहे आणि users monitoring आहे. fileciteturn0file0L247-L279
+
+पण Admin ला:
+
+```text
+Owner → Suspend
+Owner → Activate
+Customer → Suspend
+Driver → Suspend
+```
+
+असे user-management actions हवेत का?
+
+---
+
+### Q15. Notification
+
+Current SRS मध्ये notifications आहेत. fileciteturn0file0L280-L286
+
+तुला notification:
+
+- In-app notification
+- Push notification
+- Email
+- SMS
+
+यापैकी कोणते हवे?
+
+---
+
+### Q16. Search location
+
+Customer vehicle search मध्ये `Location` आहे. fileciteturn0file0L160-L170
+
+तुला location म्हणजे:
+
+**A. Owner/Vehicle city**
+
+की
+
+**B. Customer pickup location जवळचे vehicles**
+
+कारण B असेल तर पुढे maps/location-based search लागेल.
+
+---
+
+हे **16 questions** answer कर. विशेषतः **Q3, Q4, Q8, Q9, Q10, Q12 आणि Q16** खूप important आहेत.
+
+त्यानंतर आपण अजून एक छोटा round करू — **database/business rules मध्ये कोणते entities आणि relationships final हवेत** ते lock करू. मग मी तुझ्या answers वरून **final SRS मध्ये काय change/add/delete करायचे** ते व्यवस्थित सांगतो.
+
+================= ITEM 1710 ================
+1.driver la fakt owner add karu shakto ani tyala tyache credential id and password deil ani to password change karu shakto  2.as a new owner subscription mandatory to use platform but active `Active subscription नसल्यास new operational activity बंद`, पण profile/history accessible ठेवणे योग्य आहे. subscription plan time based ahe pan tyat limit pan ahet mhanaje driver ani car addition madhe  pan suggest5.Customer ला vehicle search करताना **price/km दिसेल**,  ani booking kelyavar customer and owner contact karun final price tharavtil  6.ac/non ac customer select karel pan non ac asel tar non ac mhanun disel  7.8.9   cancellation cha confirm nahi pan customer ne booking request kelyanntar owner accept/reject karu shakto if reject reason why rejected if accept then sharing details with driver and his details  10.ho 11.actually trip type cha mahit nahi pan option devu local,outstation and all  12.confirmation ghevu start kartana loke ola 15.no tracking ,no  review ,rating 16.no need to show to customer karan add kartana admin tharvel ki accept ahe ka reject  17,18.ho,pratyek owner che swathache car and driver  19.vehical booking asel tar show karayachi nahi.trp complete zalyavar available karayachi ani owner selfly tharvel ki available karayachi ahe karan servicing madhe dili asel tar unavailable asu shakte  20.ho ka reject ahe te reason mention asnar tyamule resubmission ahe ho backend akach ahe
+
+================= ITEM 1901 ================
+हो. मी SRS पूर्ण वाचला आहे. सध्याचा SRS **overall good आहे**, पण final development सुरू करण्याआधी काही business rules स्पष्ट करणे गरजेचे आहे. विशेषतः **Owner/Driver/User relationship, booking, cancellation, pricing, subscription, documents आणि admin rules** याबाबत काही गोष्टी अजून open आहेत. fileciteturn0file0L17-L45
+
+आपण आत्ता SRS rewrite करू नको. आधी **एक-एक business decision final करू**, आणि शेवटी त्यावरून final SRS बनवू.
+
+### सर्वात आधी हे questions answer कर
+
+**1. Signup / User structure**
+
+सध्याच्या SRS मध्ये Owner + Driver common `User` identity/capability म्हणून ठेवले आहे. fileciteturn0file0L385-L391
+
+तुला नेमके कोणते हवे?
+
+- A. Customer signup → Customer account
+- B. Owner signup → Owner account
+- C. Owner signup करताना तो Driver पण बनू शकतो
+- D. Owner नंतर Driver म्हणून apply करू शकतो
+- E. Owner स्वतःच्या account मधून Driver म्हणून काम करू शकतो
+
+**Question:** `Driver` account फक्त Owner create करणार का, की Driver स्वतः signup करू शकतो?
+
+---
+
+**2. Driver ला login कसे मिळणार?**
+
+Current SRS म्हणतो Owner Driver account create करतो आणि credentials देतो. fileciteturn0file0L145-L147
+
+म्हणजे:
+
+`Owner → Create Driver → Driver gets email/password → Driver Login`
+
+हे final ठेवायचे का?
+
+आणि Driver ने password स्वतः change करावा का?
+
+---
+
+**3. Owner subscription**
+
+SRS मध्ये Owner subscription mandatory business model आहे. पण **subscription नसताना Owner काय करू शकतो** हे पूर्णपणे defined नाही. fileciteturn0file0L230-L242
+
+उदा.:
+
+- Signup करू शकतो?
+- Vehicle add करू शकतो?
+- Vehicle submit for approval करू शकतो?
+- Booking receive करू शकतो?
+- Driver add करू शकतो?
+
+**Question:** माझ्या मते `Active subscription नसल्यास new operational activity बंद`, पण profile/history accessible ठेवणे योग्य आहे. हेच ठेवायचे?
+
+---
+
+**4. Subscription plans**
+
+Admin subscription plans manage करू शकतो असे SRS मध्ये आहे. fileciteturn0file0L274-L279
+
+पण plans मध्ये काय फरक?
+
+उदा.
+
+- Basic → 1 car
+- Standard → 5 cars
+- Premium → unlimited cars
+
+की subscription फक्त **time-based** असेल आणि vehicle/driver limit नसेल?
+
+---
+
+**5. Rental pricing — important**
+
+Vehicle मध्ये:
+
+- Rate per KM
+- AC Rate per KM
+
+आहे. fileciteturn0file0L85-L100
+
+पण system rental amount calculate करणार नाही असे payment rule मध्ये आहे. fileciteturn0file0L42-L45
+
+मग Customer ला vehicle search करताना **price/km दिसेल**, पण booking करताना **total rental amount calculate होणार नाही**, बरोबर?
+
+की Owner manually final price Customer ला सांगेल?
+
+---
+
+**6. AC / Non-AC**
+
+`Rate per KM` आणि `AC Rate per KM` आहेत.
+
+Customer booking करताना:
+
+- AC
+- Non-AC
+
+यापैकी option select करणार का?
+
+आणि vehicle AC capable नसेल तर AC option दिसणार नाही का?
+
+---
+
+**7. Booking cancellation**
+
+SRS मध्ये cancellation आहे, पण **कोण cancel करू शकतो आणि कधी** हे defined नाही. fileciteturn0file0L371-L374
+
+सांग:
+
+- Customer cancel करू शकतो?
+- Owner cancel करू शकतो?
+- Driver cancel करू शकतो?
+- Admin cancel करू शकतो?
+- Trip start झाल्यावर cancellation allowed आहे का?
+
+आणि cancellation reason mandatory ठेवायचा का?
+
+---
+
+**8. Booking rejection**
+
+Owner booking reject करू शकतो. fileciteturn0file0L195-L201
+
+**Question:** rejection reason mandatory की optional?
+
+माझ्या मते mandatory ठेवणे better आहे.
+
+---
+
+**9. Driver assignment**
+
+Owner booking accept केल्यानंतर Driver assign करतो. fileciteturn0file0L208-L214
+
+जर Owner कडे **Driver available नसेल**, तर:
+
+- booking accept करता येणार नाही?
+- booking accepted ठेवून नंतर driver assign करता येईल?
+- Customer ला waiting status दिसेल?
+
+हे final करणे important आहे.
+
+---
+
+**10. Customer booking details**
+
+सध्या pickup/drop/date/time/passengers/trip type आहेत. fileciteturn0file0L181-L191
+
+मला हे confirm कर:
+
+Customer ला **mobile number आणि address** booking वेळी द्यायचा आहे का?
+
+उदा.
+
+```text
+Pickup Location
+Drop Location
+Pickup Date
+Pickup Time
+Return Date
+Passengers
+Customer Mobile Number
+Pickup Address
+Additional Details
+```
+
+---
+
+**11. Trip type**
+
+`Trip Type` आहे पण values नाहीत.
+
+काय ठेवायचे?
+
+- One Way
+- Round Trip
+- Local
+- Outstation
+
+की फक्त:
+
+- One Way
+- Round Trip
+
+---
+
+**12. Driver Start/End Trip**
+
+सध्या Driver फक्त Start Trip आणि End Trip करतो. fileciteturn0file0L219-L224
+
+Start Trip करताना **OTP / Customer confirmation** लागेल का?
+
+उदा.
+
+`Driver arrives → Customer gives OTP → Driver Start Trip`
+
+की Driver directly Start Trip करेल?
+
+---
+
+**13. Trip completion**
+
+Driver `End Trip` केल्यावर trip completed.
+
+Customer ला trip complete करण्यासाठी काही confirmation द्यायचे का?
+
+की फक्त Driver चाच action पुरेसा?
+
+---
+
+**14. Location tracking**
+
+एक important missing feature:
+
+**Driver live location tracking हवे आहे का?**
+
+उदा.
+
+Customer ला:
+
+`Driver is 2.3 km away`
+
+किंवा Google Maps वर live location.
+
+की application मध्ये **फक्त pickup/drop location store** करायची आणि live tracking नाही?
+
+---
+
+**15. Reviews / Ratings**
+
+SRS मध्ये Rating/Review नाही.
+
+Trip complete झाल्यावर:
+
+`Customer → Driver rating/review`
+
+आणि
+
+`Customer → Vehicle/Owner rating/review`
+
+हवे आहे का?
+
+---
+
+**16. Documents**
+
+Vehicle मध्ये RC front/back आणि Driver मध्ये License front/back आहे. fileciteturn0file0L93-L100 fileciteturn0file0L117-L127
+
+Documents कुठे store करायचे याबाबत SRS मध्ये technical decision नाही.
+
+Business requirement म्हणून एवढे confirm कर:
+
+**Admin documents पाहू शकतो, Owner स्वतःचे documents पाहू शकतो, पण Customer ला documents कधीही दिसणार नाहीत?**
+
+---
+
+**17. Vehicle ownership**
+
+एक vehicle फक्त **एकाच Owner** कडे असणार?
+
+उदा.
+
+`Owner A → Car 1`
+
+आणि दुसरा Owner त्याच vehicle ला add करू शकणार नाही.
+
+---
+
+**18. Driver ownership**
+
+एक Driver फक्त एका Owner शी associated असेल?
+
+उदा.
+
+`Owner A → Driver X`
+
+Driver simultaneously `Owner B` साठी काम करू शकणार नाही?
+
+---
+
+**19. Vehicle availability**
+
+Vehicle `ACTIVE` असूनही जर दुसऱ्या booking/trip मध्ये असेल तर search मध्ये ते available दाखवायचे नाही.
+
+हे obvious आहे, पण SRS मध्ये exact availability rule हवा.
+
+**Question:** future booking dates पाहून availability calculate करायची का?
+
+उदा.
+
+Car:
+
+`1 Sept – 5 Sept → Booked`
+
+तर Customer:
+
+`3 Sept` search → vehicle दिसणार नाही.
+
+---
+
+**20. Admin rejection नंतर resubmission**
+
+Vehicle/Driver rejected झाल्यावर Owner corrections करून **same record पुन्हा submit** करणार का?
+
+SRS मध्ये `RESUBMISSION (where permitted)` आहे. fileciteturn0file0L364-L370
+
+मी `Yes` recommend करतो.
+
+---
+
+### एक मोठा architectural decision
+
+सध्याच्या SRS मध्ये 3 applications आहेत:
+
+```text
+Customer Mobile App
+        │
+        ├──── Central Backend ──── Database
+        │
+Owner + Driver Mobile App
+        │
+Super Admin Web App
+```
+
+हे योग्य आहे. fileciteturn0file0L322-L326
+
+पण backend बद्दल आपण final SRS मध्ये हे स्पष्ट करू शकतो:
+
+```text
+                ┌──────────────────┐
+                │  Central Backend │
+                │   REST APIs      │
+                └────────┬─────────┘
+                         │
+                    ┌────┴────┐
+                    │ Database│
+                    └─────────┘
+                 /       |       \
+                /        |        \
+        Customer      Owner/     Super Admin
+          App          Driver       Web
+                       App
+```
+
+**एकच centralized backend आणि एकच database** ठेवायचा आहे का?
+
+---
+
+तू मला **1 ते 20 चे answers** दे. प्रत्येकाचे मोठे explanation देण्याची गरज नाही—उदा.:
+
+`1-D, 2-Yes, 3-..., 4-...`
+
+जिथे तुला decision माहीत नसेल तिथे **"suggest"** लिही. त्या points वर मी तुला industry-wise best option आणि त्याचा reason सांगतो. मग आपण **SRS v2 final requirements** lock करू.
+

@@ -1,9 +1,9 @@
 package com.carrental.auth.mapper;
 
-import com.carrental.auth.dto.request.CustomerSignupRequest;
-import com.carrental.auth.dto.request.OwnerSignupRequest;
 import com.carrental.auth.dto.response.UserResponse;
 import com.carrental.auth.entity.User;
+import com.carrental.customer.dto.CustomerSignupRequest;
+import com.carrental.owner.dto.OwnerSignupRequest;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;

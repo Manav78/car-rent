@@ -1,11 +1,10 @@
 package com.carrental.auth.service;
 
-import com.carrental.auth.dto.request.CustomerSignupRequest;
 import com.carrental.auth.dto.request.ForgotPasswordRequest;
 import com.carrental.auth.dto.request.LoginRequest;
-import com.carrental.auth.dto.request.OwnerSignupRequest;
 import com.carrental.auth.dto.request.RefreshTokenRequest;
 import com.carrental.auth.dto.request.ResetPasswordRequest;
+import com.carrental.auth.dto.request.VerifyEmailRequest;
 import com.carrental.auth.dto.response.AuthResponse;
 import com.carrental.auth.dto.response.TokenRefreshResponse;
 import com.carrental.auth.dto.response.UserResponse;
@@ -15,20 +14,24 @@ import com.carrental.auth.entity.RefreshToken;
 import com.carrental.auth.entity.User;
 import com.carrental.auth.enums.Role;
 import com.carrental.auth.exception.AuthException;
-import com.carrental.auth.exception.BadRequestException;
 import com.carrental.auth.exception.InvalidTokenException;
-import com.carrental.auth.exception.ResourceNotFoundException;
 import com.carrental.auth.exception.TokenRefreshException;
 import com.carrental.auth.exception.UserAlreadyExistsException;
 import com.carrental.auth.mapper.AuthMapper;
 import com.carrental.auth.repository.EmailVerificationTokenRepository;
 import com.carrental.auth.repository.PasswordResetTokenRepository;
 import com.carrental.auth.repository.UserRepository;
-import com.carrental.auth.security.JwtTokenProvider;
-import com.carrental.auth.security.UserDetailsImpl;
+import com.carrental.common.exception.BadRequestException;
+import com.carrental.common.exception.ResourceNotFoundException;
+import com.carrental.customer.dto.CustomerSignupRequest;
+import com.carrental.notification.service.EmailService;
+import com.carrental.owner.dto.OwnerSignupRequest;
+import com.carrental.security.jwt.JwtTokenProvider;
+import com.carrental.security.service.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -36,6 +39,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
@@ -44,6 +48,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
@@ -58,12 +64,21 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public UserResponse registerCustomer(CustomerSignupRequest request) {
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            throw new BadRequestException("Password and confirm password do not match");
+        }
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new UserAlreadyExistsException("Email already registered: " + request.getEmail());
         }
 
+        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new UserAlreadyExistsException("Phone number already registered: " + request.getPhoneNumber());
+        }
+
         User user = authMapper.toCustomerEntity(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setPhoneNumber(request.getPhoneNumber());
         user.setRole(Role.ROLE_CUSTOMER);
         user.setWillingToDrive(false);
         user.setEmailVerified(false);
@@ -81,12 +96,21 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public UserResponse registerOwner(OwnerSignupRequest request) {
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            throw new BadRequestException("Password and confirm password do not match");
+        }
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new UserAlreadyExistsException("Email already registered: " + request.getEmail());
         }
 
+        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new UserAlreadyExistsException("Phone number already registered: " + request.getPhoneNumber());
+        }
+
         User user = authMapper.toOwnerEntity(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setPhoneNumber(request.getPhoneNumber());
         user.setRole(Role.ROLE_OWNER);
         user.setEmailVerified(false);
         user.setAccountNonLocked(true);
@@ -114,14 +138,16 @@ public class AuthServiceImpl implements AuthService {
     private void createAndSendVerificationToken(User user) {
         emailVerificationTokenRepository.deleteByUser(user);
 
+        String otp = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
+
         EmailVerificationToken verificationToken = EmailVerificationToken.builder()
                 .user(user)
-                .token(UUID.randomUUID().toString())
-                .expiryDate(Instant.now().plus(24, ChronoUnit.HOURS))
+                .token(otp)
+                .expiryDate(Instant.now().plus(15, ChronoUnit.MINUTES))
                 .build();
 
         emailVerificationTokenRepository.save(verificationToken);
-        emailService.sendVerificationEmail(user.getEmail(), user.getFullName(), verificationToken.getToken());
+        emailService.sendVerificationEmail(user.getEmail(), user.getFullName(), otp);
     }
 
     @Override
@@ -134,6 +160,10 @@ public class AuthServiceImpl implements AuthService {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         User user = userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userDetails.getId()));
+
+        if (!user.isEmailVerified()) {
+            throw new DisabledException("Account is disabled. Please verify your email first.");
+        }
 
         String accessToken = jwtTokenProvider.generateAccessToken(userDetails);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
@@ -177,6 +207,41 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    public void verifyEmail(VerifyEmailRequest request) {
+        if (request.getEmail() != null && !request.getEmail().isBlank() && request.getOtp() != null && !request.getOtp().isBlank()) {
+            User user = userRepository.findByEmail(request.getEmail().trim())
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
+
+            if (user.isEmailVerified()) {
+                throw new BadRequestException("Email is already verified");
+            }
+
+            EmailVerificationToken token = emailVerificationTokenRepository.findByUser(user)
+                    .orElseThrow(() -> new InvalidTokenException("No verification OTP found for this user. Please request a new OTP."));
+
+            if (token.isExpired()) {
+                emailVerificationTokenRepository.delete(token);
+                throw new InvalidTokenException("OTP has expired. Please request a new one.");
+            }
+
+            if (!token.getToken().equals(request.getOtp().trim())) {
+                throw new InvalidTokenException("Invalid OTP. Please check the code sent to your email.");
+            }
+
+            user.setEmailVerified(true);
+            userRepository.save(user);
+
+            emailVerificationTokenRepository.delete(token);
+            log.info("Email verified successfully for user: {}", user.getEmail());
+        } else if (request.getToken() != null && !request.getToken().isBlank()) {
+            verifyEmail(request.getToken().trim());
+        } else {
+            throw new BadRequestException("Email and OTP are required for email verification");
+        }
+    }
+
+    @Override
+    @Transactional
     public void verifyEmail(String tokenStr) {
         EmailVerificationToken token = emailVerificationTokenRepository.findByToken(tokenStr)
                 .orElseThrow(() -> new InvalidTokenException("Invalid email verification token"));
@@ -196,7 +261,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void resendVerificationEmail(String email) {
+    public void resendVerificationOtp(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
 
@@ -205,7 +270,13 @@ public class AuthServiceImpl implements AuthService {
         }
 
         createAndSendVerificationToken(user);
-        log.info("Resent verification email to: {}", email);
+        log.info("Resent verification OTP to: {}", email);
+    }
+
+    @Override
+    @Transactional
+    public void resendVerificationEmail(String email) {
+        resendVerificationOtp(email);
     }
 
     @Override

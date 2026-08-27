@@ -1,18 +1,18 @@
 package com.carrental.auth.controller;
 
-import com.carrental.auth.dto.request.CustomerSignupRequest;
 import com.carrental.auth.dto.request.ForgotPasswordRequest;
 import com.carrental.auth.dto.request.LoginRequest;
-import com.carrental.auth.dto.request.OwnerSignupRequest;
 import com.carrental.auth.dto.request.RefreshTokenRequest;
 import com.carrental.auth.dto.request.ResendVerificationRequest;
 import com.carrental.auth.dto.request.ResetPasswordRequest;
 import com.carrental.auth.dto.request.VerifyEmailRequest;
-import com.carrental.auth.dto.response.ApiResponse;
 import com.carrental.auth.dto.response.AuthResponse;
 import com.carrental.auth.dto.response.TokenRefreshResponse;
 import com.carrental.auth.dto.response.UserResponse;
 import com.carrental.auth.service.AuthService;
+import com.carrental.common.dto.ApiResponse;
+import com.carrental.customer.dto.CustomerSignupRequest;
+import com.carrental.owner.dto.OwnerSignupRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -36,14 +36,14 @@ public class AuthController {
     public ResponseEntity<ApiResponse<UserResponse>> registerCustomer(@Valid @RequestBody CustomerSignupRequest request) {
         UserResponse response = authService.registerCustomer(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Customer registered successfully. Please check your email for verification.", response));
+                .body(ApiResponse.success("Signup successful. Please verify your email using the OTP sent to your email address.", response));
     }
 
     @PostMapping("/signup/owner")
     public ResponseEntity<ApiResponse<UserResponse>> registerOwner(@Valid @RequestBody OwnerSignupRequest request) {
         UserResponse response = authService.registerOwner(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Owner registered successfully. Please check your email for verification.", response));
+                .body(ApiResponse.success("Signup successful. Please verify your email using the OTP sent to your email address.", response));
     }
 
     @PostMapping("/login")
@@ -66,14 +66,14 @@ public class AuthController {
 
     @PostMapping("/verify-email")
     public ResponseEntity<ApiResponse<Void>> verifyEmailByPost(@Valid @RequestBody VerifyEmailRequest request) {
-        authService.verifyEmail(request.getToken());
+        authService.verifyEmail(request);
         return ResponseEntity.ok(ApiResponse.success("Email verified successfully"));
     }
 
-    @PostMapping("/resend-verification")
+    @PostMapping(value = {"/resend-verification-otp", "/resend-verification"})
     public ResponseEntity<ApiResponse<Void>> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
-        authService.resendVerificationEmail(request.getEmail());
-        return ResponseEntity.ok(ApiResponse.success("Verification email has been resent"));
+        authService.resendVerificationOtp(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.success("Verification OTP has been resent to your email address."));
     }
 
     @PostMapping("/forgot-password")

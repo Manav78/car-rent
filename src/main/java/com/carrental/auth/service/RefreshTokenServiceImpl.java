@@ -4,7 +4,7 @@ import com.carrental.auth.entity.RefreshToken;
 import com.carrental.auth.entity.User;
 import com.carrental.auth.exception.TokenRefreshException;
 import com.carrental.auth.repository.RefreshTokenRepository;
-import com.carrental.auth.security.JwtTokenProvider;
+import com.carrental.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
