@@ -4,3 +4,4 @@ public enum TripType {
     LOCAL,
     OUTSTATION
 }
+

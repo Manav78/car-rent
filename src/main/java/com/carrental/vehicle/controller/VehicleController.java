@@ -2,10 +2,11 @@ package com.carrental.vehicle.controller;
 
 import com.carrental.common.dto.ApiResponse;
 import com.carrental.security.service.UserDetailsImpl;
-import com.carrental.vehicle.dto.VehicleRequest;
-import com.carrental.vehicle.dto.VehicleResponse;
+import com.carrental.vehicle.dto.request.VehicleRequest;
+import com.carrental.vehicle.dto.response.VehicleResponse;
 import com.carrental.vehicle.enums.VehicleType;
 import com.carrental.vehicle.service.VehicleService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+@Tag(name = "Vehicles", description = "Endpoints for vehicle discovery, search, filtering, and fleet management")
 @RestController
 @RequestMapping("/api/vehicles")
 @RequiredArgsConstructor
@@ -68,7 +70,7 @@ public class VehicleController {
                                                                       @Valid @RequestBody VehicleRequest request) {
         VehicleResponse response = vehicleService.createVehicle(userDetails.getId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Vehicle listed successfully", response));
+                .body(ApiResponse.created("Vehicle listed successfully", response));
     }
 
     @PutMapping("/{id}")
@@ -88,3 +90,4 @@ public class VehicleController {
         return ResponseEntity.ok(ApiResponse.success("Vehicle deleted successfully"));
     }
 }
+

@@ -9,3 +9,4 @@ public class AuthException extends RuntimeException {
         super(message, cause);
     }
 }
+

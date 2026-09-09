@@ -17,10 +17,20 @@ public class UserResponse {
     private Long id;
     private String firstName;
     private String lastName;
-    private String fullName;
     private String email;
     private String phoneNumber;
     private Role role;
-    private boolean emailVerified;
+    private Boolean emailVerified;
+    private Boolean isActive;
+    private boolean enabled;
     private LocalDateTime createdAt;
+
+    public boolean isEmailVerified() {
+        return Boolean.TRUE.equals(emailVerified);
+    }
+
+    public boolean isEnabled() {
+        return enabled || (Boolean.TRUE.equals(emailVerified) && (isActive == null || isActive));
+    }
 }
+

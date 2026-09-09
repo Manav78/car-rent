@@ -17,3 +17,4 @@ public class TokenRefreshResponse {
     private String tokenType = "Bearer";
     private Long expiresIn;
 }
+

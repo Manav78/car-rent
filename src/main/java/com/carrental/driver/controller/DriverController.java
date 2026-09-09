@@ -1,11 +1,12 @@
 package com.carrental.driver.controller;
 
 import com.carrental.common.dto.ApiResponse;
-import com.carrental.driver.dto.DriverRequest;
-import com.carrental.driver.dto.DriverResponse;
-import com.carrental.driver.dto.DriverStatusUpdateRequest;
+import com.carrental.driver.dto.request.DriverRequest;
+import com.carrental.driver.dto.response.DriverResponse;
+import com.carrental.driver.dto.request.DriverStatusUpdateRequest;
 import com.carrental.driver.service.DriverService;
 import com.carrental.security.service.UserDetailsImpl;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "Driver", description = "Endpoints for driver profile, status, and ride operations")
 @RestController
 @RequestMapping("/api/drivers")
 @RequiredArgsConstructor
@@ -64,3 +66,4 @@ public class DriverController {
         return ResponseEntity.ok(ApiResponse.success("Available drivers retrieved", drivers));
     }
 }
+

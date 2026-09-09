@@ -1,8 +1,8 @@
 package com.carrental.booking.service;
 
-import com.carrental.booking.dto.BookingRequest;
-import com.carrental.booking.dto.BookingResponse;
-import com.carrental.booking.dto.BookingStatusUpdateRequest;
+import com.carrental.booking.dto.request.BookingRequest;
+import com.carrental.booking.dto.response.BookingResponse;
+import com.carrental.booking.dto.request.BookingStatusUpdateRequest;
 
 import com.carrental.security.service.UserDetailsImpl;
 
@@ -16,17 +16,14 @@ public interface BookingService {
 
     BookingResponse getBookingById(UserDetailsImpl userDetails, Long id);
 
-    BookingResponse getBookingByReference(String reference);
-
-    BookingResponse getBookingByReference(UserDetailsImpl userDetails, String reference);
-
     List<BookingResponse> getCustomerBookings(Long customerId);
+
+    List<BookingResponse> getCustomerHistory(Long customerId);
 
     List<BookingResponse> getOwnerBookings(Long ownerId);
 
     List<BookingResponse> getDriverBookings(Long driverId);
 
     BookingResponse updateBookingStatus(Long bookingId, BookingStatusUpdateRequest request);
-
-    void cancelBooking(Long customerId, Long bookingId);
 }
+

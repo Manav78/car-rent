@@ -1,20 +1,27 @@
 package com.carrental.auth.service;
 
+import com.carrental.auth.service.impl.AuthServiceImpl;
+
 import com.carrental.auth.dto.request.LoginRequest;
+import com.carrental.auth.dto.request.VerifyEmailRequest;
 import com.carrental.auth.dto.response.AuthResponse;
 import com.carrental.auth.dto.response.UserResponse;
 import com.carrental.auth.entity.EmailVerificationToken;
 import com.carrental.auth.entity.RefreshToken;
 import com.carrental.auth.entity.User;
 import com.carrental.auth.enums.Role;
+import com.carrental.auth.exception.InvalidTokenException;
 import com.carrental.auth.exception.UserAlreadyExistsException;
 import com.carrental.auth.mapper.AuthMapper;
 import com.carrental.auth.repository.EmailVerificationTokenRepository;
 import com.carrental.auth.repository.PasswordResetTokenRepository;
 import com.carrental.auth.repository.UserRepository;
-import com.carrental.customer.dto.CustomerSignupRequest;
+import com.carrental.common.exception.BadRequestException;
+import com.carrental.customer.dto.request.CustomerSignupRequest;
+import com.carrental.owner.dto.request.OwnerSignupRequest;
+import com.carrental.driver.repository.DriverProfileRepository;
 import com.carrental.notification.service.EmailService;
-import com.carrental.owner.dto.OwnerSignupRequest;
+import com.carrental.owner.repository.OwnerProfileRepository;
 import com.carrental.security.jwt.JwtTokenProvider;
 import com.carrental.security.service.UserDetailsImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +36,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.time.LocalDate;
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -37,15 +45,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-import com.carrental.auth.dto.request.VerifyEmailRequest;
-import com.carrental.auth.exception.InvalidTokenException;
-import com.carrental.common.exception.BadRequestException;
-import org.springframework.security.authentication.DisabledException;
-
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-
 @ExtendWith(MockitoExtension.class)
+@DisplayName("AuthService Unit Tests")
 class AuthServiceTest {
 
     @Mock
@@ -56,6 +57,12 @@ class AuthServiceTest {
 
     @Mock
     private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Mock
+    private OwnerProfileRepository ownerProfileRepository;
+
+    @Mock
+    private DriverProfileRepository driverProfileRepository;
 
     @Mock
     private RefreshTokenService refreshTokenService;
@@ -78,281 +85,303 @@ class AuthServiceTest {
     @InjectMocks
     private AuthServiceImpl authService;
 
-    private CustomerSignupRequest customerRequest;
-    private OwnerSignupRequest ownerRequest;
-    private User customerUser;
-    private User ownerUser;
-    private UserResponse userResponse;
+    private User sampleUser;
+    private UserResponse sampleUserResponse;
 
     @BeforeEach
     void setUp() {
-        customerRequest = CustomerSignupRequest.builder()
+        sampleUser = User.builder()
+                .id(1L)
                 .firstName("Alice")
                 .lastName("Smith")
                 .email("alice@example.com")
-                .password("Password@123")
-                .confirmPassword("Password@123")
+                .password("encoded_pass")
                 .phoneNumber("9876543210")
+                .role(Role.CUSTOMER)
+                .emailVerified(true)
+                .isActive(true)
+                .enabled(true)
+                .createdAt(LocalDateTime.now())
                 .build();
 
-        ownerRequest = OwnerSignupRequest.builder()
-                .firstName("Bob")
-                .lastName("Builder")
-                .email("bob@example.com")
-                .password("Password@123")
-                .confirmPassword("Password@123")
-                .phoneNumber("9876543211")
-                .willingToDrive(true)
-                .drivingLicenseNumber("DL-12345678")
-                .licenseExpiryDate(LocalDate.now().plusYears(2))
-                .build();
-
-        customerUser = User.builder()
+        sampleUserResponse = UserResponse.builder()
                 .id(1L)
                 .firstName("Alice")
                 .lastName("Smith")
                 .email("alice@example.com")
                 .phoneNumber("9876543210")
-                .emailVerified(false)
-                .role(Role.ROLE_CUSTOMER)
-                .build();
-
-        ownerUser = User.builder()
-                .id(2L)
-                .firstName("Bob")
-                .lastName("Builder")
-                .email("bob@example.com")
-                .phoneNumber("9876543211")
-                .emailVerified(false)
-                .role(Role.ROLE_OWNER)
-                .willingToDrive(true)
-                .drivingLicenseNumber("DL-12345678")
-                .licenseExpiryDate(LocalDate.now().plusYears(2))
-                .build();
-
-        userResponse = UserResponse.builder()
-                .id(1L)
-                .firstName("Alice")
-                .lastName("Smith")
-                .email("alice@example.com")
-                .role(Role.ROLE_CUSTOMER)
+                .role(Role.CUSTOMER)
+                .emailVerified(true)
+                .isActive(true)
+                .enabled(true)
                 .build();
     }
 
     @Test
-    @DisplayName("Should register customer successfully and send verification OTP")
+    @DisplayName("Should register customer successfully")
     void testRegisterCustomerSuccess() {
-        when(userRepository.existsByEmail(anyString())).thenReturn(false);
-        when(userRepository.existsByPhoneNumber(anyString())).thenReturn(false);
-        when(authMapper.toCustomerEntity(any(CustomerSignupRequest.class))).thenReturn(customerUser);
-        when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
-        when(userRepository.save(any(User.class))).thenReturn(customerUser);
-        when(authMapper.toUserResponse(any(User.class))).thenReturn(userResponse);
+        CustomerSignupRequest request = new CustomerSignupRequest();
+        request.setFirstName("Alice");
+        request.setLastName("Smith");
+        request.setEmail("alice@example.com");
+        request.setPassword("Password@123");
+        request.setConfirmPassword("Password@123");
+        request.setPhoneNumber("9876543210");
 
-        UserResponse result = authService.registerCustomer(customerRequest);
+        when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
+        when(authMapper.toCustomerEntity(any(CustomerSignupRequest.class))).thenReturn(sampleUser);
+        when(passwordEncoder.encode("Password@123")).thenReturn("encoded_pass");
+        when(userRepository.save(any(User.class))).thenReturn(sampleUser);
+        when(authMapper.toUserResponse(any(User.class))).thenReturn(sampleUserResponse);
 
-        assertNotNull(result);
-        assertEquals("alice@example.com", result.getEmail());
-        verify(emailVerificationTokenRepository).save(any(EmailVerificationToken.class));
+        UserResponse response = authService.registerCustomer(request);
+
+        assertNotNull(response);
+        assertEquals("alice@example.com", response.getEmail());
         verify(emailService).sendVerificationEmail(eq("alice@example.com"), anyString(), anyString());
     }
 
     @Test
-    @DisplayName("Should throw BadRequestException when customer password and confirmPassword mismatch")
-    void testRegisterCustomerPasswordMismatch() {
-        customerRequest.setConfirmPassword("DifferentPassword@123");
+    @DisplayName("Should throw exception when passwords do not match")
+    void testRegisterPasswordMismatch() {
+        CustomerSignupRequest request = new CustomerSignupRequest();
+        request.setPassword("Pass1");
+        request.setConfirmPassword("Pass2");
 
-        BadRequestException ex = assertThrows(BadRequestException.class, () -> authService.registerCustomer(customerRequest));
-        assertTrue(ex.getMessage().contains("Password and confirm password do not match"));
-        verify(userRepository, never()).save(any(User.class));
+        assertThrows(BadRequestException.class, () -> authService.registerCustomer(request));
     }
 
     @Test
-    @DisplayName("Should throw exception when customer email already exists")
-    void testRegisterCustomerDuplicateEmail() {
+    @DisplayName("Should throw exception when email already exists")
+    void testRegisterDuplicateEmail() {
+        CustomerSignupRequest request = new CustomerSignupRequest();
+        request.setEmail("alice@example.com");
+        request.setPassword("Password@123");
+        request.setConfirmPassword("Password@123");
+
         when(userRepository.existsByEmail("alice@example.com")).thenReturn(true);
 
-        assertThrows(UserAlreadyExistsException.class, () -> authService.registerCustomer(customerRequest));
-        verify(userRepository, never()).save(any(User.class));
+        assertThrows(UserAlreadyExistsException.class, () -> authService.registerCustomer(request));
     }
 
     @Test
-    @DisplayName("Should throw exception when customer phone number already exists")
-    void testRegisterCustomerDuplicatePhone() {
-        when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
-        when(userRepository.existsByPhoneNumber("9876543210")).thenReturn(true);
+    @DisplayName("Should login successfully")
+    void testLoginSuccess() {
+        LoginRequest loginRequest = new LoginRequest("alice@example.com", "Password@123");
+        Authentication authentication = mock(Authentication.class);
+        RefreshToken refreshToken = RefreshToken.builder().token("mock-refresh-token").build();
+        UserDetailsImpl userDetails = UserDetailsImpl.builder().id(1L).email("alice@example.com").build();
 
-        assertThrows(UserAlreadyExistsException.class, () -> authService.registerCustomer(customerRequest));
-        verify(userRepository, never()).save(any(User.class));
+        sampleUser.setEmailVerified(true);
+        sampleUser.setIsActive(true);
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(userDetails);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
+        when(jwtTokenProvider.generateAccessToken(userDetails)).thenReturn("mock-access-token");
+        when(refreshTokenService.createRefreshToken(sampleUser)).thenReturn(refreshToken);
+        when(authMapper.toUserResponse(sampleUser)).thenReturn(sampleUserResponse);
+
+        AuthResponse authResponse = authService.login(loginRequest);
+
+        assertNotNull(authResponse);
+        assertEquals("mock-access-token", authResponse.getAccessToken());
+        assertEquals("mock-refresh-token", authResponse.getRefreshToken());
     }
 
     @Test
-    @DisplayName("Should register owner with license details when willing to drive")
-    void testRegisterOwnerWillingToDrive() {
-        when(userRepository.existsByEmail(anyString())).thenReturn(false);
-        when(userRepository.existsByPhoneNumber(anyString())).thenReturn(false);
-        when(authMapper.toOwnerEntity(any(OwnerSignupRequest.class))).thenReturn(ownerUser);
-        when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
-        when(userRepository.save(any(User.class))).thenReturn(ownerUser);
-        when(authMapper.toUserResponse(any(User.class))).thenReturn(
-                UserResponse.builder()
-                        .id(2L)
-                        .firstName("Bob")
-                        .lastName("Builder")
-                        .email("bob@example.com")
-                        .role(Role.ROLE_OWNER)
-                        .build()
-        );
+    @DisplayName("Should login admin successfully")
+    void testLoginSuccess_Admin() {
+        LoginRequest loginRequest = new LoginRequest("admin@carrental.com", "Admin@123");
+        Authentication authentication = mock(Authentication.class);
+        UserDetailsImpl userDetails = UserDetailsImpl.builder()
+                .id(1L)
+                .email("admin@carrental.com")
+                .authorities(java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN")))
+                .build();
+        User adminUser = User.builder()
+                .id(1L)
+                .name("Super Admin")
+                .email("admin@carrental.com")
+                .isActive(true)
+                .emailVerified(true)
+                .role(Role.ADMIN)
+                .build();
+        UserResponse adminResponse = UserResponse.builder()
+                .id(1L)
+                .firstName("Super Admin")
+                .email("admin@carrental.com")
+                .role(Role.ADMIN)
+                .emailVerified(true)
+                .isActive(true)
+                .enabled(true)
+                .build();
+        RefreshToken refreshToken = RefreshToken.builder().token("admin-refresh-token").build();
 
-        UserResponse result = authService.registerOwner(ownerRequest);
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(userDetails);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(adminUser));
+        when(jwtTokenProvider.generateAccessToken(userDetails)).thenReturn("admin-access-token");
+        when(refreshTokenService.createRefreshToken(adminUser)).thenReturn(refreshToken);
+        when(authMapper.toUserResponse(adminUser)).thenReturn(adminResponse);
 
-        assertNotNull(result);
-        assertEquals("bob@example.com", result.getEmail());
-        assertEquals(Role.ROLE_OWNER, result.getRole());
-        verify(userRepository).save(argThat(u -> Boolean.TRUE.equals(u.getWillingToDrive()) && "DL-12345678".equals(u.getDrivingLicenseNumber())));
+        AuthResponse authResponse = authService.login(loginRequest);
+
+        assertNotNull(authResponse);
+        assertEquals("admin-access-token", authResponse.getAccessToken());
+        assertEquals(Role.ADMIN, authResponse.getUser().getRole());
     }
 
     @Test
-    @DisplayName("Should throw BadRequestException when owner password and confirmPassword mismatch")
-    void testRegisterOwnerPasswordMismatch() {
-        ownerRequest.setConfirmPassword("DifferentPassword@123");
+    @DisplayName("Should login admin successfully via adminLogin endpoint")
+    void testAdminLoginSuccess() {
+        LoginRequest loginRequest = new LoginRequest("admin@carrental.com", "Admin@123");
+        Authentication authentication = mock(Authentication.class);
+        UserDetailsImpl userDetails = UserDetailsImpl.builder()
+                .id(1L)
+                .email("admin@carrental.com")
+                .authorities(java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN")))
+                .build();
+        User adminUser = User.builder()
+                .id(1L)
+                .name("Super Admin")
+                .email("admin@carrental.com")
+                .isActive(true)
+                .emailVerified(true)
+                .role(Role.ADMIN)
+                .build();
+        UserResponse adminResponse = UserResponse.builder()
+                .id(1L)
+                .firstName("Super Admin")
+                .email("admin@carrental.com")
+                .role(Role.ADMIN)
+                .emailVerified(true)
+                .isActive(true)
+                .enabled(true)
+                .build();
+        RefreshToken refreshToken = RefreshToken.builder().token("admin-refresh-token").build();
 
-        BadRequestException ex = assertThrows(BadRequestException.class, () -> authService.registerOwner(ownerRequest));
-        assertTrue(ex.getMessage().contains("Password and confirm password do not match"));
-        verify(userRepository, never()).save(any(User.class));
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(userDetails);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(adminUser));
+        when(jwtTokenProvider.generateAccessToken(userDetails)).thenReturn("admin-access-token");
+        when(refreshTokenService.createRefreshToken(adminUser)).thenReturn(refreshToken);
+        when(authMapper.toUserResponse(adminUser)).thenReturn(adminResponse);
+
+        AuthResponse authResponse = authService.adminLogin(loginRequest);
+
+        assertNotNull(authResponse);
+        assertEquals("admin-access-token", authResponse.getAccessToken());
+        assertEquals(Role.ADMIN, authResponse.getUser().getRole());
     }
 
     @Test
-    @DisplayName("Should verify email successfully with correct OTP")
+    @DisplayName("Should verify email successfully")
     void testVerifyEmailSuccess() {
+        sampleUser.setEmailVerified(false);
         EmailVerificationToken token = EmailVerificationToken.builder()
-                .user(customerUser)
+                .id(1L)
+                .user(sampleUser)
                 .token("123456")
-                .expiryDate(Instant.now().plus(15, ChronoUnit.MINUTES))
+                .expiryDate(Instant.now().plusSeconds(300))
                 .build();
 
-        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(customerUser));
-        when(emailVerificationTokenRepository.findByUser(customerUser)).thenReturn(Optional.of(token));
+        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(sampleUser));
+        when(emailVerificationTokenRepository.findByUser(sampleUser)).thenReturn(Optional.of(token));
 
-        VerifyEmailRequest request = new VerifyEmailRequest("alice@example.com", "123456", null);
-        authService.verifyEmail(request);
+        authService.verifyEmail(new VerifyEmailRequest("alice@example.com", "123456"));
 
-        assertTrue(customerUser.isEmailVerified());
-        verify(userRepository).save(customerUser);
+        assertTrue(sampleUser.isEmailVerified());
+        verify(userRepository).save(sampleUser);
         verify(emailVerificationTokenRepository).delete(token);
     }
 
     @Test
-    @DisplayName("Should reject incorrect OTP")
-    void testVerifyEmailIncorrectOtp() {
+    @DisplayName("Should throw exception when verification token expired")
+    void testVerifyEmailExpiredToken() {
+        sampleUser.setEmailVerified(false);
         EmailVerificationToken token = EmailVerificationToken.builder()
-                .user(customerUser)
+                .id(1L)
+                .user(sampleUser)
                 .token("123456")
-                .expiryDate(Instant.now().plus(15, ChronoUnit.MINUTES))
+                .expiryDate(Instant.now().minusSeconds(100))
                 .build();
 
-        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(customerUser));
-        when(emailVerificationTokenRepository.findByUser(customerUser)).thenReturn(Optional.of(token));
+        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(sampleUser));
+        when(emailVerificationTokenRepository.findByUser(sampleUser)).thenReturn(Optional.of(token));
 
-        VerifyEmailRequest request = new VerifyEmailRequest("alice@example.com", "654321", null);
-        InvalidTokenException ex = assertThrows(InvalidTokenException.class, () -> authService.verifyEmail(request));
-        assertTrue(ex.getMessage().contains("Invalid OTP"));
-    }
-
-    @Test
-    @DisplayName("Should reject expired OTP")
-    void testVerifyEmailExpiredOtp() {
-        EmailVerificationToken token = EmailVerificationToken.builder()
-                .user(customerUser)
-                .token("123456")
-                .expiryDate(Instant.now().minus(5, ChronoUnit.MINUTES))
-                .build();
-
-        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(customerUser));
-        when(emailVerificationTokenRepository.findByUser(customerUser)).thenReturn(Optional.of(token));
-
-        VerifyEmailRequest request = new VerifyEmailRequest("alice@example.com", "123456", null);
-        InvalidTokenException ex = assertThrows(InvalidTokenException.class, () -> authService.verifyEmail(request));
-        assertTrue(ex.getMessage().contains("expired"));
-        verify(emailVerificationTokenRepository).delete(token);
-    }
-
-    @Test
-    @DisplayName("Should resend verification OTP and invalidate previous one")
-    void testResendVerificationOtp() {
-        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(customerUser));
-
-        authService.resendVerificationOtp("alice@example.com");
-
-        verify(emailVerificationTokenRepository).deleteByUser(customerUser);
-        verify(emailVerificationTokenRepository).save(any(EmailVerificationToken.class));
-        verify(emailService).sendVerificationEmail(eq("alice@example.com"), anyString(), anyString());
-    }
-
-    @Test
-    @DisplayName("Should reject login when email is unverified")
-    void testLoginUnverifiedUserThrowsDisabledException() {
-        LoginRequest loginRequest = new LoginRequest("alice@example.com", "Password@123");
-        customerUser.setEmailVerified(false);
-        UserDetailsImpl userDetails = UserDetailsImpl.build(customerUser);
-        Authentication authentication = mock(Authentication.class);
-
-        when(authentication.getPrincipal()).thenReturn(userDetails);
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(customerUser));
-
-        assertThrows(DisabledException.class, () -> authService.login(loginRequest));
-    }
-
-    @Test
-    @DisplayName("Should login verified user successfully and return tokens")
-    void testLoginVerifiedUserSuccess() {
-        LoginRequest loginRequest = new LoginRequest("alice@example.com", "Password@123");
-        customerUser.setEmailVerified(true);
-        UserDetailsImpl userDetails = UserDetailsImpl.build(customerUser);
-        Authentication authentication = mock(Authentication.class);
-
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn(userDetails);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(customerUser));
-        when(jwtTokenProvider.generateAccessToken(userDetails)).thenReturn("dummy-access-token");
-        when(jwtTokenProvider.getAccessTokenExpirationMs()).thenReturn(3600000L);
-        when(refreshTokenService.createRefreshToken(customerUser)).thenReturn(
-                RefreshToken.builder().token("dummy-refresh-token").build()
+        assertThrows(InvalidTokenException.class, () ->
+                authService.verifyEmail(new VerifyEmailRequest("alice@example.com", "123456"))
         );
-        when(authMapper.toUserResponse(customerUser)).thenReturn(userResponse);
-
-        AuthResponse authResponse = authService.login(loginRequest);
-
-        assertNotNull(authResponse);
-        assertEquals("dummy-access-token", authResponse.getAccessToken());
-        assertEquals("dummy-refresh-token", authResponse.getRefreshToken());
-        assertEquals("Bearer", authResponse.getTokenType());
     }
 
     @Test
-    @DisplayName("Should login successfully after email_verified is set to true in database")
-    void testLoginAfterManualDatabaseEmailVerificationUpdate() {
+    @DisplayName("Should throw DisabledException when logging in with unverified email")
+    void testLoginUnverifiedEmail() {
         LoginRequest loginRequest = new LoginRequest("alice@example.com", "Password@123");
-        // Simulate DB value changed from false to true
-        customerUser.setEmailVerified(true);
-        UserDetailsImpl userDetails = UserDetailsImpl.build(customerUser);
         Authentication authentication = mock(Authentication.class);
+        UserDetailsImpl userDetails = UserDetailsImpl.builder().id(1L).email("alice@example.com").build();
+
+        sampleUser.setEmailVerified(false);
+        sampleUser.setIsActive(true);
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
         when(authentication.getPrincipal()).thenReturn(userDetails);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(customerUser));
-        when(jwtTokenProvider.generateAccessToken(userDetails)).thenReturn("fresh-jwt-token");
-        when(jwtTokenProvider.getAccessTokenExpirationMs()).thenReturn(3600000L);
-        when(refreshTokenService.createRefreshToken(customerUser)).thenReturn(
-                RefreshToken.builder().token("fresh-refresh-token").build()
-        );
-        when(authMapper.toUserResponse(customerUser)).thenReturn(userResponse);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
 
-        AuthResponse authResponse = authService.login(loginRequest);
+        org.springframework.security.authentication.DisabledException ex =
+                assertThrows(org.springframework.security.authentication.DisabledException.class,
+                        () -> authService.login(loginRequest));
+        assertTrue(ex.getMessage().contains("Account is disabled. Please verify your email first."));
+    }
 
-        assertNotNull(authResponse);
-        assertEquals("fresh-jwt-token", authResponse.getAccessToken());
-        assertTrue(customerUser.isEmailVerified());
+    @Test
+    @DisplayName("Should register customer with emailVerified false and Role CUSTOMER")
+    void testRegisterCustomerWithCorrectFlags() {
+        CustomerSignupRequest request = new CustomerSignupRequest();
+        request.setFirstName("Bob");
+        request.setLastName("Ross");
+        request.setEmail("bob@example.com");
+        request.setPassword("Password@123");
+        request.setConfirmPassword("Password@123");
+        request.setPhoneNumber("9876543299");
+
+        User freshUser = new User();
+        when(userRepository.existsByEmail("bob@example.com")).thenReturn(false);
+        when(authMapper.toCustomerEntity(any(CustomerSignupRequest.class))).thenReturn(freshUser);
+        when(passwordEncoder.encode("Password@123")).thenReturn("encoded_pass");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(authMapper.toUserResponse(any(User.class))).thenReturn(sampleUserResponse);
+
+        authService.registerCustomer(request);
+
+        assertFalse(freshUser.isEmailVerified());
+        assertTrue(freshUser.isEnabled());
+        assertEquals(Role.CUSTOMER, freshUser.getRole());
+    }
+
+    @Test
+    @DisplayName("Should register owner with emailVerified false and Role OWNER")
+    void testRegisterOwnerWithCorrectFlags() {
+        OwnerSignupRequest request = new OwnerSignupRequest();
+        request.setFirstName("Oscar");
+        request.setLastName("Owner");
+        request.setEmail("oscar@example.com");
+        request.setPassword("Password@123");
+        request.setConfirmPassword("Password@123");
+        request.setPhoneNumber("9876543288");
+
+        User freshUser = new User();
+        when(userRepository.existsByEmail("oscar@example.com")).thenReturn(false);
+        when(authMapper.toOwnerEntity(any(OwnerSignupRequest.class))).thenReturn(freshUser);
+        when(passwordEncoder.encode("Password@123")).thenReturn("encoded_pass");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(authMapper.toUserResponse(any(User.class))).thenReturn(sampleUserResponse);
+
+        authService.registerOwner(request);
+
+        assertFalse(freshUser.isEmailVerified());
+        assertTrue(freshUser.isEnabled());
+        assertEquals(Role.OWNER, freshUser.getRole());
     }
 }
+

@@ -3,5 +3,13 @@ package com.carrental.notification.enums;
 public enum NotificationType {
     EMAIL,
     SYSTEM,
-    SMS
+    SMS,
+    SUBSCRIPTION_EXPIRING,
+    DRIVER_ADDED,
+    OWNER_DRIVER_APPLICATION,
+    VEHICLE_SUBMITTED,
+    CUSTOMER_REGISTERED,
+    SUBSCRIPTION_ACTIVATED,
+    OWNER_REGISTERED
 }
+

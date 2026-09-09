@@ -3,6 +3,8 @@ package com.carrental.auth.repository;
 import com.carrental.auth.entity.User;
 import com.carrental.auth.enums.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -15,9 +17,22 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByEmail(String email);
 
-    boolean existsByPhoneNumber(String phoneNumber);
+    Optional<User> findByMobile(String mobile);
 
-    List<User> findByRole(Role role);
+    boolean existsByMobile(String mobile);
 
-    long countByRole(Role role);
+    @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.mobile = :phoneNumber")
+    boolean existsByPhoneNumber(@Param("phoneNumber") String phoneNumber);
+
+    @Query("SELECT u FROM User u JOIN u.roles r WHERE r = :role OR r = :#{T(com.carrental.auth.enums.Role).valueOf('ROLE_' + #role.name().replace('ROLE_', ''))}")
+    List<User> findByRole(@Param("role") Role role);
+
+    @Query("SELECT COUNT(DISTINCT u) FROM User u JOIN u.roles r WHERE r = :role OR r = :#{T(com.carrental.auth.enums.Role).valueOf('ROLE_' + #role.name().replace('ROLE_', ''))}")
+    long countByRole(@Param("role") Role role);
+
+    long countByDeletedAtIsNotNull();
+
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.deletedByUser WHERE u.id = :id")
+    Optional<User> findByIdWithDeletedBy(@Param("id") Long id);
 }
+

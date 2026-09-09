@@ -17,3 +17,4 @@ public class ResendVerificationRequest {
     @Email(message = "Invalid email format")
     private String email;
 }
+

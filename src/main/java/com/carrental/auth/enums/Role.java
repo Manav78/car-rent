@@ -1,6 +1,10 @@
 package com.carrental.auth.enums;
 
 public enum Role {
+    CUSTOMER,
+    OWNER,
+    ADMIN,
+    DRIVER,
     ROLE_CUSTOMER,
     ROLE_OWNER,
     ROLE_ADMIN,
@@ -10,3 +14,4 @@ public enum Role {
         return name().replace("ROLE_", "");
     }
 }
+

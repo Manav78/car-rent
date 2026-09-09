@@ -1,7 +1,7 @@
 package com.carrental.owner.service;
 
-import com.carrental.owner.dto.OwnerResponse;
-import com.carrental.owner.dto.OwnerUpdateRequest;
+import com.carrental.owner.dto.response.OwnerResponse;
+import com.carrental.owner.dto.request.OwnerUpdateRequest;
 
 public interface OwnerService {
 
@@ -9,3 +9,4 @@ public interface OwnerService {
 
     OwnerResponse updateOwnerProfile(Long userId, OwnerUpdateRequest request);
 }
+

@@ -7,3 +7,4 @@ public enum FuelType {
     HYBRID,
     CNG
 }
+

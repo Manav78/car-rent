@@ -1,7 +1,7 @@
 package com.carrental.owner.validation;
 
-import com.carrental.owner.annotation.ValidOwnerLicense;
-import com.carrental.owner.dto.OwnerSignupRequest;
+import com.carrental.owner.validation.ValidOwnerLicense;
+import com.carrental.owner.dto.request.OwnerSignupRequest;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
@@ -44,3 +44,4 @@ public class OwnerLicenseValidator implements ConstraintValidator<ValidOwnerLice
         return true;
     }
 }
+

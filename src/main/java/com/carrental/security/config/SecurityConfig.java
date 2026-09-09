@@ -1,8 +1,8 @@
 package com.carrental.security.config;
 
-import com.carrental.security.jwt.JwtAccessDeniedHandler;
-import com.carrental.security.jwt.JwtAuthenticationEntryPoint;
-import com.carrental.security.jwt.JwtAuthenticationFilter;
+import com.carrental.security.filter.JwtAccessDeniedHandler;
+import com.carrental.security.filter.JwtAuthenticationEntryPoint;
+import com.carrental.security.filter.JwtAuthenticationFilter;
 import com.carrental.security.service.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -88,8 +88,18 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/vehicles/**").permitAll()
                         .requestMatchers("/error").permitAll()
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html","/favicon.ico").permitAll()
+                        .requestMatchers(
+                                "/v3/api-docs",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/swagger-resources",
+                                "/swagger-resources/**",
+                                "/configuration/ui",
+                                "/configuration/security",
+                                "/webjars/**",
+                                "/favicon.ico"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
@@ -98,3 +108,4 @@ public class SecurityConfig {
         return http.build();
     }
 }
+

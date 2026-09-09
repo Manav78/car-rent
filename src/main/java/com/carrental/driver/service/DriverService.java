@@ -1,8 +1,8 @@
 package com.carrental.driver.service;
 
-import com.carrental.driver.dto.DriverRequest;
-import com.carrental.driver.dto.DriverResponse;
-import com.carrental.driver.dto.DriverStatusUpdateRequest;
+import com.carrental.driver.dto.request.DriverRequest;
+import com.carrental.driver.dto.response.DriverResponse;
+import com.carrental.driver.dto.request.DriverStatusUpdateRequest;
 import com.carrental.driver.enums.DriverStatus;
 
 import java.util.List;
@@ -17,3 +17,4 @@ public interface DriverService {
 
     List<DriverResponse> getAvailableDrivers();
 }
+

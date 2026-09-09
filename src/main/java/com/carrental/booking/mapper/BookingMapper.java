@@ -1,6 +1,6 @@
 package com.carrental.booking.mapper;
 
-import com.carrental.booking.dto.BookingResponse;
+import com.carrental.booking.dto.response.BookingResponse;
 import com.carrental.booking.entity.Booking;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -20,3 +20,4 @@ public interface BookingMapper {
     @Mapping(target = "driverPhoneNumber", expression = "java(booking.getDriver() != null ? booking.getDriver().getPhoneNumber() : null)")
     BookingResponse toResponse(Booking booking);
 }
+

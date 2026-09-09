@@ -35,15 +35,14 @@ public class RefreshToken {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false, unique = true, length = 500)
+    @Column(name = "token", nullable = false, unique = true, length = 255)
     private String token;
 
-    @Column(name = "expiry_date", nullable = false)
-    private Instant expiryDate;
+    @Column(name = "expires_at", nullable = false)
+    private Instant expiresAt;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private boolean revoked = false;
+    @Column(name = "revoked_at")
+    private Instant revokedAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -54,6 +53,36 @@ public class RefreshToken {
     }
 
     public boolean isExpired() {
-        return Instant.now().isAfter(this.expiryDate);
+        return expiresAt != null && Instant.now().isAfter(this.expiresAt);
+    }
+
+    public boolean isRevoked() {
+        return revokedAt != null;
+    }
+
+    // Backward-compatibility helpers
+    public Instant getExpiryDate() {
+        return expiresAt;
+    }
+
+    public void setExpiryDate(Instant expiryDate) {
+        this.expiresAt = expiryDate;
+    }
+
+    public void setRevoked(boolean revoked) {
+        this.revokedAt = revoked ? Instant.now() : null;
+    }
+
+    public static class RefreshTokenBuilder {
+        public RefreshTokenBuilder expiryDate(Instant expiryDate) {
+            this.expiresAt = expiryDate;
+            return this;
+        }
+
+        public RefreshTokenBuilder revoked(boolean revoked) {
+            this.revokedAt = revoked ? Instant.now() : null;
+            return this;
+        }
     }
 }
+

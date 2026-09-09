@@ -1,11 +1,12 @@
 package com.carrental.booking.controller;
 
-import com.carrental.booking.dto.BookingRequest;
-import com.carrental.booking.dto.BookingResponse;
-import com.carrental.booking.dto.BookingStatusUpdateRequest;
+import com.carrental.booking.dto.request.BookingRequest;
+import com.carrental.booking.dto.response.BookingResponse;
+import com.carrental.booking.dto.request.BookingStatusUpdateRequest;
 import com.carrental.booking.service.BookingService;
 import com.carrental.common.dto.ApiResponse;
 import com.carrental.security.service.UserDetailsImpl;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+@Tag(name = "Bookings", description = "Endpoints for vehicle booking lifecycle and management")
 @RestController
 @RequestMapping("/api/bookings")
 @RequiredArgsConstructor
@@ -35,7 +37,7 @@ public class BookingController {
                                                                       @Valid @RequestBody BookingRequest request) {
         BookingResponse response = bookingService.createBooking(userDetails.getId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Booking request submitted successfully", response));
+                .body(ApiResponse.created("Booking request submitted successfully", response));
     }
 
     @GetMapping("/{id}")
@@ -43,14 +45,6 @@ public class BookingController {
     public ResponseEntity<ApiResponse<BookingResponse>> getBookingById(@AuthenticationPrincipal UserDetailsImpl userDetails,
                                                                        @PathVariable("id") Long id) {
         BookingResponse response = bookingService.getBookingById(userDetails, id);
-        return ResponseEntity.ok(ApiResponse.success("Booking retrieved successfully", response));
-    }
-
-    @GetMapping("/reference/{reference}")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<BookingResponse>> getBookingByReference(@AuthenticationPrincipal UserDetailsImpl userDetails,
-                                                                              @PathVariable("reference") String reference) {
-        BookingResponse response = bookingService.getBookingByReference(userDetails, reference);
         return ResponseEntity.ok(ApiResponse.success("Booking retrieved successfully", response));
     }
 
@@ -82,12 +76,5 @@ public class BookingController {
         BookingResponse response = bookingService.updateBookingStatus(id, request);
         return ResponseEntity.ok(ApiResponse.success("Booking status updated", response));
     }
-
-    @PatchMapping("/{id}/cancel")
-    @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<ApiResponse<Void>> cancelBooking(@AuthenticationPrincipal UserDetailsImpl userDetails,
-                                                           @PathVariable("id") Long id) {
-        bookingService.cancelBooking(userDetails.getId(), id);
-        return ResponseEntity.ok(ApiResponse.success("Booking cancelled successfully"));
-    }
 }
+

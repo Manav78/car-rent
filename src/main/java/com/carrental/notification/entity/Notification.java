@@ -15,7 +15,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,15 +27,13 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Notification {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private User recipient;
 
@@ -47,22 +44,65 @@ public class Notification {
     private String message;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "type", nullable = false, length = 30)
-    private NotificationType type;
+    @Column(name = "notification_type", nullable = false, length = 30)
+    private NotificationType notificationType;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 30)
-    @Builder.Default
-    private NotificationStatus status = NotificationStatus.UNREAD;
+    @Column(name = "reference_type", length = 50)
+    private String referenceType;
+
+    @Column(name = "reference_id")
+    private Long referenceId;
+
+    @Column(name = "is_read", nullable = false)
+    private Boolean isRead = false;
+
+    @Column(name = "read_at")
+    private LocalDateTime readAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Builder
+    public Notification(Long id, User recipient, String title, String message,
+                        NotificationType notificationType, NotificationType type,
+                        String referenceType, Long referenceId,
+                        Boolean isRead, NotificationStatus status,
+                        LocalDateTime readAt, LocalDateTime createdAt) {
+        this.id = id;
+        this.recipient = recipient;
+        this.title = title;
+        this.message = message;
+        this.notificationType = notificationType != null ? notificationType : type;
+        this.referenceType = referenceType;
+        this.referenceId = referenceId;
+        this.isRead = isRead != null ? isRead : (status == NotificationStatus.READ);
+        this.readAt = readAt;
+        this.createdAt = createdAt;
+    }
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
-        if (this.status == null) {
-            this.status = NotificationStatus.PENDING;
+        if (this.isRead == null) {
+            this.isRead = false;
         }
     }
+
+    // Backward-compatibility helpers
+    public NotificationType getType() {
+        return notificationType;
+    }
+
+    public void setType(NotificationType type) {
+        this.notificationType = type;
+    }
+
+    public NotificationStatus getStatus() {
+        return Boolean.TRUE.equals(isRead) ? NotificationStatus.READ : NotificationStatus.UNREAD;
+    }
+
+    public void setStatus(NotificationStatus status) {
+        this.isRead = (status == NotificationStatus.READ);
+    }
 }
+

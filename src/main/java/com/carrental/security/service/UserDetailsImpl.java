@@ -27,15 +27,25 @@ public class UserDetailsImpl implements UserDetails {
 
     @JsonIgnore
     private String password;
-    private boolean emailVerified;
-    private boolean accountNonLocked;
-    private boolean enabled;
+
+    @Builder.Default
+    private boolean enabled = true;
+
     private Collection<? extends GrantedAuthority> authorities;
 
     public static UserDetailsImpl build(User user) {
-        List<GrantedAuthority> authorities = List.of(
-                new SimpleGrantedAuthority(user.getRole().name())
-        );
+        List<GrantedAuthority> authorities = new java.util.ArrayList<>();
+        if (user.getRoles() != null && !user.getRoles().isEmpty()) {
+            for (com.carrental.auth.enums.Role r : user.getRoles()) {
+                String base = r.name().replace("ROLE_", "");
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + base));
+                authorities.add(new SimpleGrantedAuthority(base));
+            }
+        } else if (user.getRole() != null) {
+            String base = user.getRole().name().replace("ROLE_", "");
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + base));
+            authorities.add(new SimpleGrantedAuthority(base));
+        }
 
         return UserDetailsImpl.builder()
                 .id(user.getId())
@@ -43,11 +53,13 @@ public class UserDetailsImpl implements UserDetails {
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .password(user.getPassword())
-                .emailVerified(user.isEmailVerified())
-                .accountNonLocked(user.isAccountNonLocked())
-                .enabled(user.isEnabled())
+                .enabled(Boolean.TRUE.equals(user.getEmailVerified()) && Boolean.TRUE.equals(user.getIsActive()))
                 .authorities(authorities)
                 .build();
+    }
+
+    public String getFullName() {
+        return ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim();
     }
 
     @Override
@@ -72,7 +84,7 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return accountNonLocked;
+        return true;
     }
 
     @Override
@@ -98,3 +110,4 @@ public class UserDetailsImpl implements UserDetails {
         return Objects.hash(id);
     }
 }
+

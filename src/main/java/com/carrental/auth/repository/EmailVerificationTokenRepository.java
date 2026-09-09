@@ -22,3 +22,4 @@ public interface EmailVerificationTokenRepository extends JpaRepository<EmailVer
     @Modifying
     void deleteByExpiryDateBefore(Instant now);
 }
+

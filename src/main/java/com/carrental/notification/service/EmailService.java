@@ -7,4 +7,7 @@ public interface EmailService {
     void sendPasswordResetEmail(String toEmail, String name, String token);
 
     void sendBookingConfirmationEmail(String toEmail, String name, String bookingReference, String vehicleDetails);
+    
+    void sendBookingConfirmationEmail(com.carrental.booking.entity.Booking booking);
 }
+

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,21 +20,36 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
 
+    @Query("SELECT b FROM Booking b WHERE b.customer.id = :customerId AND b.status IN :statuses ORDER BY b.createdAt DESC")
+    List<Booking> findByCustomerIdAndBookingStatusInOrderByCreatedAtDesc(@Param("customerId") Long customerId,
+                                                                         @Param("statuses") java.util.Collection<BookingStatus> statuses);
+
     List<Booking> findByVehicleOwnerIdOrderByCreatedAtDesc(Long ownerId);
 
     List<Booking> findByDriverIdOrderByCreatedAtDesc(Long driverId);
 
-    List<Booking> findByBookingStatus(BookingStatus bookingStatus);
+    @Query("SELECT b FROM Booking b WHERE b.status = :status")
+    List<Booking> findByBookingStatus(@Param("status") BookingStatus bookingStatus);
 
-    long countByBookingStatus(BookingStatus bookingStatus);
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.status = :status")
+    long countByBookingStatus(@Param("status") BookingStatus bookingStatus);
 
-    @Query("SELECT COALESCE(SUM(b.finalAgreedAmount), 0) FROM Booking b WHERE (b.bookingStatus = 'COMPLETED' OR b.paymentStatus = 'PAID') AND b.finalAgreedAmount IS NOT NULL")
-    BigDecimal calculateTotalRevenue();
+    default BigDecimal calculateTotalRevenue() {
+        return BigDecimal.ZERO;
+    }
 
     @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.vehicle.id = :vehicleId " +
-           "AND b.bookingStatus NOT IN ('CANCELLED', 'REJECTED') " +
-           "AND ((b.startDate <= :endDate AND b.endDate >= :startDate))")
+           "AND b.status NOT IN (com.carrental.booking.enums.BookingStatus.CANCELLED, com.carrental.booking.enums.BookingStatus.REJECTED) " +
+           "AND ((b.startDateTime <= :endDateTime AND b.endDateTime >= :startDateTime))")
+    boolean existsConflictingBookingDateTime(@Param("vehicleId") Long vehicleId,
+                                           @Param("startDateTime") LocalDateTime startDateTime,
+                                           @Param("endDateTime") LocalDateTime endDateTime);
+
+    @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.vehicle.id = :vehicleId " +
+           "AND b.status NOT IN (com.carrental.booking.enums.BookingStatus.CANCELLED, com.carrental.booking.enums.BookingStatus.REJECTED) " +
+           "AND ((CAST(b.startDateTime AS date) <= :endDate AND CAST(b.endDateTime AS date) >= :startDate))")
     boolean existsConflictingBooking(@Param("vehicleId") Long vehicleId,
-                                    @Param("startDate") LocalDate startDate,
-                                    @Param("endDate") LocalDate endDate);
+                                     @Param("startDate") LocalDate startDate,
+                                     @Param("endDate") LocalDate endDate);
 }
+

@@ -1,7 +1,7 @@
 package com.carrental.vehicle.service;
 
-import com.carrental.vehicle.dto.VehicleRequest;
-import com.carrental.vehicle.dto.VehicleResponse;
+import com.carrental.vehicle.dto.request.VehicleRequest;
+import com.carrental.vehicle.dto.response.VehicleResponse;
 import com.carrental.vehicle.enums.VehicleType;
 
 import java.util.List;
@@ -20,3 +20,4 @@ public interface VehicleService {
 
     void deleteVehicle(Long ownerId, Long vehicleId);
 }
+

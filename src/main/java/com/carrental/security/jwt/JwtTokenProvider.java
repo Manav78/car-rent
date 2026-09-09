@@ -65,7 +65,8 @@ public class JwtTokenProvider {
         claims.put("email", email);
         claims.put("firstName", firstName);
         claims.put("lastName", lastName);
-        claims.put("roles", java.util.List.of(role));
+        String baseRole = role != null ? role.replace("ROLE_", "") : "CUSTOMER";
+        claims.put("roles", java.util.List.of("ROLE_" + baseRole, baseRole));
 
         return createToken(claims, email, accessTokenExpirationMs);
     }
@@ -142,3 +143,4 @@ public class JwtTokenProvider {
         return false;
     }
 }
+

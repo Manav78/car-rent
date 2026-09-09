@@ -35,15 +35,14 @@ public class PasswordResetToken {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(name = "token", nullable = false, length = 255)
     private String token;
 
-    @Column(name = "expiry_date", nullable = false)
-    private Instant expiryDate;
+    @Column(name = "expires_at", nullable = false)
+    private Instant expiresAt;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private boolean used = false;
+    @Column(name = "used_at")
+    private Instant usedAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -54,6 +53,36 @@ public class PasswordResetToken {
     }
 
     public boolean isExpired() {
-        return Instant.now().isAfter(this.expiryDate);
+        return expiresAt != null && Instant.now().isAfter(this.expiresAt);
+    }
+
+    public boolean isUsed() {
+        return usedAt != null;
+    }
+
+    // Backward-compatibility helpers
+    public Instant getExpiryDate() {
+        return expiresAt;
+    }
+
+    public void setExpiryDate(Instant expiryDate) {
+        this.expiresAt = expiryDate;
+    }
+
+    public void setUsed(boolean used) {
+        this.usedAt = used ? Instant.now() : null;
+    }
+
+    public static class PasswordResetTokenBuilder {
+        public PasswordResetTokenBuilder expiryDate(Instant expiryDate) {
+            this.expiresAt = expiryDate;
+            return this;
+        }
+
+        public PasswordResetTokenBuilder used(boolean used) {
+            this.usedAt = used ? Instant.now() : null;
+            return this;
+        }
     }
 }
+

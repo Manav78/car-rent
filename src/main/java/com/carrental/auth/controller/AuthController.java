@@ -11,8 +11,10 @@ import com.carrental.auth.dto.response.TokenRefreshResponse;
 import com.carrental.auth.dto.response.UserResponse;
 import com.carrental.auth.service.AuthService;
 import com.carrental.common.dto.ApiResponse;
-import com.carrental.customer.dto.CustomerSignupRequest;
-import com.carrental.owner.dto.OwnerSignupRequest;
+import com.carrental.customer.dto.request.CustomerSignupRequest;
+import com.carrental.owner.dto.request.OwnerSignupRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "Authentication", description = "Endpoints for registration, login, email verification, and token refresh")
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -32,18 +35,18 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping("/signup/customer")
+    @PostMapping(value = {"/signup/customer", "/customer/signup"})
     public ResponseEntity<ApiResponse<UserResponse>> registerCustomer(@Valid @RequestBody CustomerSignupRequest request) {
         UserResponse response = authService.registerCustomer(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Signup successful. Please verify your email using the OTP sent to your email address.", response));
+                .body(ApiResponse.created("Signup successful. Please verify your email using the OTP sent to your email address.", response));
     }
 
-    @PostMapping("/signup/owner")
+    @PostMapping(value = {"/signup/owner", "/owner/signup"})
     public ResponseEntity<ApiResponse<UserResponse>> registerOwner(@Valid @RequestBody OwnerSignupRequest request) {
         UserResponse response = authService.registerOwner(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Signup successful. Please verify your email using the OTP sent to your email address.", response));
+                .body(ApiResponse.created("Signup successful. Please verify your email using the OTP sent to your email address.", response));
     }
 
     @PostMapping("/login")
@@ -52,20 +55,20 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Login successful", response));
     }
 
+    @PostMapping(value = {"/admin/login", "/login/admin"})
+    public ResponseEntity<ApiResponse<AuthResponse>> adminLogin(@Valid @RequestBody LoginRequest request) {
+        AuthResponse response = authService.adminLogin(request);
+        return ResponseEntity.ok(ApiResponse.success("Admin login successful", response));
+    }
+
     @PostMapping("/refresh-token")
     public ResponseEntity<ApiResponse<TokenRefreshResponse>> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         TokenRefreshResponse response = authService.refreshToken(request);
         return ResponseEntity.ok(ApiResponse.success("Token refreshed successfully", response));
     }
 
-    @GetMapping("/verify-email")
-    public ResponseEntity<ApiResponse<Void>> verifyEmailByGetParam(@RequestParam("token") String token) {
-        authService.verifyEmail(token);
-        return ResponseEntity.ok(ApiResponse.success("Email verified successfully"));
-    }
-
     @PostMapping("/verify-email")
-    public ResponseEntity<ApiResponse<Void>> verifyEmailByPost(@Valid @RequestBody VerifyEmailRequest request) {
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
         authService.verifyEmail(request);
         return ResponseEntity.ok(ApiResponse.success("Email verified successfully"));
     }
@@ -102,3 +105,4 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("User profile fetched successfully", response));
     }
 }
+

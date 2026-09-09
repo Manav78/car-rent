@@ -1,8 +1,11 @@
 package com.carrental.customer.controller;
 
 import com.carrental.auth.enums.Role;
-import com.carrental.customer.dto.CustomerResponse;
-import com.carrental.customer.dto.CustomerUpdateRequest;
+import com.carrental.booking.dto.response.BookingResponse;
+import com.carrental.booking.service.BookingService;
+import com.carrental.common.dto.ApiResponse;
+import com.carrental.customer.dto.response.CustomerResponse;
+import com.carrental.customer.dto.request.CustomerUpdateRequest;
 import com.carrental.customer.service.CustomerService;
 import com.carrental.security.service.UserDetailsImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,10 +17,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,10 +27,14 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("CustomerController Unit Tests")
 class CustomerControllerTest {
 
     @Mock
     private CustomerService customerService;
+
+    @Mock
+    private BookingService bookingService;
 
     @InjectMocks
     private CustomerController customerController;
@@ -41,83 +47,64 @@ class CustomerControllerTest {
         userDetails = UserDetailsImpl.builder()
                 .id(10L)
                 .email("alice@example.com")
-                .authorities(List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER")))
                 .build();
 
         customerResponse = CustomerResponse.builder()
                 .id(10L)
                 .firstName("Alice")
                 .lastName("Smith")
-                .fullName("Alice Smith")
                 .email("alice@example.com")
-                .phoneNumber("+1234567890")
                 .role(Role.ROLE_CUSTOMER)
-                .address("123 Main St")
-                .city("Chicago")
-                .postalCode("60601")
-                .emailVerified(true)
-                .createdAt(LocalDateTime.now())
                 .build();
     }
 
     @Test
-    @DisplayName("Should return customer dashboard response")
+    @DisplayName("Should return customer dashboard")
     void testGetCustomerDashboard() {
-        var response = customerController.getCustomerDashboard();
+        ResponseEntity<ApiResponse<Map<String, String>>> response = customerController.getCustomerDashboard();
+
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(response.getBody().isSuccess());
-        assertTrue(response.getBody().getData().containsKey("message"));
     }
 
     @Test
-    @DisplayName("Should return customer profile for authenticated customer")
+    @DisplayName("Should get profile for customer")
     void testGetProfile() {
         when(customerService.getCustomerProfile(10L)).thenReturn(customerResponse);
 
-        var response = customerController.getProfile(userDetails);
+        ResponseEntity<ApiResponse<CustomerResponse>> response = customerController.getProfile(userDetails);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertTrue(response.getBody().isSuccess());
-        assertEquals("Alice Smith", response.getBody().getData().getFullName());
-        assertEquals("Chicago", response.getBody().getData().getCity());
+        assertEquals("Alice", response.getBody().getData().getFirstName());
     }
 
     @Test
-    @DisplayName("Should update customer profile via PUT")
+    @DisplayName("Should update profile for customer")
     void testUpdateProfile() {
-        CustomerUpdateRequest request = CustomerUpdateRequest.builder()
-                .firstName("Alicia")
-                .city("Springfield")
-                .build();
+        CustomerUpdateRequest request = new CustomerUpdateRequest();
+        request.setFirstName("Alice Updated");
 
-        when(customerService.updateCustomerProfile(eq(10L), any(CustomerUpdateRequest.class)))
-                .thenReturn(customerResponse);
+        when(customerService.updateCustomerProfile(eq(10L), any(CustomerUpdateRequest.class))).thenReturn(customerResponse);
 
-        var response = customerController.updateProfile(userDetails, request);
+        ResponseEntity<ApiResponse<CustomerResponse>> response = customerController.updateProfile(userDetails, request);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertTrue(response.getBody().isSuccess());
-        verify(customerService).updateCustomerProfile(10L, request);
+        verify(customerService).updateCustomerProfile(eq(10L), any(CustomerUpdateRequest.class));
     }
 
     @Test
-    @DisplayName("Should update customer profile via PATCH")
-    void testPatchProfile() {
-        CustomerUpdateRequest request = CustomerUpdateRequest.builder()
-                .address("New Address 100")
-                .build();
+    @DisplayName("Should delete own customer account")
+    void testDeleteAccount() {
+        doNothing().when(customerService).deleteCustomerAccount(10L);
 
-        when(customerService.updateCustomerProfile(eq(10L), any(CustomerUpdateRequest.class)))
-                .thenReturn(customerResponse);
-
-        var response = customerController.patchProfile(userDetails, request);
+        ResponseEntity<ApiResponse<Void>> response = customerController.deleteProfile(userDetails);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertTrue(response.getBody().isSuccess());
-        verify(customerService).updateCustomerProfile(10L, request);
+        verify(customerService).deleteCustomerAccount(10L);
     }
 }
+

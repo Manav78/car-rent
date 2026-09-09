@@ -3,15 +3,20 @@ package com.carrental.vehicle.repository;
 import com.carrental.vehicle.entity.Vehicle;
 import com.carrental.vehicle.enums.VehicleStatus;
 import com.carrental.vehicle.enums.VehicleType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
-public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
+public interface VehicleRepository extends JpaRepository<Vehicle, Long>, JpaSpecificationExecutor<Vehicle> {
 
     List<Vehicle> findByOwnerId(Long ownerId);
 
@@ -19,7 +24,12 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
 
     List<Vehicle> findByVehicleType(VehicleType vehicleType);
 
-    boolean existsByLicensePlate(String licensePlate);
+    @Query("SELECT COUNT(v) > 0 FROM Vehicle v WHERE v.vehicleNumber = :licensePlate")
+    boolean existsByLicensePlate(@Param("licensePlate") String licensePlate);
+
+    boolean existsByVehicleNumber(String vehicleNumber);
+
+    Optional<Vehicle> findByVehicleNumber(String vehicleNumber);
 
     long countByStatus(VehicleStatus status);
 
@@ -30,4 +40,16 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     List<Vehicle> searchAvailableVehicles(@Param("city") String city,
                                          @Param("vehicleType") VehicleType vehicleType,
                                          @Param("seatingCapacity") Integer seatingCapacity);
+
+    Page<Vehicle> findByStatus(VehicleStatus status, Pageable pageable);
+
+    @Query(value = "SELECT v FROM Vehicle v JOIN FETCH v.owner WHERE v.status = :status",
+           countQuery = "SELECT count(v) FROM Vehicle v WHERE v.status = :status")
+    Page<Vehicle> findAllByStatusWithOwner(@Param("status") VehicleStatus status, Pageable pageable);
+
+    @Query("SELECT v FROM Vehicle v JOIN FETCH v.owner WHERE v.id = :id")
+    Optional<Vehicle> findByIdWithOwner(@Param("id") Long id);
+
+    long countByStatusIn(Collection<VehicleStatus> statuses);
 }
+

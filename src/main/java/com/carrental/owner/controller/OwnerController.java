@@ -1,10 +1,11 @@
 package com.carrental.owner.controller;
 
 import com.carrental.common.dto.ApiResponse;
-import com.carrental.owner.dto.OwnerResponse;
-import com.carrental.owner.dto.OwnerUpdateRequest;
+import com.carrental.owner.dto.response.OwnerResponse;
+import com.carrental.owner.dto.request.OwnerUpdateRequest;
 import com.carrental.owner.service.OwnerService;
 import com.carrental.security.service.UserDetailsImpl;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
+@Tag(name = "Owner", description = "Endpoints for owner profile and fleet management")
 @RestController
 @RequestMapping("/api/owners")
 @RequiredArgsConstructor
@@ -47,3 +49,4 @@ public class OwnerController {
         return ResponseEntity.ok(ApiResponse.success("Owner profile updated successfully", response));
     }
 }
+

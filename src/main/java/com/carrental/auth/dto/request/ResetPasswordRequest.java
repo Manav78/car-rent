@@ -20,3 +20,4 @@ public class ResetPasswordRequest {
     @Size(min = 6, max = 100, message = "Password must be between 6 and 100 characters")
     private String newPassword;
 }
+
