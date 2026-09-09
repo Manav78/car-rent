@@ -72,7 +72,7 @@ public class DriverProfile {
     private Integer yearsOfExperience = 0;
 
     @Column(name = "rating")
-    private Double rating = 5.0;
+    private Double rating = 0.0;
 
     @Column(name = "total_trips")
     private Integer totalTrips = 0;

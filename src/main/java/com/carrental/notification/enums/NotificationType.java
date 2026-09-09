@@ -1,6 +1,7 @@
 package com.carrental.notification.enums;
 
 public enum NotificationType {
+    APPROVAL,
     EMAIL,
     SYSTEM,
     SMS,
