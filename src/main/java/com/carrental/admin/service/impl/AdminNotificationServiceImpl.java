@@ -1,8 +1,8 @@
 package com.carrental.admin.service.impl;
 
-import com.carrental.admin.service.AdminNotificationService;
 import com.carrental.admin.dto.response.AdminNotificationResponse;
 import com.carrental.admin.dto.response.UnreadCountResponse;
+import com.carrental.admin.service.AdminNotificationService;
 import com.carrental.notification.entity.Notification;
 import com.carrental.notification.enums.NotificationStatus;
 import com.carrental.notification.repository.NotificationRepository;
@@ -25,6 +25,7 @@ public class AdminNotificationServiceImpl implements AdminNotificationService {
 
     private final NotificationRepository notificationRepository;
 
+    @Override
     @Transactional(readOnly = true)
     public Page<AdminNotificationResponse> getNotifications(
             UserDetailsImpl principal,
@@ -33,15 +34,15 @@ public class AdminNotificationServiceImpl implements AdminNotificationService {
     ) {
         Pageable effectivePageable = sanitizePageable(pageable);
         Page<Notification> page;
+
         if (isRead == null) {
-            page = notificationRepository.findByRecipientIdOrderByCreatedAtDesc(principal.getId(), effectivePageable);
-        } else if (Boolean.TRUE.equals(isRead)) {
-            page = notificationRepository.findByRecipientIdAndStatusOrderByCreatedAtDesc(
-                    principal.getId(), NotificationStatus.READ, effectivePageable);
+            page = notificationRepository.findByRecipientIdOrderByCreatedAtDesc(
+                    principal.getId(), effectivePageable);
         } else {
-            page = notificationRepository.findByRecipientIdAndStatusOrderByCreatedAtDesc(
-                    principal.getId(), NotificationStatus.UNREAD, effectivePageable);
+            page = notificationRepository.findByRecipientIdAndIsReadOrderByCreatedAtDesc(
+                    principal.getId(), isRead, effectivePageable);
         }
+
         return page.map(this::toResponse);
     }
 
@@ -60,12 +61,14 @@ public class AdminNotificationServiceImpl implements AdminNotificationService {
         return pageable;
     }
 
+    @Override
     @Transactional(readOnly = true)
     public UnreadCountResponse getUnreadCount(UserDetailsImpl principal) {
-        long count = notificationRepository.countByRecipientIdAndStatus(principal.getId(), NotificationStatus.UNREAD);
+        long count = notificationRepository.countByRecipientIdAndIsReadFalse(principal.getId());
         return new UnreadCountResponse(count);
     }
 
+    @Override
     @Transactional
     public void markAsRead(Long notificationId, UserDetailsImpl principal) {
         Notification notification = notificationRepository
@@ -75,18 +78,19 @@ public class AdminNotificationServiceImpl implements AdminNotificationService {
                         "Notification not found"
                 ));
 
-        if (notification.getStatus() == NotificationStatus.READ) {
+        if (Boolean.TRUE.equals(notification.getIsRead())) {
             return;
         }
 
-        notification.setStatus(NotificationStatus.READ);
+        notification.setIsRead(true);
         notification.setReadAt(LocalDateTime.now());
         notificationRepository.save(notification);
     }
 
+    @Override
     @Transactional
     public void markAllAsRead(UserDetailsImpl principal) {
-        notificationRepository.markAllAsRead(principal.getId(), NotificationStatus.READ, LocalDateTime.now());
+        notificationRepository.markAllAsRead(principal.getId(), LocalDateTime.now());
     }
 
     private AdminNotificationResponse toResponse(Notification n) {
@@ -97,10 +101,9 @@ public class AdminNotificationServiceImpl implements AdminNotificationService {
                 n.getMessage(),
                 n.getReferenceType(),
                 n.getReferenceId(),
-                n.getStatus() == NotificationStatus.READ,
+                Boolean.TRUE.equals(n.getIsRead()),
                 n.getReadAt(),
                 n.getCreatedAt()
         );
     }
 }
-

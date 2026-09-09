@@ -1,7 +1,6 @@
 package com.carrental.notification.repository;
 
 import com.carrental.notification.entity.Notification;
-import com.carrental.notification.enums.NotificationStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -21,28 +20,45 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     Page<Notification> findByRecipientIdOrderByCreatedAtDesc(Long recipientId, Pageable pageable);
 
-    @Query("SELECT COUNT(n) FROM Notification n WHERE n.recipient.id = :recipientId " +
-           "AND ((:status = com.carrental.notification.enums.NotificationStatus.READ AND n.isRead = true) " +
-           "  OR (:status <> com.carrental.notification.enums.NotificationStatus.READ AND (n.isRead = false OR n.isRead IS NULL)))")
-    long countByRecipientIdAndStatus(@Param("recipientId") Long recipientId, @Param("status") NotificationStatus status);
+    // Direct, fast queries against the actual persistent `isRead` column
+    long countByRecipientIdAndIsReadFalse(Long recipientId);
 
     long countByRecipientIdAndIsRead(Long recipientId, Boolean isRead);
 
-    @Query(value = "SELECT n FROM Notification n WHERE n.recipient.id = :recipientId " +
-                   "AND ((:status = com.carrental.notification.enums.NotificationStatus.READ AND n.isRead = true) " +
-                   "  OR (:status <> com.carrental.notification.enums.NotificationStatus.READ AND (n.isRead = false OR n.isRead IS NULL))) " +
-                   "ORDER BY n.createdAt DESC",
-           countQuery = "SELECT COUNT(n) FROM Notification n WHERE n.recipient.id = :recipientId " +
-                        "AND ((:status = com.carrental.notification.enums.NotificationStatus.READ AND n.isRead = true) " +
-                        "  OR (:status <> com.carrental.notification.enums.NotificationStatus.READ AND (n.isRead = false OR n.isRead IS NULL)))")
-    Page<Notification> findByRecipientIdAndStatusOrderByCreatedAtDesc(@Param("recipientId") Long recipientId, @Param("status") NotificationStatus status, Pageable pageable);
+    // Filter by read / unread (or all if isRead is null)
+    @Query(
+            value = """
+            SELECT n FROM Notification n 
+            WHERE n.recipient.id = :recipientId 
+              AND (:isRead IS NULL OR n.isRead = :isRead) 
+            ORDER BY n.createdAt DESC
+            """,
+            countQuery = """
+            SELECT COUNT(n) FROM Notification n 
+            WHERE n.recipient.id = :recipientId 
+              AND (:isRead IS NULL OR n.isRead = :isRead)
+            """
+    )
+    Page<Notification> findByRecipientIdAndIsReadFilter(
+            @Param("recipientId") Long recipientId,
+            @Param("isRead") Boolean isRead,
+            Pageable pageable
+    );
 
     Page<Notification> findByRecipientIdAndIsReadOrderByCreatedAtDesc(Long recipientId, Boolean isRead, Pageable pageable);
 
     Optional<Notification> findByIdAndRecipientId(Long id, Long recipientId);
 
     @Modifying
-    @Query("UPDATE Notification n SET n.isRead = true, n.readAt = :readAt WHERE n.recipient.id = :recipientId AND (n.isRead IS NULL OR n.isRead = false)")
-    void markAllAsRead(@Param("recipientId") Long recipientId, @Param("status") NotificationStatus status, @Param("readAt") LocalDateTime readAt);
+    @Query("""
+        UPDATE Notification n 
+        SET n.isRead = true, 
+            n.readAt = :readAt 
+        WHERE n.recipient.id = :recipientId 
+          AND (n.isRead = false OR n.isRead IS NULL)
+    """)
+    int markAllAsRead(
+            @Param("recipientId") Long recipientId,
+            @Param("readAt") LocalDateTime readAt
+    );
 }
-
