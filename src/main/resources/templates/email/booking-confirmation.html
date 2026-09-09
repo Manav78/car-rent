@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Confirmation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 0;
+            color: #333333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
+        }
+        .header {
+            background-color: #16a34a;
+            color: #ffffff;
+            padding: 28px 24px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .header p {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 32px 24px;
+            line-height: 1.6;
+        }
+        .ref-box {
+            background-color: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .ref-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #15803d;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .ref-code {
+            font-size: 22px;
+            font-weight: 700;
+            color: #166534;
+            letter-spacing: 2px;
+        }
+        .details-card {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 24px 0;
+        }
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .details-table td {
+            padding: 8px 0;
+            vertical-align: top;
+            font-size: 14px;
+        }
+        .details-table .label {
+            color: #64748b;
+            width: 40%;
+            font-weight: 500;
+        }
+        .details-table .value {
+            color: #1e293b;
+            font-weight: 600;
+            width: 60%;
+        }
+        .details-table tr:not(:last-child) td {
+            border-bottom: 1px solid #edf2f7;
+        }
+        .status-badge {
+            display: inline-block;
+            background-color: #dcfce7;
+            color: #15803d;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .footer {
+            background-color: #f8fafc;
+            padding: 20px 24px;
+            text-align: center;
+            font-size: 12px;
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Booking Confirmed!</h1>
+            <p>Your car rental request has been confirmed</p>
+        </div>
+        <div class="content">
+            <p>Hello <strong th:text="${customerName != null ? customerName : name}">Customer</strong>,</p>
+            <p>Great news! Your booking has been successfully confirmed. Below are your booking and itinerary details:</p>
+
+            <div class="ref-box">
+                <div class="ref-title">Booking Reference</div>
+                <div class="ref-code" th:text="${bookingReference}">BK-XXXXXXXX</div>
+            </div>
+
+            <div class="details-card">
+                <table class="details-table">
+                    <tr>
+                        <td class="label">Status:</td>
+                        <td class="value"><span class="status-badge" th:text="${bookingStatus}">CONFIRMED</span></td>
+                    </tr>
+                    <tr>
+                        <td class="label">Vehicle:</td>
+                        <td class="value"><span th:text="${vehicleBrand}">Toyota</span> <span th:text="${vehicleModel}">Camry</span> (<span th:text="${vehicleType}">SEDAN</span>)</td>
+                    </tr>
+                    <tr th:if="${licensePlate != null and licensePlate != ''}">
+                        <td class="label">License Plate:</td>
+                        <td class="value" th:text="${licensePlate}">MH 12 AB 1234</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Pickup Location:</td>
+                        <td class="value" th:text="${pickupLocation}">Airport Terminal</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Drop-off Location:</td>
+                        <td class="value" th:text="${dropoffLocation}">City Center</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Start Date:</td>
+                        <td class="value" th:text="${startDate}">2026-09-01</td>
+                    </tr>
+                    <tr>
+                        <td class="label">End Date:</td>
+                        <td class="value" th:text="${endDate}">2026-09-05</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Trip Type:</td>
+                        <td class="value" th:text="${tripType}">LOCAL</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Passengers:</td>
+                        <td class="value" th:text="${passengerCount}">4</td>
+                    </tr>
+                    <tr th:if="${driverName != null and driverName != '' and driverName != 'Assigned soon'}">
+                        <td class="label">Assigned Driver:</td>
+                        <td class="value"><span th:text="${driverName}">Driver Name</span> (<span th:text="${driverPhone}">Phone</span>)</td>
+                    </tr>
+                </table>
+            </div>
+
+            <p>If you have any questions or need to make changes to your booking, please contact our owner.</p>
+            <p>Thank you for choosing Car Rental Services!</p>
+        </div>
+        <div class="footer">
+            <p>&copy; Car Rental Services. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
