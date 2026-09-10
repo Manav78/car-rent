@@ -82,7 +82,7 @@ class AdminNotificationServiceTest {
     void testGetNotifications_Read() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<Notification> page = new PageImpl<>(List.of(notification), pageable, 1);
-        when(notificationRepository.findByRecipientIdAndStatusOrderByCreatedAtDesc(1L, NotificationStatus.READ, pageable)).thenReturn(page);
+        when(notificationRepository.findByRecipientIdAndIsReadOrderByCreatedAtDesc(1L, true, pageable)).thenReturn(page);
 
         Page<AdminNotificationResponse> result = adminNotificationService.getNotifications(principal, true, pageable);
 
@@ -95,7 +95,7 @@ class AdminNotificationServiceTest {
     void testGetNotifications_Unread() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<Notification> page = new PageImpl<>(List.of(notification), pageable, 1);
-        when(notificationRepository.findByRecipientIdAndStatusOrderByCreatedAtDesc(1L, NotificationStatus.UNREAD, pageable)).thenReturn(page);
+        when(notificationRepository.findByRecipientIdAndIsReadOrderByCreatedAtDesc(1L, false, pageable)).thenReturn(page);
 
         Page<AdminNotificationResponse> result = adminNotificationService.getNotifications(principal, false, pageable);
 
@@ -120,7 +120,7 @@ class AdminNotificationServiceTest {
     @Test
     @DisplayName("getUnreadCount - returns count")
     void testGetUnreadCount() {
-        when(notificationRepository.countByRecipientIdAndStatus(1L, NotificationStatus.UNREAD)).thenReturn(5L);
+        when(notificationRepository.countByRecipientIdAndIsReadFalse(1L)).thenReturn(5L);
 
         UnreadCountResponse response = adminNotificationService.getUnreadCount(principal);
 
@@ -135,7 +135,7 @@ class AdminNotificationServiceTest {
 
         adminNotificationService.markAsRead(10L, principal);
 
-        assertThat(notification.getStatus()).isEqualTo(NotificationStatus.READ);
+        assertThat(notification.getIsRead()).isTrue();
         assertThat(notification.getReadAt()).isNotNull();
         verify(notificationRepository).save(notification);
     }
@@ -143,7 +143,7 @@ class AdminNotificationServiceTest {
     @Test
     @DisplayName("markAsRead - already read skips save")
     void testMarkAsRead_AlreadyRead() {
-        notification.setStatus(NotificationStatus.READ);
+        notification.setIsRead(true);
         when(notificationRepository.findByIdAndRecipientId(10L, 1L)).thenReturn(Optional.of(notification));
 
         adminNotificationService.markAsRead(10L, principal);
@@ -165,7 +165,7 @@ class AdminNotificationServiceTest {
     void testMarkAllAsRead() {
         adminNotificationService.markAllAsRead(principal);
 
-        verify(notificationRepository).markAllAsRead(eq(1L), eq(NotificationStatus.READ), any(LocalDateTime.class));
+        verify(notificationRepository).markAllAsRead(eq(1L), any(LocalDateTime.class));
     }
 }
 
