@@ -4,14 +4,10 @@ public enum Role {
     CUSTOMER,
     OWNER,
     ADMIN,
-    DRIVER,
-    ROLE_CUSTOMER,
-    ROLE_OWNER,
-    ROLE_ADMIN,
-    ROLE_DRIVER;
+    DRIVER;
 
     public String getRoleName() {
-        return name().replace("ROLE_", "");
+        return name();
     }
 }
 

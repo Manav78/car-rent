@@ -94,7 +94,7 @@ class AdminServiceTest {
                 .lastName("User")
                 .email("admin@test.com")
                 .phoneNumber("1234567890")
-                .role(Role.ROLE_ADMIN)
+                .role(Role.ADMIN)
                 .enabled(true)
                 .accountNonLocked(true)
                 .createdAt(LocalDateTime.now())

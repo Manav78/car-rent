@@ -53,7 +53,7 @@ class VehicleServiceTest {
                 .firstName("Bob")
                 .lastName("Owner")
                 .email("bob@owner.com")
-                .role(Role.ROLE_OWNER)
+                .role(Role.OWNER)
                 .build();
 
         sampleVehicle = Vehicle.builder()

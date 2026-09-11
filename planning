@@ -1,6 +1,483 @@
-Do not make further code changes yet.
-Review the implementation because the report has a lifecycle contradiction.
-PENDING -> DRIVER_ASSIGNED -> Owner confirms -> CONFIRMED is not the required flow. Driver assignment itself must transition
- the booking from PENDING to CONFIRMED. Also check whether PATCH /status with status=CONFIRMED duplicates the dedicated assign-driver
-  endpoint. If assign-driver is the confirmation operation, remove driverId from BookingStatusUpdateRequest and do not require a
-  second confirm action. Only report the required changes; do not modify files until explicitly approved. and booking can be cancalled by owner itself only
+Refactor the existing Spring Security authentication and authorization implementation according to the following requirements.
+
+IMPORTANT: Do not redesign unrelated modules or business logic. Inspect the existing code first and make only the changes required for role handling, Spring Security authorities, JWT claims, and authorization. Preserve the existing authentication flow, User entity structure, JWT expiration/refresh-token logic, and project architecture unless a change is explicitly required below.
+
+## 1. Multi-role support is REQUIRED
+
+The application supports multiple roles for a single user.
+
+Example:
+
+* Customer → CUSTOMER
+* Owner → OWNER
+* Driver → DRIVER
+* Admin → ADMIN
+* An Owner can also have DRIVER role.
+
+Therefore, do NOT assume that a user has only one role.
+
+The existing `User` entity's multi-role field should remain the source of truth for authorization.
+
+Example:
+
+```text
+roles = [OWNER, DRIVER]
+```
+
+This user must have both Owner and Driver permissions.
+
+Do not remove multi-role support just to simplify the implementation.
+
+---
+
+## 2. Role enum must NOT contain ROLE_ prefix
+
+Use only business role names in the application's Role enum.
+
+Expected values:
+
+```java
+CUSTOMER,
+OWNER,
+DRIVER,
+ADMIN
+```
+
+Do NOT use:
+
+```java
+ROLE_CUSTOMER,
+ROLE_OWNER,
+ROLE_DRIVER,
+ROLE_ADMIN
+```
+
+The `ROLE_` prefix is a Spring Security convention and should not be stored as part of the application's business role value.
+
+---
+
+## 3. UserDetailsImpl authority creation
+
+Refactor `UserDetailsImpl` so that every database role is converted into exactly ONE Spring Security authority.
+
+For example:
+
+```text
+OWNER  -> ROLE_OWNER
+DRIVER  -> ROLE_DRIVER
+```
+
+If the user has:
+
+```text
+roles = [OWNER, DRIVER]
+```
+
+the authorities must be:
+
+```text
+ROLE_OWNER
+ROLE_DRIVER
+```
+
+Do NOT create both:
+
+```text
+ROLE_OWNER
+OWNER
+```
+
+and do NOT create:
+
+```text
+ROLE_DRIVER
+DRIVER
+```
+
+The current implementation that adds both prefixed and non-prefixed authorities is unnecessary and must be removed.
+
+Expected logic should be conceptually equivalent to:
+
+```java
+List<GrantedAuthority> authorities = user.getRoles()
+        .stream()
+        .map(role -> new SimpleGrantedAuthority("ROLE_" + role.name()))
+        .toList();
+```
+
+Adapt this to the project's existing Java version and coding style.
+
+---
+
+## 4. Use hasRole() for role-based authorization
+
+Use Spring Security's `hasRole()` consistently for application roles.
+
+Examples:
+
+```java
+@PreAuthorize("hasRole('OWNER')")
+```
+
+```java
+@PreAuthorize("hasRole('DRIVER')")
+```
+
+```java
+@PreAuthorize("hasRole('CUSTOMER')")
+```
+
+```java
+@PreAuthorize("hasRole('ADMIN')")
+```
+
+Do NOT unnecessarily use:
+
+```java
+hasAuthority("OWNER")
+```
+
+because our authorities are stored internally as:
+
+```text
+ROLE_OWNER
+ROLE_DRIVER
+ROLE_CUSTOMER
+ROLE_ADMIN
+```
+
+Remember:
+
+```java
+hasRole("OWNER")
+```
+
+automatically checks:
+
+```text
+ROLE_OWNER
+```
+
+Therefore, do not write:
+
+```java
+hasRole("ROLE_OWNER")
+```
+
+because that would incorrectly result in a `ROLE_ROLE_OWNER` lookup.
+
+---
+
+## 5. Do not duplicate role authorities
+
+Remove any implementation that produces:
+
+```text
+ROLE_OWNER
+OWNER
+```
+
+or:
+
+```text
+ROLE_ADMIN
+ADMIN
+```
+
+Only one authority per actual role must exist:
+
+```text
+ROLE_OWNER
+ROLE_ADMIN
+ROLE_DRIVER
+ROLE_CUSTOMER
+```
+
+This must also apply to the JWT role representation.
+
+---
+
+## 6. JWT purpose must remain minimal
+
+JWT is being used only for:
+
+1. Identifying who the authenticated user is.
+2. Identifying the user's roles.
+3. Supporting authentication.
+4. Supporting authorization/access control.
+
+Do not put unnecessary user profile data into the JWT.
+
+The JWT should NOT contain unnecessary duplicate or presentation-oriented fields such as:
+
+```text
+firstName
+lastName
+email
+```
+
+if the same information is already available through `sub` or can be retrieved from the authenticated user.
+
+Do not duplicate:
+
+```json
+"email": "amit.shinde@test.com",
+"sub": "amit.shinde@test.com"
+```
+
+If email is used as the JWT subject, keep:
+
+```json
+"sub": "amit.shinde@test.com"
+```
+
+and remove the duplicate `email` claim.
+
+Do not add profile data merely for frontend convenience.
+
+---
+
+## 7. JWT role claim
+
+The JWT must contain the user's actual application roles without duplicate Spring Security authorities.
+
+For a user having:
+
+```text
+roles = [OWNER, DRIVER]
+```
+
+the JWT should represent the roles as:
+
+```json
+"roles": [
+    "OWNER",
+    "DRIVER"
+]
+```
+
+Do NOT put:
+
+```json
+"roles": [
+    "ROLE_OWNER",
+    "OWNER",
+    "ROLE_DRIVER",
+    "DRIVER"
+]
+```
+
+The JWT represents application roles, therefore use:
+
+```text
+OWNER
+DRIVER
+```
+
+The `ROLE_` prefix should be added only when converting roles into Spring Security `GrantedAuthority`.
+
+---
+
+## 8. Recommended minimal JWT payload
+
+For example, an Owner + Driver user should have a payload conceptually like:
+
+```json
+{
+  "sub": "amit.shinde@test.com",
+  "id": 11,
+  "roles": [
+    "OWNER",
+    "DRIVER"
+  ],
+  "iat": 1789126110,
+  "exp": 1789129710
+}
+```
+
+Do not add:
+
+```text
+firstName
+lastName
+email
+ROLE_OWNER
+OWNER
+ROLE_DRIVER
+DRIVER
+```
+
+unless the existing implementation has a specific security requirement that genuinely requires them.
+
+Keep only claims required by the application's authentication and authorization design.
+
+---
+
+## 9. Important separation of concerns
+
+Maintain this distinction throughout the implementation:
+
+### Application role
+
+```text
+OWNER
+DRIVER
+CUSTOMER
+ADMIN
+```
+
+### Spring Security authority
+
+```text
+ROLE_OWNER
+ROLE_DRIVER
+ROLE_CUSTOMER
+ROLE_ADMIN
+```
+
+### Authorization
+
+```java
+hasRole("OWNER")
+hasRole("DRIVER")
+hasRole("CUSTOMER")
+hasRole("ADMIN")
+```
+
+### JWT
+
+```json
+"roles": ["OWNER", "DRIVER"]
+```
+
+Do not mix these representations.
+
+---
+
+## 10. UserDetailsImpl expected behavior
+
+Refactor `UserDetailsImpl.build(User user)` so that:
+
+```text
+User.roles
+     ↓
+OWNER, DRIVER
+     ↓
+Spring Security authorities
+     ↓
+ROLE_OWNER, ROLE_DRIVER
+```
+
+Only the Spring Security authority layer should add `ROLE_`.
+
+Do not modify the database role values to include `ROLE_`.
+
+---
+
+## 11. Backward compatibility / existing code inspection
+
+Before making changes:
+
+1. Search the entire backend for:
+
+   * `ROLE_`
+   * `hasRole`
+   * `hasAuthority`
+   * `getRole()`
+   * `getRoles()`
+   * JWT claim creation
+   * JWT parsing
+   * `SimpleGrantedAuthority`
+   * `UserDetailsImpl`
+
+2. Identify all places where roles are currently converted.
+
+3. Remove duplicate authority generation.
+
+4. Update authorization checks to use:
+
+```java
+hasRole("OWNER")
+```
+
+instead of mixing `hasRole()` and `hasAuthority()` unnecessarily.
+
+5. Ensure JWT generation and JWT parsing use the same role representation.
+
+6. Ensure multi-role users continue to authenticate correctly.
+
+7. Ensure an Owner + Driver user can access both Owner and Driver protected endpoints.
+
+8. Ensure a Customer cannot access Owner/Driver/Admin endpoints.
+
+9. Ensure an Admin cannot accidentally lose access because of the role-prefix refactoring.
+
+10. Do not introduce a second role system.
+
+---
+
+## 12. Expected final architecture
+
+The final security flow should be:
+
+```text
+DATABASE
+roles = [OWNER, DRIVER]
+        |
+        v
+UserDetailsImpl
+        |
+        | add ROLE_ prefix
+        v
+GrantedAuthorities
+[
+    ROLE_OWNER,
+    ROLE_DRIVER
+]
+        |
+        v
+Spring Security
+        |
+        +---- hasRole("OWNER")  -> allowed
+        |
+        +---- hasRole("DRIVER") -> allowed
+        |
+        +---- hasRole("ADMIN")  -> denied
+```
+
+JWT should remain minimal:
+
+```text
+sub
+id
+roles
+iat
+exp
+```
+
+Example:
+
+```json
+{
+  "sub": "amit.shinde@test.com",
+  "id": 11,
+  "roles": ["OWNER", "DRIVER"],
+  "iat": 1789126110,
+  "exp": 1789129710
+}
+```
+
+Final objective:
+
+* Multi-role support must remain.
+* Role enum contains only `OWNER`, `DRIVER`, `CUSTOMER`, `ADMIN`.
+* `ROLE_` must NOT be stored in the business role.
+* `ROLE_` is added only when creating Spring Security `GrantedAuthority`.
+* Exactly one authority per role.
+* Use `hasRole()` for authorization.
+* Do not mix `hasRole()` and `hasAuthority()` without a genuine need.
+* JWT must not contain duplicate role representations.
+* JWT must not contain unnecessary profile information.
+* JWT should contain only the information necessary for user identification, roles, authentication, and authorization.
+* Do not change unrelated business logic or existing SRS behavior.
+* After refactoring, verify all affected authentication and authorization paths compile and behave consistently.

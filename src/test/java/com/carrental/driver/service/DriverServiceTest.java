@@ -53,7 +53,7 @@ class DriverServiceTest {
                 .lastName("Driver")
                 .email("dave@example.com")
                 .phoneNumber("9876543202")
-                .role(Role.ROLE_DRIVER)
+                .role(Role.DRIVER)
                 .enabled(true)
                 .createdAt(LocalDateTime.now())
                 .build();

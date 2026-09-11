@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -49,12 +50,11 @@ public class JwtTokenProvider {
     public String generateAccessToken(UserDetailsImpl userDetails) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("id", userDetails.getId());
-        claims.put("email", userDetails.getEmail());
-        claims.put("firstName", userDetails.getFirstName());
-        claims.put("lastName", userDetails.getLastName());
-        claims.put("roles", userDetails.getAuthorities().stream()
-                .map(item -> item.getAuthority())
-                .toList());
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(item -> item.getAuthority().replace("ROLE_", ""))
+                .distinct()
+                .toList();
+        claims.put("roles", roles);
 
         return createToken(claims, userDetails.getUsername(), accessTokenExpirationMs);
     }
@@ -62,13 +62,20 @@ public class JwtTokenProvider {
     public String generateAccessToken(Long userId, String email, String firstName, String lastName, String role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("id", userId);
-        claims.put("email", email);
-        claims.put("firstName", firstName);
-        claims.put("lastName", lastName);
         String baseRole = role != null ? role.replace("ROLE_", "") : "CUSTOMER";
-        claims.put("roles", java.util.List.of("ROLE_" + baseRole, baseRole));
+        claims.put("roles", java.util.List.of(baseRole));
 
         return createToken(claims, email, accessTokenExpirationMs);
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<String> extractRoles(String token) {
+        Claims claims = extractAllClaims(token);
+        Object rolesObj = claims.get("roles");
+        if (rolesObj instanceof List<?> list) {
+            return list.stream().map(Object::toString).toList();
+        }
+        return List.of();
     }
 
     private String createToken(Map<String, Object> claims, String subject, long expirationMs) {

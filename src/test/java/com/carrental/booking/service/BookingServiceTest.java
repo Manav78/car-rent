@@ -88,19 +88,19 @@ class BookingServiceTest {
         customer = User.builder()
                 .id(1L)
                 .email("customer@test.com")
-                .role(Role.ROLE_CUSTOMER)
+                .role(Role.CUSTOMER)
                 .build();
 
         owner = User.builder()
                 .id(2L)
                 .email("owner@test.com")
-                .role(Role.ROLE_OWNER)
+                .role(Role.OWNER)
                 .build();
 
         driver = User.builder()
                 .id(3L)
                 .email("driver@test.com")
-                .role(Role.ROLE_DRIVER)
+                .role(Role.DRIVER)
                 .build();
 
         vehicle = Vehicle.builder()

@@ -404,10 +404,8 @@ public class BookingServiceImpl implements BookingService {
         User driverUser = userRepository.findById(driverId)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver user not found with id: " + driverId));
 
-        boolean hasDriverRole = (driverUser.getRoles() != null && driverUser.getRoles().stream()
-                .anyMatch(r -> r == Role.DRIVER || r == Role.ROLE_DRIVER))
-                || driverUser.getRole() == Role.DRIVER
-                || driverUser.getRole() == Role.ROLE_DRIVER;
+        boolean hasDriverRole = (driverUser.getRoles() != null && driverUser.getRoles().contains(Role.DRIVER))
+                || driverUser.getRole() == Role.DRIVER;
 
         if (!hasDriverRole) {
             throw new BadRequestException("Selected user is not registered as a driver");

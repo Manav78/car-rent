@@ -37,14 +37,10 @@ public class UserDetailsImpl implements UserDetails {
         List<GrantedAuthority> authorities = new java.util.ArrayList<>();
         if (user.getRoles() != null && !user.getRoles().isEmpty()) {
             for (com.carrental.auth.enums.Role r : user.getRoles()) {
-                String base = r.name().replace("ROLE_", "");
-                authorities.add(new SimpleGrantedAuthority("ROLE_" + base));
-                authorities.add(new SimpleGrantedAuthority(base));
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + r.name()));
             }
         } else if (user.getRole() != null) {
-            String base = user.getRole().name().replace("ROLE_", "");
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + base));
-            authorities.add(new SimpleGrantedAuthority(base));
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
         }
 
         return UserDetailsImpl.builder()

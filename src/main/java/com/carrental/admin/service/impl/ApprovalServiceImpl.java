@@ -253,7 +253,9 @@ public class ApprovalServiceImpl implements ApprovalService {
                         "Driver not found"
                 ));
 
-        if (driver.getUser() != null && (driver.getUser().getRole() == Role.OWNER || driver.getUser().getRole() == Role.ROLE_OWNER)) {
+        boolean isOwner = driver.getUser() != null && ((driver.getUser().getRoles() != null && driver.getUser().getRoles().contains(Role.OWNER))
+                || driver.getUser().getRole() == Role.OWNER);
+        if (isOwner) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "This is an Owner-as-Driver application. Review it via /approvals/owner-drivers/{id}"

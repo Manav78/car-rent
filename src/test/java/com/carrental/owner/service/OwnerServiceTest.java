@@ -54,7 +54,7 @@ class OwnerServiceTest {
                 .lastName("Builder")
                 .email("bob@example.com")
                 .phoneNumber("9876543201")
-                .role(Role.ROLE_OWNER)
+                .role(Role.OWNER)
                 .enabled(true)
                 .createdAt(LocalDateTime.now())
                 .build();

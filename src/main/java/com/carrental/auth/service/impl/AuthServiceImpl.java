@@ -202,7 +202,7 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userDetails.getId()));
 
-        boolean isAdmin = (user.getRoles() != null && (user.getRoles().contains(Role.ADMIN) || user.getRoles().contains(Role.ROLE_ADMIN)))
+        boolean isAdmin = (user.getRoles() != null && user.getRoles().contains(Role.ADMIN))
                 || Role.ADMIN.equals(user.getRole());
 
         if (!isAdmin) {
@@ -240,14 +240,8 @@ public class AuthServiceImpl implements AuthService {
                 .map(refreshTokenService::verifyExpiration)
                 .map(RefreshToken::getUser)
                 .map(user -> {
-                    String roleName = user.getRole() != null ? user.getRole().name().replace("ROLE_", "") : "CUSTOMER";
-                    String accessToken = jwtTokenProvider.generateAccessToken(
-                            user.getId(),
-                            user.getEmail(),
-                            user.getFirstName(),
-                            user.getLastName(),
-                            roleName
-                    );
+                    UserDetailsImpl userDetails = UserDetailsImpl.build(user);
+                    String accessToken = jwtTokenProvider.generateAccessToken(userDetails);
                     return TokenRefreshResponse.builder()
                             .accessToken(accessToken)
                             .refreshToken(requestRefreshToken)

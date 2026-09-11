@@ -54,7 +54,7 @@ class CustomerControllerTest {
                 .firstName("Alice")
                 .lastName("Smith")
                 .email("alice@example.com")
-                .role(Role.ROLE_CUSTOMER)
+                .role(Role.CUSTOMER)
                 .build();
     }
 

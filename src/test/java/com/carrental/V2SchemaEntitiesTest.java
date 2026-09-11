@@ -130,7 +130,7 @@ class V2SchemaEntitiesTest {
                 .email("johndoe@test.com")
                 .mobile("9876543210")
                 .password("Password@123")
-                .role(Role.ROLE_CUSTOMER)
+                .role(Role.CUSTOMER)
                 .emailVerified(true)
                 .isActive(true)
                 .build();
@@ -190,7 +190,7 @@ class V2SchemaEntitiesTest {
                 .email("owner.smith@test.com")
                 .mobile("9123456780")
                 .password("Password@123")
-                .role(Role.ROLE_OWNER)
+                .role(Role.OWNER)
                 .emailVerified(true)
                 .isActive(true)
                 .build();
@@ -241,7 +241,7 @@ class V2SchemaEntitiesTest {
                 .email("fleet@test.com")
                 .mobile("9988776655")
                 .password("Password@123")
-                .role(Role.ROLE_OWNER)
+                .role(Role.OWNER)
                 .build();
         ownerUser = userRepository.save(ownerUser);
 
@@ -250,7 +250,7 @@ class V2SchemaEntitiesTest {
                 .email("driver1@test.com")
                 .mobile("9876501234")
                 .password("Password@123")
-                .role(Role.ROLE_DRIVER)
+                .role(Role.DRIVER)
                 .build();
         driverUser = userRepository.save(driverUser);
 
@@ -312,7 +312,7 @@ class V2SchemaEntitiesTest {
                 .email("vowner@test.com")
                 .mobile("9112233445")
                 .password("Password@123")
-                .role(Role.ROLE_OWNER)
+                .role(Role.OWNER)
                 .build();
         owner = userRepository.save(owner);
 
@@ -372,7 +372,7 @@ class V2SchemaEntitiesTest {
                 .email("cust@test.com")
                 .mobile("9776655443")
                 .password("Password@123")
-                .role(Role.ROLE_CUSTOMER)
+                .role(Role.CUSTOMER)
                 .build();
         customer = userRepository.save(customer);
 
@@ -381,7 +381,7 @@ class V2SchemaEntitiesTest {
                 .email("host@test.com")
                 .mobile("9665544332")
                 .password("Password@123")
-                .role(Role.ROLE_OWNER)
+                .role(Role.OWNER)
                 .build();
         owner = userRepository.save(owner);
 
@@ -441,7 +441,7 @@ class V2SchemaEntitiesTest {
                 .email("notify@test.com")
                 .mobile("9554433221")
                 .password("Password@123")
-                .role(Role.ROLE_CUSTOMER)
+                .role(Role.CUSTOMER)
                 .build();
         user = userRepository.save(user);
 

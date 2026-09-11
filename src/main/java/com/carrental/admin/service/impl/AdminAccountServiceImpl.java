@@ -120,7 +120,9 @@ public class AdminAccountServiceImpl implements AdminAccountService {
     }
 
     private void assertNotAdmin(User user) {
-        if (user.getRole() == Role.ADMIN || user.getRole() == Role.ROLE_ADMIN) {
+        boolean isAdmin = (user.getRoles() != null && user.getRoles().contains(Role.ADMIN))
+                || user.getRole() == Role.ADMIN;
+        if (isAdmin) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Admin accounts cannot be deleted"
@@ -129,9 +131,9 @@ public class AdminAccountServiceImpl implements AdminAccountService {
     }
 
     private DeletedAccountResponse toResponse(User user) {
-        List<String> roles = user.getRole() != null
-                ? List.of(user.getRole().name())
-                : List.of();
+        List<String> roles = user.getRoles() != null && !user.getRoles().isEmpty()
+                ? user.getRoles().stream().map(Enum::name).toList()
+                : (user.getRole() != null ? List.of(user.getRole().name()) : List.of());
 
         return new DeletedAccountResponse(
                 user.getId(),
