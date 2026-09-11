@@ -131,21 +131,21 @@ class BookingControllerTest {
     @Test
     @DisplayName("updateBookingStatus - returns updated booking response")
     void testUpdateBookingStatus() {
-        BookingStatusUpdateRequest request = new BookingStatusUpdateRequest(BookingStatus.CONFIRMED);
-        BookingResponse confirmedResponse = BookingResponse.builder()
+        BookingStatusUpdateRequest request = new BookingStatusUpdateRequest(BookingStatus.CANCELLED);
+        BookingResponse cancelledResponse = BookingResponse.builder()
                 .id(100L)
                 .bookingReference("BK-TEST001")
-                .status(BookingStatus.CONFIRMED)
+                .status(BookingStatus.CANCELLED)
                 .build();
 
         when(bookingService.updateBookingStatus(eq(100L), any(BookingStatusUpdateRequest.class)))
-                .thenReturn(confirmedResponse);
+                .thenReturn(cancelledResponse);
 
         ResponseEntity<ApiResponse<BookingResponse>> result = bookingController.updateBookingStatus(100L, request);
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(result.getBody()).isNotNull();
-        assertThat(result.getBody().getData().getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+        assertThat(result.getBody().getData().getStatus()).isEqualTo(BookingStatus.CANCELLED);
     }
 }
 

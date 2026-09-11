@@ -18,6 +18,10 @@ import com.carrental.notification.service.NotificationService;
 import com.carrental.vehicle.entity.Vehicle;
 import com.carrental.vehicle.enums.VehicleStatus;
 import com.carrental.vehicle.repository.VehicleRepository;
+import com.carrental.auth.enums.Role;
+import com.carrental.driver.entity.DriverProfile;
+import com.carrental.driver.enums.DriverStatus;
+import com.carrental.driver.repository.DriverProfileRepository;
 import com.carrental.booking.mapper.BookingMapper;
 import com.carrental.security.service.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,6 +42,7 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final VehicleRepository vehicleRepository;
     private final UserRepository userRepository;
+    private final DriverProfileRepository driverProfileRepository;
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final BookingMapper bookingMapper;
@@ -155,6 +161,15 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<BookingResponse> getOwnerBookingsByStatus(Long ownerId, BookingStatus status) {
+        return bookingRepository.findByVehicleOwnerIdAndStatusOrderByCreatedAtDesc(ownerId, status)
+                .stream()
+                .map(bookingMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<BookingResponse> getDriverBookings(Long driverId) {
         return bookingRepository.findByDriverIdOrderByCreatedAtDesc(driverId)
                 .stream()
@@ -164,29 +179,266 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public BookingResponse updateBookingStatus(Long bookingId, BookingStatusUpdateRequest request) {
+    public BookingResponse assignDriver(UserDetailsImpl userDetails, Long bookingId, Long driverId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
 
-        BookingStatus oldStatus = booking.getStatus();
+        validateOwnerAccess(userDetails, booking);
 
-        if (request.getStatus() != null) {
-            booking.setStatus(request.getStatus());
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new BadRequestException("Driver can only be assigned to a booking in PENDING status. Current status: " + booking.getStatus());
+        }
+
+        User driver = validateAndGetEligibleDriver(driverId);
+        booking.setDriver(driver);
+        booking.setStatus(BookingStatus.CONFIRMED);
+
+        Booking saved = bookingRepository.save(booking);
+        log.info("Owner {} assigned driver {} to booking {} and confirmed booking", userDetails.getId(), driverId, bookingId);
+
+        // Send confirmation email and notifications only after successful confirmation
+        try {
+            emailService.sendBookingConfirmationEmail(saved);
+        } catch (Exception e) {
+            log.warn("Failed to send booking confirmation email for booking {}: {}", saved.getBookingReference(), e.getMessage());
+        }
+
+        if (saved.getCustomer() != null) {
+            String driverInfo = (saved.getDriver() != null)
+                    ? saved.getDriver().getFullName() + " (Phone: " + saved.getDriver().getPhoneNumber() + ")"
+                    : "Assigned driver";
+            String vehicleInfo = (saved.getVehicle() != null)
+                    ? saved.getVehicle().getBrand() + " " + saved.getVehicle().getModel()
+                    : "vehicle";
+            notificationService.createNotification(saved.getCustomer(), "Booking Confirmed",
+                    "Your booking " + saved.getBookingReference() + " for " + vehicleInfo + " has been confirmed. Driver: " + driverInfo,
+                    NotificationType.SYSTEM);
+        }
+
+        if (saved.getDriver() != null) {
+            String vehicleInfo = (saved.getVehicle() != null)
+                    ? saved.getVehicle().getBrand() + " " + saved.getVehicle().getModel()
+                    : "vehicle";
+            notificationService.createNotification(saved.getDriver(), "New Trip Assigned",
+                    "You have been assigned to trip " + saved.getBookingReference() + " for " + vehicleInfo + ".",
+                    NotificationType.SYSTEM);
+        }
+
+        return bookingMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse updateBookingStatus(Long bookingId, BookingStatusUpdateRequest request) {
+        return updateBookingStatus(null, bookingId, request);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse updateBookingStatus(UserDetailsImpl userDetails, Long bookingId, BookingStatusUpdateRequest request) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+
+        if (userDetails != null) {
+            validateOwnerAccess(userDetails, booking);
+        }
+
+        if (request == null || request.getStatus() == null) {
+            throw new BadRequestException("Booking status is required");
+        }
+
+        BookingStatus newStatus = request.getStatus();
+
+        // CONFIRMED is rejected here because assignDriver is the only confirmation operation
+        if (newStatus == BookingStatus.CONFIRMED) {
+            throw new BadRequestException("Bookings cannot be confirmed directly via status update. Assign an eligible driver via the assign-driver endpoint to confirm the booking.");
+        }
+
+        // Only Owner (or Admin) can set REJECTED or CANCELLED
+        if (newStatus != BookingStatus.REJECTED && newStatus != BookingStatus.CANCELLED) {
+            throw new BadRequestException("Invalid booking status transition. Only REJECTED or CANCELLED can be set via this endpoint.");
+        }
+
+        BookingStatus currentStatus = booking.getStatus();
+        if (currentStatus == BookingStatus.CANCELLED || currentStatus == BookingStatus.REJECTED || currentStatus == BookingStatus.COMPLETED) {
+            throw new BadRequestException("Cannot modify a booking that is already " + currentStatus);
+        }
+
+        if (newStatus == BookingStatus.REJECTED) {
+            if (currentStatus != BookingStatus.PENDING) {
+                throw new BadRequestException("Only PENDING bookings can be rejected. Current status: " + currentStatus);
+            }
+
+            String reason = request.getRejectionReason();
+            if (reason == null || reason.trim().isEmpty()) {
+                throw new BadRequestException("Rejection reason is mandatory when rejecting a booking");
+            }
+
+            booking.setRejectionReason(reason.trim());
+            booking.setStatus(BookingStatus.REJECTED);
+        } else if (newStatus == BookingStatus.CANCELLED) {
+            if (currentStatus == BookingStatus.IN_PROGRESS) {
+                throw new BadRequestException("Cannot cancel a booking that is already IN_PROGRESS");
+            }
+            booking.setStatus(BookingStatus.CANCELLED);
+            booking.setCancelledAt(LocalDateTime.now());
+            String reason = request.getRejectionReason();
+            if (reason != null && !reason.trim().isEmpty()) {
+                if (booking.getNotes() == null || booking.getNotes().trim().isEmpty()) {
+                    booking.setNotes("Cancelled: " + reason.trim());
+                } else {
+                    booking.setNotes(booking.getNotes() + " | Cancelled: " + reason.trim());
+                }
+            }
         }
 
         Booking saved = bookingRepository.save(booking);
-        log.info("Updated booking status for id: {} to {}", bookingId, booking.getStatus());
+        log.info("Updated booking status for id: {} from {} to {}", bookingId, currentStatus, saved.getStatus());
 
-        // Send confirmation email when transitioned to CONFIRMED (avoid duplicate if already CONFIRMED)
-        if (oldStatus != BookingStatus.CONFIRMED && saved.getStatus() == BookingStatus.CONFIRMED) {
-            try {
-                emailService.sendBookingConfirmationEmail(saved);
-            } catch (Exception e) {
-                log.warn("Failed to send booking confirmation email for booking {}: {}", saved.getBookingReference(), e.getMessage());
+        // Notifications & Emails
+        if (newStatus == BookingStatus.REJECTED) {
+            if (saved.getCustomer() != null) {
+                notificationService.createNotification(saved.getCustomer(), "Booking Rejected",
+                        "Your booking request " + saved.getBookingReference() + " has been rejected by the owner. Reason: " + saved.getRejectionReason(),
+                        NotificationType.SYSTEM);
+            }
+        } else if (newStatus == BookingStatus.CANCELLED) {
+            if (saved.getCustomer() != null) {
+                notificationService.createNotification(saved.getCustomer(), "Booking Cancelled",
+                        "Your booking " + saved.getBookingReference() + " has been cancelled by the vehicle owner.",
+                        NotificationType.SYSTEM);
+            }
+            if (saved.getDriver() != null) {
+                notificationService.createNotification(saved.getDriver(), "Trip Cancelled",
+                        "Trip " + saved.getBookingReference() + " has been cancelled.",
+                        NotificationType.SYSTEM);
             }
         }
 
         return bookingMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse updateDriverTripStatus(UserDetailsImpl userDetails, Long bookingId, BookingStatusUpdateRequest request) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+
+        if (userDetails == null) {
+            throw new BadRequestException("Authentication required");
+        }
+
+        boolean isAdmin = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        boolean isAssignedDriver = booking.getDriver() != null
+                && booking.getDriver().getId().equals(userDetails.getId());
+
+        if (!isAdmin && !isAssignedDriver) {
+            throw new BadRequestException("Only the assigned driver can update the trip status");
+        }
+
+        if (request == null || request.getStatus() == null) {
+            throw new BadRequestException("Status is required");
+        }
+
+        BookingStatus newStatus = request.getStatus();
+
+        if (newStatus == BookingStatus.CONFIRMED || newStatus == BookingStatus.REJECTED || newStatus == BookingStatus.CANCELLED) {
+            throw new BadRequestException("Drivers cannot confirm, reject, or cancel bookings");
+        }
+
+        if (newStatus == BookingStatus.IN_PROGRESS) {
+            if (booking.getStatus() != BookingStatus.CONFIRMED) {
+                throw new BadRequestException("Trip can only be started when booking is CONFIRMED. Current status: " + booking.getStatus());
+            }
+        } else if (newStatus == BookingStatus.COMPLETED) {
+            if (booking.getStatus() != BookingStatus.IN_PROGRESS) {
+                throw new BadRequestException("Trip can only be completed when it is IN_PROGRESS. Current status: " + booking.getStatus());
+            }
+        } else {
+            throw new BadRequestException("Invalid trip status transition: " + newStatus);
+        }
+
+        booking.setStatus(newStatus);
+        Booking saved = bookingRepository.save(booking);
+        log.info("Driver {} updated trip {} status to {}", userDetails.getId(), bookingId, newStatus);
+
+        return bookingMapper.toResponse(saved);
+    }
+
+    private void validateOwnerAccess(UserDetailsImpl userDetails, Booking booking) {
+        if (userDetails == null) {
+            throw new BadRequestException("Authentication required");
+        }
+
+        boolean isCustomer = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_CUSTOMER"));
+        if (isCustomer) {
+            throw new BadRequestException("Customers are not permitted to change booking status or cancel bookings");
+        }
+
+        boolean isDriver = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_DRIVER"));
+        if (isDriver) {
+            throw new BadRequestException("Drivers cannot confirm, reject, or cancel bookings");
+        }
+
+        boolean isAdmin = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        boolean isVehicleOwner = booking.getVehicle() != null
+                && booking.getVehicle().getOwner() != null
+                && booking.getVehicle().getOwner().getId().equals(userDetails.getId());
+
+        if (!isAdmin && !isVehicleOwner) {
+            throw new BadRequestException("Only the vehicle owner can perform this operation on this booking");
+        }
+    }
+
+    private User validateAndGetEligibleDriver(Long driverId) {
+        if (driverId == null) {
+            throw new BadRequestException("Driver ID must be specified");
+        }
+
+        User driverUser = userRepository.findById(driverId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver user not found with id: " + driverId));
+
+        boolean hasDriverRole = (driverUser.getRoles() != null && driverUser.getRoles().stream()
+                .anyMatch(r -> r == Role.DRIVER || r == Role.ROLE_DRIVER))
+                || driverUser.getRole() == Role.DRIVER
+                || driverUser.getRole() == Role.ROLE_DRIVER;
+
+        if (!hasDriverRole) {
+            throw new BadRequestException("Selected user is not registered as a driver");
+        }
+
+        if (Boolean.FALSE.equals(driverUser.getIsActive())) {
+            throw new BadRequestException("Driver account is deactivated");
+        }
+
+        DriverProfile profile = driverProfileRepository.findByUserId(driverId)
+                .orElse(null);
+
+        if (profile != null) {
+            boolean isApproved = "APPROVED".equalsIgnoreCase(profile.getApprovalStatus())
+                    || profile.getStatus() == DriverStatus.APPROVED
+                    || profile.getStatus() == DriverStatus.AVAILABLE;
+
+            if (!isApproved) {
+                throw new BadRequestException("Driver has not been approved by admin");
+            }
+
+            if (profile.getStatus() == DriverStatus.OFFLINE || profile.getStatus() == DriverStatus.REJECTED) {
+                throw new BadRequestException("Driver is currently offline or rejected");
+            }
+
+            if (profile.getLicenseExpiryDate() != null && profile.getLicenseExpiryDate().isBefore(LocalDate.now())) {
+                throw new BadRequestException("Driver's driving license has expired");
+            }
+        }
+
+        return driverUser;
     }
 
     private void validateBookingAccess(UserDetailsImpl userDetails, Booking booking) {

@@ -70,9 +70,16 @@ public class BookingController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'DRIVER')")
-    public ResponseEntity<ApiResponse<BookingResponse>> updateBookingStatus(@PathVariable("id") Long id,
-                                                                            @RequestBody BookingStatusUpdateRequest request) {
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
+    public ResponseEntity<ApiResponse<BookingResponse>> updateBookingStatus(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable("id") Long id,
+            @Valid @RequestBody BookingStatusUpdateRequest request) {
+        BookingResponse response = bookingService.updateBookingStatus(userDetails, id, request);
+        return ResponseEntity.ok(ApiResponse.success("Booking status updated", response));
+    }
+
+    public ResponseEntity<ApiResponse<BookingResponse>> updateBookingStatus(Long id, BookingStatusUpdateRequest request) {
         BookingResponse response = bookingService.updateBookingStatus(id, request);
         return ResponseEntity.ok(ApiResponse.success("Booking status updated", response));
     }
