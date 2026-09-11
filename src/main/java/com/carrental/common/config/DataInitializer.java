@@ -151,10 +151,6 @@ public class DataInitializer implements CommandLineRunner {
                     .status(DriverStatus.APPROVED)
                     .approvalStatus("APPROVED")
                     .approvedAt(LocalDateTime.now())
-                    .willingToDrive(true)
-                    .yearsOfExperience(6)
-                    .rating(4.9)
-                    .totalTrips(45)
                     .build();
             driverProfileRepository.save(driverProfile);
 

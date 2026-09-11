@@ -64,8 +64,6 @@ class DriverServiceTest {
                 .drivingLicenseNumber("DL-12345678")
                 .licenseExpiryDate(LocalDate.now().plusYears(3))
                 .status(DriverStatus.AVAILABLE)
-                .rating(4.8)
-                .totalTrips(15)
                 .build();
     }
 

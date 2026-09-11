@@ -53,9 +53,6 @@ public class DriverServiceImpl implements DriverService {
         if (request.getLicenseExpiryDate() != null) {
             profile.setLicenseExpiryDate(request.getLicenseExpiryDate());
         }
-        if (request.getYearsOfExperience() != null) {
-            profile.setYearsOfExperience(request.getYearsOfExperience());
-        }
         if (request.getStatus() != null) {
             profile.setStatus(request.getStatus());
         }
@@ -92,18 +89,6 @@ public class DriverServiceImpl implements DriverService {
     }
 
     private DriverResponse mapToResponse(User user, DriverProfile profile) {
-        Double rating = (profile != null && profile.getRating() != null)
-                ? profile.getRating()
-                : 0.0;
-
-        Integer yearsOfExperience = (profile != null && profile.getYearsOfExperience() != null)
-                ? profile.getYearsOfExperience()
-                : 0;
-
-        Integer totalTrips = (profile != null && profile.getTotalTrips() != null)
-                ? profile.getTotalTrips()
-                : 0;
-
         return DriverResponse.builder()
                 .id(profile != null ? profile.getId() : null)
                 .userId(user.getId())
@@ -114,11 +99,7 @@ public class DriverServiceImpl implements DriverService {
                 .role(user.getRole())
                 .drivingLicenseNumber(profile != null ? profile.getDrivingLicenseNumber() : null)
                 .licenseExpiryDate(profile != null ? profile.getLicenseExpiryDate() : null)
-                .willingToDrive(profile != null && Boolean.TRUE.equals(profile.getWillingToDrive()))
-                .yearsOfExperience(yearsOfExperience)
                 .status(profile != null && profile.getStatus() != null ? profile.getStatus() : DriverStatus.PENDING)
-                .rating(rating)
-                .totalTrips(totalTrips)
                 .createdAt(profile != null && profile.getCreatedAt() != null ? profile.getCreatedAt() : user.getCreatedAt())
                 .build();
     }

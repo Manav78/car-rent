@@ -410,15 +410,12 @@ class V2SchemaEntitiesTest {
                 .dropoffLocation("City Center")
                 .startDateTime(LocalDateTime.now().plusDays(1))
                 .endDateTime(LocalDateTime.now().plusDays(2))
-                .pricePerKm(18)
                 .status(BookingStatus.CONFIRMED)
                 .build();
         booking = bookingRepository.save(booking);
 
         assertNotNull(booking.getId());
-        assertEquals(18, booking.getPricePerKm());
         assertEquals(BookingStatus.CONFIRMED, booking.getStatus());
-        assertEquals(BookingStatus.CONFIRMED, booking.getBookingStatus());
 
         Trip trip = Trip.builder()
                 .booking(booking)

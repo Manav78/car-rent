@@ -142,5 +142,23 @@ class VehicleServiceTest {
         assertEquals(1, list.size());
         assertEquals("MH12AB1234", list.get(0).getLicensePlate());
     }
+
+    @Test
+    @DisplayName("Should get all available vehicles with vehicle info only")
+    void testGetAllAvailableVehicles() {
+        when(vehicleRepository.searchAvailableVehicles("Pune", VehicleType.SEDAN, 5))
+                .thenReturn(List.of(sampleVehicle));
+
+        List<VehicleResponse> list = vehicleService.getAllAvailableVehicles("Pune", VehicleType.SEDAN, 5);
+
+        assertNotNull(list);
+        assertEquals(1, list.size());
+        VehicleResponse response = list.get(0);
+        assertEquals(100L, response.getId());
+        assertEquals("Honda", response.getBrand());
+        assertEquals("City", response.getModel());
+        assertEquals("MH12AB1234", response.getLicensePlate());
+        assertEquals(VehicleStatus.AVAILABLE, response.getStatus());
+    }
 }
 

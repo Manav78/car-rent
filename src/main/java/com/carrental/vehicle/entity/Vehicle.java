@@ -74,7 +74,7 @@ public class Vehicle {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
-    private VehicleStatus status = VehicleStatus.AVAILABLE;
+    private VehicleStatus status = VehicleStatus.PENDING;
 
     @Column(name = "approval_status", nullable = false, length = 30)
     private String approvalStatus = "PENDING";
@@ -120,7 +120,7 @@ public class Vehicle {
         this.seatingCapacity = seatingCapacity;
         this.hasAc = hasAc != null ? hasAc : false;
         this.pricePerKm = pricePerKm;
-        this.status = status != null ? status : VehicleStatus.AVAILABLE;
+        this.status = status != null ? status : VehicleStatus.PENDING;
         this.approvalStatus = approvalStatus != null ? approvalStatus : "PENDING";
         this.rejectionReason = rejectionReason;
         this.location = location;
@@ -145,7 +145,7 @@ public class Vehicle {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
         if (this.status == null) {
-            this.status = VehicleStatus.AVAILABLE;
+            this.status = VehicleStatus.PENDING;
         }
         if (this.approvalStatus == null) {
             this.approvalStatus = "PENDING";

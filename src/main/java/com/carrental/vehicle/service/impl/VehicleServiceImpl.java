@@ -48,7 +48,8 @@ public class VehicleServiceImpl implements VehicleService {
                 .seatingCapacity(request.getSeatingCapacity())
                 .vehicleType(request.getVehicleType())
                 .fuelType(request.getFuelType())
-                .status(request.getStatus() != null ? request.getStatus() : VehicleStatus.AVAILABLE)
+                .status(VehicleStatus.PENDING)
+                .approvalStatus("PENDING")
                 .location(request.getLocation())
                 .imageUrls(request.getImageUrls() != null ? new ArrayList<>(request.getImageUrls()) : new ArrayList<>())
                 .description(request.getDescription())
@@ -109,7 +110,11 @@ public class VehicleServiceImpl implements VehicleService {
         vehicle.setSeatingCapacity(request.getSeatingCapacity());
         vehicle.setVehicleType(request.getVehicleType());
         vehicle.setFuelType(request.getFuelType());
-        if (request.getStatus() != null) vehicle.setStatus(request.getStatus());
+        if (request.getStatus() != null && "APPROVED".equalsIgnoreCase(vehicle.getApprovalStatus())) {
+            if (request.getStatus() == VehicleStatus.AVAILABLE || request.getStatus() == VehicleStatus.MAINTENANCE || request.getStatus() == VehicleStatus.INACTIVE) {
+                vehicle.setStatus(request.getStatus());
+            }
+        }
         vehicle.setLocation(request.getLocation());
         if (request.getImageUrls() != null) {
             vehicle.setImageUrls(new ArrayList<>(request.getImageUrls()));
@@ -139,9 +144,6 @@ public class VehicleServiceImpl implements VehicleService {
     private VehicleResponse mapToResponse(Vehicle vehicle) {
         return VehicleResponse.builder()
                 .id(vehicle.getId())
-                .ownerId(vehicle.getOwner() != null ? vehicle.getOwner().getId() : null)
-                .ownerName(vehicle.getOwner() != null ? vehicle.getOwner().getFullName() : null)
-                .ownerEmail(vehicle.getOwner() != null ? vehicle.getOwner().getEmail() : null)
                 .brand(vehicle.getBrand())
                 .model(vehicle.getModel())
                 .year(vehicle.getYear())

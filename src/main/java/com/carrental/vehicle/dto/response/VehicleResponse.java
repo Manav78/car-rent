@@ -3,6 +3,7 @@ package com.carrental.vehicle.dto.response;
 import com.carrental.vehicle.enums.FuelType;
 import com.carrental.vehicle.enums.VehicleStatus;
 import com.carrental.vehicle.enums.VehicleType;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,11 +16,9 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class VehicleResponse {
     private Long id;
-    private Long ownerId;
-    private String ownerName;
-    private String ownerEmail;
     private String brand;
     private String model;
     private Integer year;
@@ -34,5 +33,3 @@ public class VehicleResponse {
     private String description;
     private LocalDateTime createdAt;
 }
-
-

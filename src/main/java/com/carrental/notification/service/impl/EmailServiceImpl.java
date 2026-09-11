@@ -98,7 +98,8 @@ public class EmailServiceImpl implements EmailService {
             context.setVariable("customerName", name);
             context.setVariable("name", name);
             context.setVariable("bookingReference", bookingReference);
-            context.setVariable("bookingStatus", booking.getBookingStatus() != null ? booking.getBookingStatus().name() : "CONFIRMED");
+            context.setVariable("bookingStatus", booking.getStatus() != null ? booking.getStatus().name() : "CONFIRMED");
+            context.setVariable("status", booking.getStatus() != null ? booking.getStatus().name() : "CONFIRMED");
             context.setVariable("vehicleBrand", booking.getVehicle() != null ? booking.getVehicle().getBrand() : "N/A");
             context.setVariable("vehicleModel", booking.getVehicle() != null ? booking.getVehicle().getModel() : "N/A");
             context.setVariable("vehicleType", booking.getVehicle() != null && booking.getVehicle().getVehicleType() != null ? booking.getVehicle().getVehicleType().name() : "N/A");

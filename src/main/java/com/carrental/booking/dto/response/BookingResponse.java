@@ -33,7 +33,7 @@ public class BookingResponse {
     private String dropoffLocation;
     private TripType tripType;
     private Integer passengerCount;
-    private BookingStatus bookingStatus;
+    private BookingStatus status;
     private String rejectionReason;
     private String notes;
     private LocalDateTime createdAt;

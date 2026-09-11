@@ -23,22 +23,26 @@ public interface DriverProfileRepository extends JpaRepository<DriverProfile, Lo
            countQuery = "SELECT count(dp) FROM DriverProfile dp")
     Page<DriverProfile> findAllWithDetails(Pageable pageable);
 
-    @Query(value = "SELECT dp FROM DriverProfile dp JOIN FETCH dp.user WHERE dp.status = :status AND (dp.willingToDrive IS NULL OR dp.willingToDrive = false)",
-           countQuery = "SELECT count(dp) FROM DriverProfile dp WHERE dp.status = :status AND (dp.willingToDrive IS NULL OR dp.willingToDrive = false)")
+    @Query(value = "SELECT dp FROM DriverProfile dp JOIN FETCH dp.user u WHERE dp.status = :status AND (com.carrental.auth.enums.Role.DRIVER MEMBER OF u.roles OR com.carrental.auth.enums.Role.ROLE_DRIVER MEMBER OF u.roles)",
+           countQuery = "SELECT count(dp) FROM DriverProfile dp JOIN dp.user u WHERE dp.status = :status AND (com.carrental.auth.enums.Role.DRIVER MEMBER OF u.roles OR com.carrental.auth.enums.Role.ROLE_DRIVER MEMBER OF u.roles)")
     Page<DriverProfile> findAllByStatusWithDetails(@Param("status") DriverStatus status, Pageable pageable);
 
     @Query("SELECT dp FROM DriverProfile dp JOIN FETCH dp.user WHERE dp.id = :id")
     Optional<DriverProfile> findByIdWithDetails(@Param("id") Long id);
 
-    @Query(value = "SELECT dp FROM DriverProfile dp JOIN FETCH dp.user WHERE dp.status = :status AND dp.willingToDrive = true",
-           countQuery = "SELECT count(dp) FROM DriverProfile dp WHERE dp.status = :status AND dp.willingToDrive = true")
+    @Query(value = "SELECT dp FROM DriverProfile dp JOIN FETCH dp.user u WHERE dp.status = :status AND (com.carrental.auth.enums.Role.OWNER MEMBER OF u.roles OR com.carrental.auth.enums.Role.ROLE_OWNER MEMBER OF u.roles)",
+           countQuery = "SELECT count(dp) FROM DriverProfile dp JOIN dp.user u WHERE dp.status = :status AND (com.carrental.auth.enums.Role.OWNER MEMBER OF u.roles OR com.carrental.auth.enums.Role.ROLE_OWNER MEMBER OF u.roles)")
     Page<DriverProfile> findPendingOwnerDrivers(@Param("status") DriverStatus status, Pageable pageable);
 
-    @Query("SELECT dp FROM DriverProfile dp JOIN FETCH dp.user WHERE dp.id = :id AND dp.willingToDrive = true")
+    @Query("SELECT dp FROM DriverProfile dp JOIN FETCH dp.user u WHERE dp.id = :id AND (com.carrental.auth.enums.Role.OWNER MEMBER OF u.roles OR com.carrental.auth.enums.Role.ROLE_OWNER MEMBER OF u.roles)")
     Optional<DriverProfile> findOwnerDriverById(@Param("id") Long id);
 
     long countByStatus(DriverStatus status);
 
-    long countByStatusAndWillingToDrive(DriverStatus status, Boolean willingToDrive);
+    @Query("SELECT count(dp) FROM DriverProfile dp JOIN dp.user u WHERE dp.status = :status AND (com.carrental.auth.enums.Role.DRIVER MEMBER OF u.roles OR com.carrental.auth.enums.Role.ROLE_DRIVER MEMBER OF u.roles)")
+    long countPendingDrivers(@Param("status") DriverStatus status);
+
+    @Query("SELECT count(dp) FROM DriverProfile dp JOIN dp.user u WHERE dp.status = :status AND (com.carrental.auth.enums.Role.OWNER MEMBER OF u.roles OR com.carrental.auth.enums.Role.ROLE_OWNER MEMBER OF u.roles)")
+    long countPendingOwnerDrivers(@Param("status") DriverStatus status);
 }
 

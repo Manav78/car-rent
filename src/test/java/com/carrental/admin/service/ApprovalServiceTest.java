@@ -12,6 +12,7 @@ import com.carrental.admin.entity.Approval;
 import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.admin.repository.ApprovalRepository;
 import com.carrental.auth.entity.User;
+import com.carrental.auth.enums.Role;
 import com.carrental.auth.repository.UserRepository;
 import com.carrental.driver.entity.DriverProfile;
 import com.carrental.driver.enums.DriverStatus;
@@ -98,6 +99,16 @@ class ApprovalServiceTest {
                 .lastName("Owner")
                 .email("owner@test.com")
                 .phoneNumber("9876543210")
+                .role(Role.OWNER)
+                .build();
+
+        User driverUser = User.builder()
+                .id(3L)
+                .firstName("Driver")
+                .lastName("User")
+                .email("driver@test.com")
+                .phoneNumber("9876543211")
+                .role(Role.DRIVER)
                 .build();
 
         ownerProfile = OwnerProfile.builder()
@@ -117,10 +128,9 @@ class ApprovalServiceTest {
 
         driverProfile = DriverProfile.builder()
                 .id(200L)
-                .user(ownerUser)
+                .user(driverUser)
                 .drivingLicenseNumber("DL-98765")
                 .licenseExpiryDate(LocalDate.now().plusYears(3))
-                .willingToDrive(false)
                 .status(DriverStatus.PENDING)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -215,7 +225,7 @@ class ApprovalServiceTest {
         Page<DriverProfile> page = new PageImpl<>(List.of(driverProfile), pageable, 1);
 
         when(driverProfileRepository.findAllByStatusWithDetails(DriverStatus.PENDING, pageable)).thenReturn(page);
-        when(ownerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(ownerProfile));
+        when(ownerProfileRepository.findByUserId(3L)).thenReturn(Optional.of(ownerProfile));
 
         PageResponse<PendingDriverResponse> response = approvalService.getPendingDrivers(pageable);
 
@@ -227,7 +237,7 @@ class ApprovalServiceTest {
     @DisplayName("getDriverDetail - success")
     void testGetDriverDetail() {
         when(driverProfileRepository.findByIdWithDetails(200L)).thenReturn(Optional.of(driverProfile));
-        when(ownerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(ownerProfile));
+        when(ownerProfileRepository.findByUserId(3L)).thenReturn(Optional.of(ownerProfile));
         when(approvalRepository.findHistoryWithAdmin(any(), eq(200L))).thenReturn(Collections.emptyList());
 
         AdminDriverDetailResponse response = approvalService.getDriverDetail(200L);
@@ -254,7 +264,7 @@ class ApprovalServiceTest {
     @Test
     @DisplayName("decideDriverApproval - owner-as-driver throws CONFLICT")
     void testDecideDriverApproval_OwnerAsDriver() {
-        driverProfile.setWillingToDrive(true);
+        driverProfile.setUser(ownerUser);
         ApprovalDecisionRequest request = new ApprovalDecisionRequest(ApprovalDecision.APPROVED, null);
 
         when(driverProfileRepository.findByIdWithDetails(200L)).thenReturn(Optional.of(driverProfile));

@@ -129,7 +129,6 @@ public class AuthServiceImpl implements AuthService {
                     .user(savedUser)
                     .drivingLicenseNumber(request.getDrivingLicenseNumber())
                     .licenseExpiryDate(request.getLicenseExpiryDate())
-                    .willingToDrive(true)
                     .status(DriverStatus.PENDING)
                     .build();
             driverProfileRepository.save(driverProfile);

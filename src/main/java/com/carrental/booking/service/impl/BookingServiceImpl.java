@@ -50,8 +50,9 @@ public class BookingServiceImpl implements BookingService {
         Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle", "id", request.getVehicleId()));
 
-        if (vehicle.getStatus() != VehicleStatus.AVAILABLE) {
-            throw new BadRequestException("Vehicle is currently not available for booking");
+        if (!"APPROVED".equalsIgnoreCase(vehicle.getApprovalStatus()) ||
+                (vehicle.getStatus() != VehicleStatus.AVAILABLE && vehicle.getStatus() != VehicleStatus.APPROVED)) {
+            throw new BadRequestException("Vehicle is not approved or currently not available for booking");
         }
 
         if (request.getPassengerCount() != null && request.getPassengerCount() > vehicle.getSeatingCapacity()) {
@@ -86,7 +87,7 @@ public class BookingServiceImpl implements BookingService {
                 .tripType(request.getTripType())
                 .passengerCount(request.getPassengerCount())
                 .rejectionReason(null)
-                .bookingStatus(BookingStatus.PENDING)
+                .status(BookingStatus.PENDING)
                 .notes(request.getNotes())
                 .build();
 
@@ -167,17 +168,17 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
 
-        BookingStatus oldStatus = booking.getBookingStatus();
+        BookingStatus oldStatus = booking.getStatus();
 
-        if (request.getBookingStatus() != null) {
-            booking.setBookingStatus(request.getBookingStatus());
+        if (request.getStatus() != null) {
+            booking.setStatus(request.getStatus());
         }
 
         Booking saved = bookingRepository.save(booking);
-        log.info("Updated booking status for id: {} to {}", bookingId, booking.getBookingStatus());
+        log.info("Updated booking status for id: {} to {}", bookingId, booking.getStatus());
 
         // Send confirmation email when transitioned to CONFIRMED (avoid duplicate if already CONFIRMED)
-        if (oldStatus != BookingStatus.CONFIRMED && saved.getBookingStatus() == BookingStatus.CONFIRMED) {
+        if (oldStatus != BookingStatus.CONFIRMED && saved.getStatus() == BookingStatus.CONFIRMED) {
             try {
                 emailService.sendBookingConfirmationEmail(saved);
             } catch (Exception e) {

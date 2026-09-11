@@ -20,7 +20,6 @@ class ApiResponseTest {
         assertTrue(response.isSuccess());
         assertEquals("Operation successful", response.getMessage());
         assertEquals(200, response.getStatusCode());
-        assertEquals(200, response.getStatus());
         assertEquals("Hello World", response.getData());
         assertNotNull(response.getTimestamp());
     }
@@ -54,7 +53,6 @@ class ApiResponseTest {
 
         assertFalse(response.isSuccess());
         assertEquals(404, response.getStatusCode());
-        assertEquals(404, response.getStatus());
         assertEquals("Not Found", response.getMessage());
         assertNull(response.getData());
     }
@@ -82,12 +80,12 @@ class ApiResponseTest {
 
         assertTrue(json.contains("\"success\":true"));
         assertTrue(json.contains("\"statusCode\":200"));
+        assertFalse(json.contains("\"status\":200"));
 
         ApiResponse<?> deserialized = objectMapper.readValue(json, ApiResponse.class);
         assertNotNull(deserialized);
         assertTrue(deserialized.isSuccess());
         assertEquals(200, deserialized.getStatusCode());
-        assertEquals(200, deserialized.getStatus());
     }
 }
 

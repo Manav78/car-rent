@@ -138,8 +138,8 @@ class AdminServiceTest {
         when(driverProfileRepository.count()).thenReturn(8L);
         when(vehicleRepository.count()).thenReturn(15L);
         when(vehicleRepository.countByStatus(VehicleStatus.PENDING)).thenReturn(2L);
-        when(driverProfileRepository.countByStatusAndWillingToDrive(DriverStatus.PENDING, false)).thenReturn(1L);
-        when(driverProfileRepository.countByStatusAndWillingToDrive(DriverStatus.PENDING, true)).thenReturn(1L);
+        when(driverProfileRepository.countPendingDrivers(DriverStatus.PENDING)).thenReturn(1L);
+        when(driverProfileRepository.countPendingOwnerDrivers(DriverStatus.PENDING)).thenReturn(1L);
         when(vehicleRepository.countByStatusIn(any())).thenReturn(10L);
         when(userRepository.countByDeletedAtIsNotNull()).thenReturn(3L);
 

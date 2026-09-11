@@ -103,6 +103,7 @@ class BookingServiceTest {
                 .model("Civic")
                 .seatingCapacity(4)
                 .status(VehicleStatus.AVAILABLE)
+                .approvalStatus("APPROVED")
                 .owner(owner)
                 .build();
 
@@ -114,7 +115,7 @@ class BookingServiceTest {
                 .driver(driver)
                 .startDate(LocalDate.now().plusDays(2))
                 .endDate(LocalDate.now().plusDays(5))
-                .bookingStatus(BookingStatus.PENDING)
+                .status(BookingStatus.PENDING)
                 .build();
 
         bookingRequest = BookingRequest.builder()
@@ -131,7 +132,7 @@ class BookingServiceTest {
         bookingResponse = BookingResponse.builder()
                 .id(100L)
                 .bookingReference("BK-TEST001")
-                .bookingStatus(BookingStatus.PENDING)
+                .status(BookingStatus.PENDING)
                 .build();
     }
 
@@ -363,11 +364,11 @@ class BookingServiceTest {
         BookingStatusUpdateRequest request = new BookingStatusUpdateRequest(BookingStatus.CONFIRMED);
         Booking confirmedBooking = Booking.builder()
                 .id(100L)
-                .bookingStatus(BookingStatus.CONFIRMED)
+                .status(BookingStatus.CONFIRMED)
                 .build();
         BookingResponse confirmedResponse = BookingResponse.builder()
                 .id(100L)
-                .bookingStatus(BookingStatus.CONFIRMED)
+                .status(BookingStatus.CONFIRMED)
                 .build();
 
         when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
@@ -376,7 +377,7 @@ class BookingServiceTest {
 
         BookingResponse response = bookingService.updateBookingStatus(100L, request);
 
-        assertThat(response.getBookingStatus()).isEqualTo(BookingStatus.CONFIRMED);
+        assertThat(response.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
         verify(emailService).sendBookingConfirmationEmail(confirmedBooking);
     }
 
@@ -386,11 +387,11 @@ class BookingServiceTest {
         BookingStatusUpdateRequest request = new BookingStatusUpdateRequest(BookingStatus.CANCELLED);
         Booking cancelledBooking = Booking.builder()
                 .id(100L)
-                .bookingStatus(BookingStatus.CANCELLED)
+                .status(BookingStatus.CANCELLED)
                 .build();
         BookingResponse cancelledResponse = BookingResponse.builder()
                 .id(100L)
-                .bookingStatus(BookingStatus.CANCELLED)
+                .status(BookingStatus.CANCELLED)
                 .build();
 
         when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
@@ -399,7 +400,7 @@ class BookingServiceTest {
 
         BookingResponse response = bookingService.updateBookingStatus(100L, request);
 
-        assertThat(response.getBookingStatus()).isEqualTo(BookingStatus.CANCELLED);
+        assertThat(response.getStatus()).isEqualTo(BookingStatus.CANCELLED);
         verify(emailService, never()).sendBookingConfirmationEmail(any());
     }
 }

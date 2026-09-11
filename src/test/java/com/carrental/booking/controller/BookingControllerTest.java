@@ -51,7 +51,7 @@ class BookingControllerTest {
         sampleResponse = BookingResponse.builder()
                 .id(100L)
                 .bookingReference("BK-TEST001")
-                .bookingStatus(BookingStatus.PENDING)
+                .status(BookingStatus.PENDING)
                 .build();
     }
 
@@ -135,7 +135,7 @@ class BookingControllerTest {
         BookingResponse confirmedResponse = BookingResponse.builder()
                 .id(100L)
                 .bookingReference("BK-TEST001")
-                .bookingStatus(BookingStatus.CONFIRMED)
+                .status(BookingStatus.CONFIRMED)
                 .build();
 
         when(bookingService.updateBookingStatus(eq(100L), any(BookingStatusUpdateRequest.class)))
@@ -145,7 +145,7 @@ class BookingControllerTest {
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(result.getBody()).isNotNull();
-        assertThat(result.getBody().getData().getBookingStatus()).isEqualTo(BookingStatus.CONFIRMED);
+        assertThat(result.getBody().getData().getStatus()).isEqualTo(BookingStatus.CONFIRMED);
     }
 }
 

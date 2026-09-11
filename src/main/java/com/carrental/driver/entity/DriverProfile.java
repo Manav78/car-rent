@@ -65,18 +65,6 @@ public class DriverProfile {
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
 
-    @Column(name = "willing_to_drive")
-    private Boolean willingToDrive = true;
-
-    @Column(name = "years_of_experience")
-    private Integer yearsOfExperience = 0;
-
-    @Column(name = "rating")
-    private Double rating = 0.0;
-
-    @Column(name = "total_trips")
-    private Integer totalTrips = 0;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -88,8 +76,7 @@ public class DriverProfile {
                          String licenseNumber, String drivingLicenseNumber,
                          LocalDate licenseExpiryDate, DriverStatus status,
                          String inactiveReason, String approvalStatus, String rejectionReason,
-                         LocalDateTime approvedAt, Boolean willingToDrive,
-                         Integer yearsOfExperience, Double rating, Integer totalTrips,
+                         LocalDateTime approvedAt,
                          LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.user = user;
@@ -101,10 +88,6 @@ public class DriverProfile {
         this.approvalStatus = approvalStatus != null ? approvalStatus : "PENDING";
         this.rejectionReason = rejectionReason;
         this.approvedAt = approvedAt;
-        this.willingToDrive = willingToDrive != null ? willingToDrive : false;
-        this.yearsOfExperience = yearsOfExperience != null ? yearsOfExperience : 0;
-        this.rating = rating != null ? rating : 5.0;
-        this.totalTrips = totalTrips != null ? totalTrips : 0;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -118,18 +101,6 @@ public class DriverProfile {
         }
         if (this.approvalStatus == null) {
             this.approvalStatus = "PENDING";
-        }
-        if (this.willingToDrive == null) {
-            this.willingToDrive = false;
-        }
-        if (this.yearsOfExperience == null) {
-            this.yearsOfExperience = 0;
-        }
-        if (this.rating == null) {
-            this.rating = 5.0;
-        }
-        if (this.totalTrips == null) {
-            this.totalTrips = 0;
         }
     }
 

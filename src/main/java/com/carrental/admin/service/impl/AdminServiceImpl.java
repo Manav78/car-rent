@@ -9,6 +9,7 @@ import com.carrental.auth.entity.User;
 import com.carrental.auth.enums.Role;
 import com.carrental.auth.mapper.AuthMapper;
 import com.carrental.auth.repository.UserRepository;
+import java.time.LocalDateTime;
 import com.carrental.booking.enums.BookingStatus;
 import com.carrental.booking.repository.BookingRepository;
 import com.carrental.common.exception.ResourceNotFoundException;
@@ -84,8 +85,8 @@ public class AdminServiceImpl implements AdminService {
         long totalVehicles = vehicleRepository.count();
 
         long pendingVehicleApprovals = vehicleRepository.countByStatus(VehicleStatus.PENDING);
-        long pendingDriverApprovals = driverProfileRepository.countByStatusAndWillingToDrive(DriverStatus.PENDING, false);
-        long pendingOwnerDriverApprovals = driverProfileRepository.countByStatusAndWillingToDrive(DriverStatus.PENDING, true);
+        long pendingDriverApprovals = driverProfileRepository.countPendingDrivers(DriverStatus.PENDING);
+        long pendingOwnerDriverApprovals = driverProfileRepository.countPendingOwnerDrivers(DriverStatus.PENDING);
         long totalPendingApprovals = pendingVehicleApprovals + pendingDriverApprovals + pendingOwnerDriverApprovals;
 
         long activeVehicles = vehicleRepository.countByStatusIn(List.of(VehicleStatus.AVAILABLE, VehicleStatus.BOOKED, VehicleStatus.APPROVED));
@@ -270,7 +271,6 @@ public class AdminServiceImpl implements AdminService {
                 .role(user != null ? user.getRole() : null)
                 .drivingLicenseNumber(saved.getDrivingLicenseNumber())
                 .licenseExpiryDate(saved.getLicenseExpiryDate())
-                .willingToDrive(saved.getWillingToDrive())
                 .status(saved.getStatus())
                 .createdAt(user != null ? user.getCreatedAt() : null)
                 .build();
@@ -283,14 +283,19 @@ public class AdminServiceImpl implements AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle", "id", vehicleId));
 
         vehicle.setStatus(status);
+        if (status == VehicleStatus.APPROVED || status == VehicleStatus.AVAILABLE) {
+            vehicle.setApprovalStatus("APPROVED");
+            if (vehicle.getApprovedAt() == null) {
+                vehicle.setApprovedAt(LocalDateTime.now());
+            }
+        } else if (status == VehicleStatus.REJECTED) {
+            vehicle.setApprovalStatus("REJECTED");
+        }
         Vehicle saved = vehicleRepository.save(vehicle);
 
         log.info("Admin updated vehicle status to {} for vehicle id: {}", status, vehicleId);
         return VehicleResponse.builder()
                 .id(saved.getId())
-                .ownerId(saved.getOwner() != null ? saved.getOwner().getId() : null)
-                .ownerName(saved.getOwner() != null ? saved.getOwner().getFullName() : null)
-                .ownerEmail(saved.getOwner() != null ? saved.getOwner().getEmail() : null)
                 .brand(saved.getBrand())
                 .model(saved.getModel())
                 .year(saved.getYear())

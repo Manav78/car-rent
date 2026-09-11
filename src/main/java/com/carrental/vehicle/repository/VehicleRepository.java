@@ -33,7 +33,8 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long>, JpaSpec
 
     long countByStatus(VehicleStatus status);
 
-    @Query("SELECT v FROM Vehicle v WHERE v.status = com.carrental.vehicle.enums.VehicleStatus.AVAILABLE " +
+    @Query("SELECT v FROM Vehicle v WHERE (v.status = com.carrental.vehicle.enums.VehicleStatus.AVAILABLE OR v.status = com.carrental.vehicle.enums.VehicleStatus.APPROVED) " +
+           "AND v.approvalStatus = 'APPROVED' " +
            "AND (CAST(:city AS string) IS NULL OR CAST(:city AS string) = '' OR LOWER(v.location) LIKE LOWER(CONCAT('%', CAST(:city AS string), '%'))) " +
            "AND (:vehicleType IS NULL OR v.vehicleType = :vehicleType) " +
            "AND (:seatingCapacity IS NULL OR v.seatingCapacity >= :seatingCapacity)")

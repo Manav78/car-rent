@@ -22,8 +22,6 @@ public class DriverRequest {
     @NotNull(message = "License expiry date is required")
     private LocalDate licenseExpiryDate;
 
-    private Integer yearsOfExperience;
-
     private DriverStatus status;
 }
 

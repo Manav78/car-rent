@@ -95,7 +95,7 @@ class EmailServiceTest {
                 .vehicle(vehicle)
                 .startDate(LocalDate.now().plusDays(1))
                 .endDate(LocalDate.now().plusDays(3))
-                .bookingStatus(BookingStatus.CONFIRMED)
+                .status(BookingStatus.CONFIRMED)
                 .tripType(TripType.LOCAL)
                 .pickupLocation("Airport")
                 .dropoffLocation("Hotel")

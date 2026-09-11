@@ -8,6 +8,7 @@ import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.admin.enums.ApprovalEntityType;
 import com.carrental.admin.repository.ApprovalRepository;
 import com.carrental.auth.entity.User;
+import com.carrental.auth.enums.Role;
 import com.carrental.auth.repository.UserRepository;
 import com.carrental.driver.entity.DriverProfile;
 import com.carrental.driver.enums.DriverStatus;
@@ -153,8 +154,12 @@ public class ApprovalServiceImpl implements ApprovalService {
 
         if (request.decision() == ApprovalDecision.APPROVED) {
             vehicle.setStatus(VehicleStatus.AVAILABLE);
+            vehicle.setApprovalStatus("APPROVED");
+            vehicle.setApprovedAt(java.time.LocalDateTime.now());
         } else {
             vehicle.setStatus(VehicleStatus.REJECTED);
+            vehicle.setApprovalStatus("REJECTED");
+            vehicle.setRejectionReason(request.reason());
         }
 
         vehicleRepository.save(vehicle);
@@ -248,7 +253,7 @@ public class ApprovalServiceImpl implements ApprovalService {
                         "Driver not found"
                 ));
 
-        if (Boolean.TRUE.equals(driver.getWillingToDrive())) {
+        if (driver.getUser() != null && (driver.getUser().getRole() == Role.OWNER || driver.getUser().getRole() == Role.ROLE_OWNER)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "This is an Owner-as-Driver application. Review it via /approvals/owner-drivers/{id}"

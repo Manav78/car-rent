@@ -24,11 +24,7 @@ public class DriverResponse {
     private Role role;
     private String drivingLicenseNumber;
     private LocalDate licenseExpiryDate;
-    private Boolean willingToDrive;
-    private Integer yearsOfExperience;
     private DriverStatus status;
-    private Double rating;
-    private Integer totalTrips;
     private LocalDateTime createdAt;
 }
 

@@ -73,7 +73,6 @@ public class OwnerServiceImpl implements OwnerService {
                         .status(DriverStatus.PENDING)
                         .build();
             }
-            driverProfile.setWillingToDrive(true);
             if (request.getDrivingLicenseNumber() != null) {
                 driverProfile.setDrivingLicenseNumber(request.getDrivingLicenseNumber().trim());
             }
@@ -82,8 +81,8 @@ public class OwnerServiceImpl implements OwnerService {
             }
             driverProfile = driverProfileRepository.save(driverProfile);
         } else if (Boolean.FALSE.equals(request.getWillingToDrive()) && driverProfile != null) {
-            driverProfile.setWillingToDrive(false);
-            driverProfile = driverProfileRepository.save(driverProfile);
+            driverProfileRepository.delete(driverProfile);
+            driverProfile = null;
         }
 
         log.info("Updated owner profile for user id: {}", userId);
@@ -100,7 +99,7 @@ public class OwnerServiceImpl implements OwnerService {
                 .phoneNumber(user.getPhoneNumber())
                 .role(user.getRole())
                 .status(profile != null ? profile.getStatus() : OwnerStatus.PENDING)
-                .willingToDrive(driverProfile != null && Boolean.TRUE.equals(driverProfile.getWillingToDrive()))
+                .willingToDrive(driverProfile != null)
                 .drivingLicenseNumber(driverProfile != null ? driverProfile.getDrivingLicenseNumber() : null)
                 .licenseExpiryDate(driverProfile != null ? driverProfile.getLicenseExpiryDate() : null)
                 .createdAt(user.getCreatedAt())
