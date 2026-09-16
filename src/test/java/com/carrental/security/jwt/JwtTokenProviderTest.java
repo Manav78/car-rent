@@ -51,5 +51,35 @@ class JwtTokenProviderTest {
         assertFalse(jwtTokenProvider.validateToken(token));
         assertTrue(jwtTokenProvider.isTokenExpired(token));
     }
+
+    @Test
+    @DisplayName("Should generate minimal token for multi-role UserDetailsImpl")
+    void testGenerateAccessToken_UserDetailsImpl_MultiRole() {
+        com.carrental.security.service.UserDetailsImpl userDetails = com.carrental.security.service.UserDetailsImpl.builder()
+                .id(11L)
+                .email("amit.shinde@test.com")
+                .firstName("Amit")
+                .lastName("Shinde")
+                .authorities(java.util.List.of(
+                        new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_OWNER"),
+                        new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_DRIVER")
+                ))
+                .build();
+
+        String token = jwtTokenProvider.generateAccessToken(userDetails);
+
+        assertNotNull(token);
+        assertTrue(jwtTokenProvider.validateToken(token));
+        assertEquals("amit.shinde@test.com", jwtTokenProvider.extractUsername(token));
+        assertEquals(11L, jwtTokenProvider.extractUserId(token));
+
+        io.jsonwebtoken.Claims claims = jwtTokenProvider.extractAllClaims(token);
+        assertNull(claims.get("email"), "email claim should not be duplicated when sub is present");
+        assertNull(claims.get("firstName"), "firstName claim should be omitted for minimal payload");
+        assertNull(claims.get("lastName"), "lastName claim should be omitted for minimal payload");
+
+        java.util.List<String> roles = jwtTokenProvider.extractRoles(token);
+        assertEquals(java.util.List.of("OWNER", "DRIVER"), roles);
+    }
 }
 

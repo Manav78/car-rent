@@ -54,7 +54,7 @@ class CustomerServiceTest {
                 .lastName("Smith")
                 .email("alice@example.com")
                 .phoneNumber("+1234567890")
-                .role(Role.ROLE_CUSTOMER)
+                .role(Role.CUSTOMER)
                 .enabled(true)
                 .createdAt(LocalDateTime.now())
                 .build();

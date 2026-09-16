@@ -18,6 +18,7 @@ public interface BookingMapper {
     @Mapping(target = "driverId", source = "driver.id")
     @Mapping(target = "driverName", expression = "java(booking.getDriver() != null ? booking.getDriver().getFullName() : null)")
     @Mapping(target = "driverPhoneNumber", expression = "java(booking.getDriver() != null ? booking.getDriver().getPhoneNumber() : null)")
+    @Mapping(target = "status", source = "status")
     BookingResponse toResponse(Booking booking);
 }
 

@@ -2,8 +2,10 @@ package com.carrental.driver.service.impl;
 
 import com.carrental.driver.service.DriverService;
 
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.auth.entity.User;
 import com.carrental.auth.repository.UserRepository;
+import com.carrental.common.exception.BadRequestException;
 import com.carrental.common.exception.ResourceNotFoundException;
 import com.carrental.driver.dto.request.DriverRequest;
 import com.carrental.driver.dto.response.DriverResponse;
@@ -45,16 +47,17 @@ public class DriverServiceImpl implements DriverService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         DriverProfile profile = driverProfileRepository.findByUserId(userId)
-                .orElseGet(() -> DriverProfile.builder().user(user).status(DriverStatus.PENDING).build());
+                .orElseGet(() -> DriverProfile.builder()
+                        .user(user)
+                        .approvalStatus(ApprovalDecision.PENDING)
+                        .status(DriverStatus.INACTIVE)
+                        .build());
 
         if (request.getLicenseNumber() != null) {
             profile.setDrivingLicenseNumber(request.getLicenseNumber().trim());
         }
         if (request.getLicenseExpiryDate() != null) {
             profile.setLicenseExpiryDate(request.getLicenseExpiryDate());
-        }
-        if (request.getYearsOfExperience() != null) {
-            profile.setYearsOfExperience(request.getYearsOfExperience());
         }
         if (request.getStatus() != null) {
             profile.setStatus(request.getStatus());
@@ -75,6 +78,19 @@ public class DriverServiceImpl implements DriverService {
         DriverProfile profile = driverProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver profile not found for user: " + userId));
 
+        if (request == null || request.getStatus() == null) {
+            throw new BadRequestException("Driver status is required");
+        }
+
+        if (request.getStatus() == DriverStatus.INACTIVE) {
+            if (request.getInactiveReason() == null || request.getInactiveReason().trim().isEmpty()) {
+                throw new BadRequestException("Inactive reason is mandatory when setting driver status to INACTIVE");
+            }
+            profile.setInactiveReason(request.getInactiveReason().trim());
+        } else {
+            profile.setInactiveReason(null);
+        }
+
         profile.setStatus(request.getStatus());
         DriverProfile saved = driverProfileRepository.save(profile);
         log.info("Driver status updated to {} for user id: {}", request.getStatus(), userId);
@@ -85,25 +101,13 @@ public class DriverServiceImpl implements DriverService {
     @Override
     @Transactional(readOnly = true)
     public List<DriverResponse> getAvailableDrivers() {
-        return driverProfileRepository.findByStatus(DriverStatus.AVAILABLE)
+        return driverProfileRepository.findByApprovalStatusAndStatus(ApprovalDecision.APPROVED, DriverStatus.ACTIVE)
                 .stream()
                 .map(profile -> mapToResponse(profile.getUser(), profile))
                 .toList();
     }
 
     private DriverResponse mapToResponse(User user, DriverProfile profile) {
-        Double rating = (profile != null && profile.getRating() != null)
-                ? profile.getRating()
-                : 0.0;
-
-        Integer yearsOfExperience = (profile != null && profile.getYearsOfExperience() != null)
-                ? profile.getYearsOfExperience()
-                : 0;
-
-        Integer totalTrips = (profile != null && profile.getTotalTrips() != null)
-                ? profile.getTotalTrips()
-                : 0;
-
         return DriverResponse.builder()
                 .id(profile != null ? profile.getId() : null)
                 .userId(user.getId())
@@ -114,11 +118,10 @@ public class DriverServiceImpl implements DriverService {
                 .role(user.getRole())
                 .drivingLicenseNumber(profile != null ? profile.getDrivingLicenseNumber() : null)
                 .licenseExpiryDate(profile != null ? profile.getLicenseExpiryDate() : null)
-                .willingToDrive(profile != null && Boolean.TRUE.equals(profile.getWillingToDrive()))
-                .yearsOfExperience(yearsOfExperience)
-                .status(profile != null && profile.getStatus() != null ? profile.getStatus() : DriverStatus.PENDING)
-                .rating(rating)
-                .totalTrips(totalTrips)
+                .approvalStatus(profile != null ? profile.getApprovalStatus() : null)
+                .status(profile != null && profile.getStatus() != null ? profile.getStatus() : DriverStatus.INACTIVE)
+                .inactiveReason(profile != null ? profile.getInactiveReason() : null)
+                .rejectionReason(profile != null ? (profile.getRejectionReason() != null ? profile.getRejectionReason() : profile.getInactiveReason()) : null)
                 .createdAt(profile != null && profile.getCreatedAt() != null ? profile.getCreatedAt() : user.getCreatedAt())
                 .build();
     }

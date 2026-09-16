@@ -32,14 +32,6 @@ public class ApiResponse<T> {
     @Builder.Default
     private LocalDateTime timestamp = LocalDateTime.now();
 
-    public Integer getStatus() {
-        return statusCode;
-    }
-
-    public void setStatus(Integer status) {
-        this.statusCode = status;
-    }
-
     public static <T> ApiResponse<T> success(String message, T data) {
         return ApiResponse.<T>builder()
                 .success(true)

@@ -33,9 +33,12 @@ public interface AdminService {
     void deleteUser(Long userId);
 
     OwnerResponse updateOwnerStatus(Long ownerId, OwnerStatus status);
+    OwnerResponse updateOwnerStatus(Long ownerId, OwnerStatus status, String reason);
 
     DriverResponse updateDriverStatus(Long driverId, DriverStatus status);
+    DriverResponse updateDriverStatus(Long driverId, DriverStatus status, String reason);
 
     VehicleResponse updateVehicleStatus(Long vehicleId, VehicleStatus status);
+    VehicleResponse updateVehicleStatus(Long vehicleId, VehicleStatus status, String reason);
 }
 

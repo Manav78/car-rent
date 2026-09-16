@@ -1,5 +1,6 @@
 package com.carrental.driver.dto.response;
 
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.auth.enums.Role;
 import com.carrental.driver.enums.DriverStatus;
 import lombok.AllArgsConstructor;
@@ -24,11 +25,10 @@ public class DriverResponse {
     private Role role;
     private String drivingLicenseNumber;
     private LocalDate licenseExpiryDate;
-    private Boolean willingToDrive;
-    private Integer yearsOfExperience;
     private DriverStatus status;
-    private Double rating;
-    private Integer totalTrips;
+    private ApprovalDecision approvalStatus;
+    private String inactiveReason;
+    private String rejectionReason;
     private LocalDateTime createdAt;
 }
 

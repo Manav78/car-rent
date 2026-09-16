@@ -112,9 +112,6 @@ public class AdminNotificationPublisher {
             Long referenceId
     ) {
         List<User> admins = userRepository.findByRole(Role.ADMIN);
-        if (admins.isEmpty()) {
-            admins = userRepository.findByRole(Role.ROLE_ADMIN);
-        }
 
         if (admins.isEmpty()) {
             log.warn("No active ADMIN found. Notification '{}' skipped.", type);

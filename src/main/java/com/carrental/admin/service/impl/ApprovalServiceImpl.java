@@ -8,6 +8,7 @@ import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.admin.enums.ApprovalEntityType;
 import com.carrental.admin.repository.ApprovalRepository;
 import com.carrental.auth.entity.User;
+import com.carrental.auth.enums.Role;
 import com.carrental.auth.repository.UserRepository;
 import com.carrental.driver.entity.DriverProfile;
 import com.carrental.driver.enums.DriverStatus;
@@ -43,7 +44,7 @@ public class ApprovalServiceImpl implements ApprovalService {
 
     @Transactional(readOnly = true)
     public PageResponse<PendingVehicleResponse> getPendingVehicles(Pageable pageable) {
-        Page<Vehicle> vehiclePage = vehicleRepository.findAllByStatusWithOwner(VehicleStatus.PENDING, pageable);
+        Page<Vehicle> vehiclePage = vehicleRepository.findAllByApprovalStatusWithOwner(ApprovalDecision.PENDING, pageable);
 
         Page<PendingVehicleResponse> responsePage = vehiclePage.map(vehicle -> {
             OwnerProfile ownerProfile = ownerProfileRepository.findByUserId(vehicle.getOwner().getId()).orElse(null);
@@ -81,8 +82,13 @@ public class ApprovalServiceImpl implements ApprovalService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Vehicle not found"
                 ));
+        return toVehicleDetailResponse(vehicle);
+    }
 
-        OwnerProfile ownerProfile = ownerProfileRepository.findByUserId(vehicle.getOwner().getId()).orElse(null);
+    private AdminVehicleDetailResponse toVehicleDetailResponse(Vehicle vehicle) {
+        OwnerProfile ownerProfile = vehicle.getOwner() != null
+                ? ownerProfileRepository.findByUserId(vehicle.getOwner().getId()).orElse(null)
+                : null;
 
         List<DocumentResponse> documents = new ArrayList<>();
         if (vehicle.getImageUrls() != null) {
@@ -99,7 +105,7 @@ public class ApprovalServiceImpl implements ApprovalService {
             }
         }
 
-        List<ApprovalRecordResponse> history = mapApprovalHistory(ApprovalEntityType.VEHICLE, vehicleId);
+        List<ApprovalRecordResponse> history = mapApprovalHistory(ApprovalEntityType.VEHICLE, vehicle.getId());
 
         return new AdminVehicleDetailResponse(
                 vehicle.getId(),
@@ -116,14 +122,14 @@ public class ApprovalServiceImpl implements ApprovalService {
                 null,
                 vehicle.getLocation(),
                 vehicle.getDescription(),
-                vehicle.getStatus() != null ? vehicle.getStatus().name() : "PENDING",
-                vehicle.getStatus() == VehicleStatus.AVAILABLE ? "ACTIVE" : "INACTIVE",
-                null,
+                vehicle.getApprovalStatus() != null ? vehicle.getApprovalStatus().name() : "PENDING",
+                vehicle.getStatus() != null ? vehicle.getStatus().name() : "INACTIVE",
+                vehicle.getRejectionReason(),
 
                 ownerProfile != null ? ownerProfile.getId() : null,
-                vehicle.getOwner().getFullName(),
-                vehicle.getOwner().getEmail(),
-                vehicle.getOwner().getPhoneNumber(),
+                vehicle.getOwner() != null ? vehicle.getOwner().getFullName() : null,
+                vehicle.getOwner() != null ? vehicle.getOwner().getEmail() : null,
+                vehicle.getOwner() != null ? vehicle.getOwner().getPhoneNumber() : null,
                 null,
 
                 documents,
@@ -133,7 +139,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     }
 
     @Transactional
-    public void decideVehicleApproval(Long vehicleId, ApprovalDecisionRequest request, UserDetailsImpl userPrincipal) {
+    public AdminVehicleDetailResponse decideVehicleApproval(Long vehicleId, ApprovalDecisionRequest request, UserDetailsImpl userPrincipal) {
         validateReasonForRejection(request);
 
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
@@ -142,7 +148,7 @@ public class ApprovalServiceImpl implements ApprovalService {
                         "Vehicle not found"
                 ));
 
-        if (vehicle.getStatus() != VehicleStatus.PENDING) {
+        if (vehicle.getApprovalStatus() != ApprovalDecision.PENDING) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "Only vehicles pending approval can be reviewed"
@@ -153,8 +159,13 @@ public class ApprovalServiceImpl implements ApprovalService {
 
         if (request.decision() == ApprovalDecision.APPROVED) {
             vehicle.setStatus(VehicleStatus.AVAILABLE);
+            vehicle.setApprovalStatus(ApprovalDecision.APPROVED);
+            vehicle.setApprovedAt(java.time.LocalDateTime.now());
+            vehicle.setRejectionReason(null);
         } else {
-            vehicle.setStatus(VehicleStatus.REJECTED);
+            vehicle.setStatus(VehicleStatus.INACTIVE);
+            vehicle.setApprovalStatus(ApprovalDecision.REJECTED);
+            vehicle.setRejectionReason(request.reason());
         }
 
         vehicleRepository.save(vehicle);
@@ -166,11 +177,13 @@ public class ApprovalServiceImpl implements ApprovalService {
                 request.decision(),
                 request.reason()
         ));
+
+        return toVehicleDetailResponse(vehicle);
     }
 
     @Transactional(readOnly = true)
     public PageResponse<PendingDriverResponse> getPendingDrivers(Pageable pageable) {
-        Page<DriverProfile> driverPage = driverProfileRepository.findAllByStatusWithDetails(DriverStatus.PENDING, pageable);
+        Page<DriverProfile> driverPage = driverProfileRepository.findAllByApprovalStatusWithDetails(ApprovalDecision.PENDING, pageable);
 
         Page<PendingDriverResponse> responsePage = driverPage.map(driver -> {
             OwnerProfile ownerProfile = ownerProfileRepository.findByUserId(driver.getUser().getId()).orElse(null);
@@ -199,8 +212,13 @@ public class ApprovalServiceImpl implements ApprovalService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Driver not found"
                 ));
+        return toDriverDetailResponse(driver);
+    }
 
-        OwnerProfile ownerProfile = ownerProfileRepository.findByUserId(driver.getUser().getId()).orElse(null);
+    private AdminDriverDetailResponse toDriverDetailResponse(DriverProfile driver) {
+        OwnerProfile ownerProfile = driver.getUser() != null
+                ? ownerProfileRepository.findByUserId(driver.getUser().getId()).orElse(null)
+                : null;
 
         List<DocumentResponse> documents = new ArrayList<>();
         if (driver.getDrivingLicenseNumber() != null) {
@@ -213,24 +231,26 @@ public class ApprovalServiceImpl implements ApprovalService {
             ));
         }
 
-        List<ApprovalRecordResponse> history = mapApprovalHistory(ApprovalEntityType.DRIVER, driverId);
+        List<ApprovalRecordResponse> history = mapApprovalHistory(ApprovalEntityType.DRIVER, driver.getId());
+
+        String rejectionReason = driver.getRejectionReason() != null ? driver.getRejectionReason() : driver.getInactiveReason();
 
         return new AdminDriverDetailResponse(
                 driver.getId(),
-                driver.getUser().getId(),
-                driver.getUser().getFullName(),
-                driver.getUser().getEmail(),
-                driver.getUser().getPhoneNumber(),
+                driver.getUser() != null ? driver.getUser().getId() : null,
+                driver.getUser() != null ? driver.getUser().getFullName() : null,
+                driver.getUser() != null ? driver.getUser().getEmail() : null,
+                driver.getUser() != null ? driver.getUser().getPhoneNumber() : null,
                 null,
                 driver.getDrivingLicenseNumber(),
                 driver.getLicenseExpiryDate(),
-                driver.getStatus() != null ? driver.getStatus().name() : "PENDING",
-                driver.getStatus() == DriverStatus.AVAILABLE ? "ACTIVE" : "INACTIVE",
-                null,
+                driver.getApprovalStatus() != null ? driver.getApprovalStatus().name() : "PENDING",
+                driver.getStatus() != null ? driver.getStatus().name() : "INACTIVE",
+                rejectionReason,
 
                 ownerProfile != null ? ownerProfile.getId() : null,
-                ownerProfile != null ? driver.getUser().getFullName() : null,
-                ownerProfile != null ? driver.getUser().getEmail() : null,
+                ownerProfile != null && driver.getUser() != null ? driver.getUser().getFullName() : null,
+                ownerProfile != null && driver.getUser() != null ? driver.getUser().getEmail() : null,
 
                 documents,
                 history,
@@ -239,7 +259,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     }
 
     @Transactional
-    public void decideDriverApproval(Long driverId, ApprovalDecisionRequest request, UserDetailsImpl userPrincipal) {
+    public AdminDriverDetailResponse decideDriverApproval(Long driverId, ApprovalDecisionRequest request, UserDetailsImpl userPrincipal) {
         validateReasonForRejection(request);
 
         DriverProfile driver = driverProfileRepository.findByIdWithDetails(driverId)
@@ -248,14 +268,16 @@ public class ApprovalServiceImpl implements ApprovalService {
                         "Driver not found"
                 ));
 
-        if (Boolean.TRUE.equals(driver.getWillingToDrive())) {
+        boolean isOwner = driver.getUser() != null && ((driver.getUser().getRoles() != null && driver.getUser().getRoles().contains(Role.OWNER))
+                || driver.getUser().getRole() == Role.OWNER);
+        if (isOwner) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "This is an Owner-as-Driver application. Review it via /approvals/owner-drivers/{id}"
             );
         }
 
-        if (driver.getStatus() != DriverStatus.PENDING) {
+        if (driver.getApprovalStatus() != ApprovalDecision.PENDING) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "Only drivers pending approval can be reviewed"
@@ -265,9 +287,16 @@ public class ApprovalServiceImpl implements ApprovalService {
         User admin = getAdminUser(userPrincipal.getId());
 
         if (request.decision() == ApprovalDecision.APPROVED) {
-            driver.setStatus(DriverStatus.APPROVED);
+            driver.setApprovalStatus(ApprovalDecision.APPROVED);
+            driver.setStatus(DriverStatus.ACTIVE);
+            driver.setInactiveReason(null);
+            driver.setRejectionReason(null);
+            driver.setApprovedAt(java.time.LocalDateTime.now());
         } else {
-            driver.setStatus(DriverStatus.REJECTED);
+            driver.setApprovalStatus(ApprovalDecision.REJECTED);
+            driver.setStatus(DriverStatus.INACTIVE);
+            driver.setInactiveReason(request.reason());
+            driver.setRejectionReason(request.reason());
         }
 
         driverProfileRepository.save(driver);
@@ -279,11 +308,13 @@ public class ApprovalServiceImpl implements ApprovalService {
                 request.decision(),
                 request.reason()
         ));
+
+        return toDriverDetailResponse(driver);
     }
 
     @Transactional(readOnly = true)
     public PageResponse<PendingOwnerDriverResponse> getPendingOwnerDrivers(Pageable pageable) {
-        Page<DriverProfile> page = driverProfileRepository.findPendingOwnerDrivers(DriverStatus.PENDING, pageable);
+        Page<DriverProfile> page = driverProfileRepository.findPendingOwnerDrivers(ApprovalDecision.PENDING, pageable);
         Page<PendingOwnerDriverResponse> responsePage = page.map(dp -> {
             return new PendingOwnerDriverResponse(
                     dp.getId(),
@@ -304,25 +335,30 @@ public class ApprovalServiceImpl implements ApprovalService {
     public AdminOwnerDriverDetailResponse getOwnerDriverDetail(Long driverProfileId) {
         DriverProfile dp = driverProfileRepository.findOwnerDriverById(driverProfileId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Owner-Driver application not found"));
+        return toOwnerDriverDetailResponse(dp);
+    }
 
+    private AdminOwnerDriverDetailResponse toOwnerDriverDetailResponse(DriverProfile dp) {
         List<DocumentResponse> docs = new ArrayList<>();
         if (dp.getDrivingLicenseNumber() != null) {
             docs.add(new DocumentResponse(1L, "LICENSE", dp.getDrivingLicenseNumber(), null, dp.getCreatedAt()));
         }
 
-        List<ApprovalRecordResponse> history = mapApprovalHistory(ApprovalEntityType.DRIVER, driverProfileId);
+        List<ApprovalRecordResponse> history = mapApprovalHistory(ApprovalEntityType.DRIVER, dp.getId());
+
+        String rejectionReason = dp.getRejectionReason() != null ? dp.getRejectionReason() : dp.getInactiveReason();
 
         return new AdminOwnerDriverDetailResponse(
                 dp.getId(),
-                dp.getUser().getId(),
-                dp.getUser().getFullName(),
-                dp.getUser().getEmail(),
-                dp.getUser().getPhoneNumber(),
-                dp.getUser().getFullName() + "'s Fleet",
+                dp.getUser() != null ? dp.getUser().getId() : null,
+                dp.getUser() != null ? dp.getUser().getFullName() : null,
+                dp.getUser() != null ? dp.getUser().getEmail() : null,
+                dp.getUser() != null ? dp.getUser().getPhoneNumber() : null,
+                dp.getUser() != null ? dp.getUser().getFullName() + "'s Fleet" : "Owner Fleet",
                 dp.getDrivingLicenseNumber(),
                 dp.getLicenseExpiryDate(),
-                dp.getStatus() != null ? dp.getStatus().name() : "PENDING",
-                null,
+                dp.getApprovalStatus() != null ? dp.getApprovalStatus().name() : "PENDING",
+                rejectionReason,
                 docs,
                 history,
                 dp.getCreatedAt()
@@ -330,27 +366,36 @@ public class ApprovalServiceImpl implements ApprovalService {
     }
 
     @Transactional
-    public void decideOwnerDriverApproval(Long driverProfileId, ApprovalDecisionRequest request, UserDetailsImpl principal) {
+    public AdminOwnerDriverDetailResponse decideOwnerDriverApproval(Long driverProfileId, ApprovalDecisionRequest request, UserDetailsImpl principal) {
         validateReasonForRejection(request);
 
         DriverProfile dp = driverProfileRepository.findOwnerDriverById(driverProfileId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Owner-Driver application not found"));
 
-        if (dp.getStatus() != DriverStatus.PENDING) {
+        if (dp.getApprovalStatus() != ApprovalDecision.PENDING) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Application is not pending.");
         }
 
         User admin = getAdminUser(principal.getId());
 
         if (request.decision() == ApprovalDecision.APPROVED) {
-            dp.setStatus(DriverStatus.APPROVED);
+            dp.setApprovalStatus(ApprovalDecision.APPROVED);
+            dp.setStatus(DriverStatus.ACTIVE);
+            dp.setInactiveReason(null);
+            dp.setRejectionReason(null);
+            dp.setApprovedAt(java.time.LocalDateTime.now());
         } else {
-            dp.setStatus(DriverStatus.REJECTED);
+            dp.setApprovalStatus(ApprovalDecision.REJECTED);
+            dp.setStatus(DriverStatus.INACTIVE);
+            dp.setInactiveReason(request.reason());
+            dp.setRejectionReason(request.reason());
         }
 
         driverProfileRepository.save(dp);
 
         approvalRepository.save(new Approval(admin, ApprovalEntityType.DRIVER, dp.getId(), request.decision(), request.reason()));
+
+        return toOwnerDriverDetailResponse(dp);
     }
 
     private List<ApprovalRecordResponse> mapApprovalHistory(ApprovalEntityType entityType, Long entityId) {

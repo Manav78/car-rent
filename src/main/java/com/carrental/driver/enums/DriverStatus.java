@@ -1,11 +1,8 @@
 package com.carrental.driver.enums;
 
 public enum DriverStatus {
-    PENDING,
-    APPROVED,
-    AVAILABLE,
+    ACTIVE,
     ON_TRIP,
-    OFFLINE,
-    REJECTED
+    INACTIVE
 }
 

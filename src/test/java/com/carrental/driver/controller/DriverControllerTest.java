@@ -53,7 +53,7 @@ class DriverControllerTest {
                 .firstName("John")
                 .lastName("Driver")
                 .drivingLicenseNumber("DL-12345")
-                .status(DriverStatus.AVAILABLE)
+                .status(DriverStatus.ACTIVE)
                 .build();
     }
 

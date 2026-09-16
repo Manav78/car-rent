@@ -98,19 +98,9 @@ public class User {
         this.password = password;
         this.roles = new HashSet<>();
         if (roles != null && !roles.isEmpty()) {
-            for (Role r : roles) {
-                try {
-                    this.roles.add(Role.valueOf(r.name().replace("ROLE_", "")));
-                } catch (Exception e) {
-                    this.roles.add(r);
-                }
-            }
+            this.roles.addAll(roles);
         } else if (role != null) {
-            try {
-                this.roles.add(Role.valueOf(role.name().replace("ROLE_", "")));
-            } catch (Exception e) {
-                this.roles.add(role);
-            }
+            this.roles.add(role);
         }
         this.emailVerified = emailVerified != null ? emailVerified : false;
         this.isActive = isActive != null ? isActive : (enabled != null ? enabled : true);
@@ -192,16 +182,7 @@ public class User {
         if (roles == null || roles.isEmpty()) {
             return null;
         }
-        Role first = roles.iterator().next();
-        try {
-            return Role.valueOf(first.name().replace("ROLE_", ""));
-        } catch (Exception e) {
-            try {
-                return Role.valueOf(first.name());
-            } catch (Exception ignored) {
-                return null;
-            }
-        }
+        return roles.iterator().next();
     }
 
     public void setRole(Role role) {
@@ -210,12 +191,7 @@ public class User {
         }
         this.roles.clear();
         if (role != null) {
-            String base = role.name().replace("ROLE_", "");
-            try {
-                this.roles.add(Role.valueOf(base));
-            } catch (Exception e) {
-                this.roles.add(role);
-            }
+            this.roles.add(role);
         }
     }
 
@@ -224,12 +200,7 @@ public class User {
             this.roles = new HashSet<>();
         }
         if (role != null) {
-            String base = role.name().replace("ROLE_", "");
-            try {
-                this.roles.add(Role.valueOf(base));
-            } catch (Exception e) {
-                this.roles.add(role);
-            }
+            this.roles.add(role);
         }
     }
 }

@@ -2,6 +2,7 @@ package com.carrental.booking.service;
 
 import com.carrental.booking.service.impl.BookingServiceImpl;
 
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.auth.entity.User;
 import com.carrental.auth.enums.Role;
 import com.carrental.auth.repository.UserRepository;
@@ -13,8 +14,12 @@ import com.carrental.booking.enums.BookingStatus;
 import com.carrental.booking.enums.TripType;
 import com.carrental.booking.mapper.BookingMapper;
 import com.carrental.booking.repository.BookingRepository;
+import com.carrental.booking.repository.TripRepository;
 import com.carrental.common.exception.BadRequestException;
 import com.carrental.common.exception.ResourceNotFoundException;
+import com.carrental.driver.entity.DriverProfile;
+import com.carrental.driver.enums.DriverStatus;
+import com.carrental.driver.repository.DriverProfileRepository;
 import com.carrental.notification.service.EmailService;
 import com.carrental.notification.service.NotificationService;
 import com.carrental.security.service.UserDetailsImpl;
@@ -58,6 +63,12 @@ class BookingServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private DriverProfileRepository driverProfileRepository;
+
+    @Mock
+    private TripRepository tripRepository;
+
+    @Mock
     private NotificationService notificationService;
 
     @Mock
@@ -72,6 +83,7 @@ class BookingServiceTest {
     private User customer;
     private User owner;
     private User driver;
+    private DriverProfile driverProfile;
     private Vehicle vehicle;
     private Booking booking;
     private BookingRequest bookingRequest;
@@ -82,19 +94,28 @@ class BookingServiceTest {
         customer = User.builder()
                 .id(1L)
                 .email("customer@test.com")
-                .role(Role.ROLE_CUSTOMER)
+                .role(Role.CUSTOMER)
                 .build();
 
         owner = User.builder()
                 .id(2L)
                 .email("owner@test.com")
-                .role(Role.ROLE_OWNER)
+                .role(Role.OWNER)
                 .build();
 
         driver = User.builder()
                 .id(3L)
                 .email("driver@test.com")
-                .role(Role.ROLE_DRIVER)
+                .role(Role.DRIVER)
+                .build();
+
+        driverProfile = DriverProfile.builder()
+                .id(300L)
+                .user(driver)
+                .drivingLicenseNumber("DL-12345")
+                .licenseExpiryDate(LocalDate.now().plusYears(2))
+                .status(DriverStatus.ACTIVE)
+                .approvalStatus(ApprovalDecision.APPROVED)
                 .build();
 
         vehicle = Vehicle.builder()
@@ -103,6 +124,7 @@ class BookingServiceTest {
                 .model("Civic")
                 .seatingCapacity(4)
                 .status(VehicleStatus.AVAILABLE)
+                .approvalStatus(ApprovalDecision.APPROVED)
                 .owner(owner)
                 .build();
 
@@ -114,7 +136,7 @@ class BookingServiceTest {
                 .driver(driver)
                 .startDate(LocalDate.now().plusDays(2))
                 .endDate(LocalDate.now().plusDays(5))
-                .bookingStatus(BookingStatus.PENDING)
+                .status(BookingStatus.PENDING)
                 .build();
 
         bookingRequest = BookingRequest.builder()
@@ -131,7 +153,7 @@ class BookingServiceTest {
         bookingResponse = BookingResponse.builder()
                 .id(100L)
                 .bookingReference("BK-TEST001")
-                .bookingStatus(BookingStatus.PENDING)
+                .status(BookingStatus.PENDING)
                 .build();
     }
 
@@ -358,39 +380,27 @@ class BookingServiceTest {
     }
 
     @Test
-    @DisplayName("updateBookingStatus - confirms and sends email")
-    void testUpdateBookingStatus_Confirmed() {
+    @DisplayName("updateBookingStatus - rejects CONFIRMED status directly (must use assign-driver)")
+    void testUpdateBookingStatus_Confirmed_ThrowsBadRequest() {
         BookingStatusUpdateRequest request = new BookingStatusUpdateRequest(BookingStatus.CONFIRMED);
-        Booking confirmedBooking = Booking.builder()
-                .id(100L)
-                .bookingStatus(BookingStatus.CONFIRMED)
-                .build();
-        BookingResponse confirmedResponse = BookingResponse.builder()
-                .id(100L)
-                .bookingStatus(BookingStatus.CONFIRMED)
-                .build();
-
         when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
-        when(bookingRepository.save(any(Booking.class))).thenReturn(confirmedBooking);
-        when(bookingMapper.toResponse(confirmedBooking)).thenReturn(confirmedResponse);
 
-        BookingResponse response = bookingService.updateBookingStatus(100L, request);
-
-        assertThat(response.getBookingStatus()).isEqualTo(BookingStatus.CONFIRMED);
-        verify(emailService).sendBookingConfirmationEmail(confirmedBooking);
+        assertThatThrownBy(() -> bookingService.updateBookingStatus(100L, request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Bookings cannot be confirmed directly via status update");
     }
 
     @Test
-    @DisplayName("updateBookingStatus - to non-confirmed does not send email")
+    @DisplayName("updateBookingStatus - to cancelled does not send confirmation email")
     void testUpdateBookingStatus_Cancelled() {
         BookingStatusUpdateRequest request = new BookingStatusUpdateRequest(BookingStatus.CANCELLED);
         Booking cancelledBooking = Booking.builder()
                 .id(100L)
-                .bookingStatus(BookingStatus.CANCELLED)
+                .status(BookingStatus.CANCELLED)
                 .build();
         BookingResponse cancelledResponse = BookingResponse.builder()
                 .id(100L)
-                .bookingStatus(BookingStatus.CANCELLED)
+                .status(BookingStatus.CANCELLED)
                 .build();
 
         when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
@@ -399,8 +409,140 @@ class BookingServiceTest {
 
         BookingResponse response = bookingService.updateBookingStatus(100L, request);
 
-        assertThat(response.getBookingStatus()).isEqualTo(BookingStatus.CANCELLED);
+        assertThat(response.getStatus()).isEqualTo(BookingStatus.CANCELLED);
         verify(emailService, never()).sendBookingConfirmationEmail(any());
+    }
+
+    @Test
+    @DisplayName("assignDriver - owner successfully assigns driver and atomically confirms pending booking")
+    void testAssignDriver_Success() {
+        UserDetailsImpl ownerDetails = UserDetailsImpl.builder().id(2L).email("owner@test.com")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_OWNER"))).build();
+        Booking confirmedBooking = Booking.builder()
+                .id(100L)
+                .bookingReference("BK-TEST123")
+                .customer(customer)
+                .vehicle(vehicle)
+                .driver(driver)
+                .status(BookingStatus.CONFIRMED)
+                .build();
+        BookingResponse confirmedResponse = BookingResponse.builder()
+                .id(100L)
+                .bookingReference("BK-TEST123")
+                .status(BookingStatus.CONFIRMED)
+                .driverId(3L)
+                .build();
+
+        when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
+        when(userRepository.findById(3L)).thenReturn(Optional.of(driver));
+        when(driverProfileRepository.findByUserId(3L)).thenReturn(Optional.of(driverProfile));
+        when(bookingRepository.save(any(Booking.class))).thenReturn(confirmedBooking);
+        when(bookingMapper.toResponse(confirmedBooking)).thenReturn(confirmedResponse);
+
+        BookingResponse response = bookingService.assignDriver(ownerDetails, 100L, 3L);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+        verify(bookingRepository).save(booking);
+        verify(emailService).sendBookingConfirmationEmail(confirmedBooking);
+        verify(notificationService).createNotification(eq(customer), eq("Booking Confirmed"), any(), any());
+        verify(notificationService).createNotification(eq(driver), eq("New Trip Assigned"), any(), any());
+    }
+
+    @Test
+    @DisplayName("assignDriver - fails if booking is not in PENDING status")
+    void testAssignDriver_NotPending_ThrowsBadRequest() {
+        UserDetailsImpl ownerDetails = UserDetailsImpl.builder().id(2L).email("owner@test.com")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_OWNER"))).build();
+        booking.setStatus(BookingStatus.CONFIRMED);
+        when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> bookingService.assignDriver(ownerDetails, 100L, 3L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Driver can only be assigned to a booking in PENDING status");
+    }
+
+    @Test
+    @DisplayName("reject - fails if rejection reason is missing")
+    void testReject_WithoutReason_ThrowsBadRequest() {
+        UserDetailsImpl ownerDetails = UserDetailsImpl.builder().id(2L).email("owner@test.com")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_OWNER"))).build();
+        when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
+
+        BookingStatusUpdateRequest request = new BookingStatusUpdateRequest(BookingStatus.REJECTED);
+
+        assertThatThrownBy(() -> bookingService.updateBookingStatus(ownerDetails, 100L, request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Rejection reason is mandatory when rejecting a booking");
+    }
+
+    @Test
+    @DisplayName("reject - success with mandatory reason")
+    void testReject_WithReason_Success() {
+        UserDetailsImpl ownerDetails = UserDetailsImpl.builder().id(2L).email("owner@test.com")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_OWNER"))).build();
+        BookingStatusUpdateRequest request = BookingStatusUpdateRequest.builder()
+                .status(BookingStatus.REJECTED)
+                .reason("Vehicle unavailable")
+                .build();
+        Booking rejectedBooking = Booking.builder().id(100L).status(BookingStatus.REJECTED).customer(customer).build();
+        BookingResponse rejectedResponse = BookingResponse.builder().id(100L).status(BookingStatus.REJECTED).build();
+
+        when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
+        when(bookingRepository.save(any(Booking.class))).thenReturn(rejectedBooking);
+        when(bookingMapper.toResponse(rejectedBooking)).thenReturn(rejectedResponse);
+
+        BookingResponse response = bookingService.updateBookingStatus(ownerDetails, 100L, request);
+
+        assertThat(response.getStatus()).isEqualTo(BookingStatus.REJECTED);
+        verify(notificationService).createNotification(eq(customer), eq("Booking Rejected"), any(), any());
+    }
+
+    @Test
+    @DisplayName("cancel - customer is forbidden from cancelling")
+    void testCancel_CustomerForbidden() {
+        UserDetailsImpl customerDetails = UserDetailsImpl.builder().id(1L).email("customer@test.com")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER"))).build();
+        when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
+
+        BookingStatusUpdateRequest request = new BookingStatusUpdateRequest(BookingStatus.CANCELLED);
+
+        assertThatThrownBy(() -> bookingService.updateBookingStatus(customerDetails, 100L, request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Customers are not permitted to change booking status or cancel bookings");
+    }
+
+    @Test
+    @DisplayName("driver trip - driver cannot confirm, reject, or cancel")
+    void testDriverTrip_DriverCannotConfirmOrRejectOrCancel() {
+        UserDetailsImpl driverDetails = UserDetailsImpl.builder().id(3L).email("driver@test.com")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_DRIVER"))).build();
+        when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
+
+        BookingStatusUpdateRequest request = new BookingStatusUpdateRequest(BookingStatus.CONFIRMED);
+
+        assertThatThrownBy(() -> bookingService.updateDriverTripStatus(driverDetails, 100L, request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Drivers cannot confirm, reject, or cancel bookings");
+    }
+
+    @Test
+    @DisplayName("driver trip - driver can start and complete trip")
+    void testDriverTrip_StartAndComplete() {
+        UserDetailsImpl driverDetails = UserDetailsImpl.builder().id(3L).email("driver@test.com")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_DRIVER"))).build();
+        booking.setStatus(BookingStatus.CONFIRMED);
+        Booking inProgressBooking = Booking.builder().id(100L).status(BookingStatus.IN_PROGRESS).build();
+        BookingResponse inProgressResponse = BookingResponse.builder().id(100L).status(BookingStatus.IN_PROGRESS).build();
+
+        when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
+        when(bookingRepository.save(any(Booking.class))).thenReturn(inProgressBooking);
+        when(bookingMapper.toResponse(inProgressBooking)).thenReturn(inProgressResponse);
+
+        BookingStatusUpdateRequest startRequest = new BookingStatusUpdateRequest(BookingStatus.IN_PROGRESS);
+        BookingResponse startResponse = bookingService.updateDriverTripStatus(driverDetails, 100L, startRequest);
+
+        assertThat(startResponse.getStatus()).isEqualTo(BookingStatus.IN_PROGRESS);
     }
 }
 

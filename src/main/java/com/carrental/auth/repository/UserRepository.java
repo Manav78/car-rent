@@ -24,10 +24,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.mobile = :phoneNumber")
     boolean existsByPhoneNumber(@Param("phoneNumber") String phoneNumber);
 
-    @Query("SELECT u FROM User u JOIN u.roles r WHERE r = :role OR r = :#{T(com.carrental.auth.enums.Role).valueOf('ROLE_' + #role.name().replace('ROLE_', ''))}")
+    @Query("SELECT DISTINCT u FROM User u JOIN u.roles r WHERE r = :role")
     List<User> findByRole(@Param("role") Role role);
 
-    @Query("SELECT COUNT(DISTINCT u) FROM User u JOIN u.roles r WHERE r = :role OR r = :#{T(com.carrental.auth.enums.Role).valueOf('ROLE_' + #role.name().replace('ROLE_', ''))}")
+    @Query("SELECT COUNT(DISTINCT u) FROM User u JOIN u.roles r WHERE r = :role")
     long countByRole(@Param("role") Role role);
 
     long countByDeletedAtIsNotNull();

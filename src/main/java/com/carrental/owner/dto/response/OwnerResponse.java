@@ -23,6 +23,7 @@ public class OwnerResponse {
     private String phoneNumber;
     private Role role;
     private OwnerStatus status;
+    private String rejectionReason;
     private Boolean willingToDrive;
     private String drivingLicenseNumber;
     private LocalDate licenseExpiryDate;

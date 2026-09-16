@@ -12,6 +12,7 @@ import com.carrental.admin.entity.Approval;
 import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.admin.repository.ApprovalRepository;
 import com.carrental.auth.entity.User;
+import com.carrental.auth.enums.Role;
 import com.carrental.auth.repository.UserRepository;
 import com.carrental.driver.entity.DriverProfile;
 import com.carrental.driver.enums.DriverStatus;
@@ -98,6 +99,16 @@ class ApprovalServiceTest {
                 .lastName("Owner")
                 .email("owner@test.com")
                 .phoneNumber("9876543210")
+                .role(Role.OWNER)
+                .build();
+
+        User driverUser = User.builder()
+                .id(3L)
+                .firstName("Driver")
+                .lastName("User")
+                .email("driver@test.com")
+                .phoneNumber("9876543211")
+                .role(Role.DRIVER)
                 .build();
 
         ownerProfile = OwnerProfile.builder()
@@ -111,17 +122,18 @@ class ApprovalServiceTest {
                 .model("Camry")
                 .licensePlate("ABC-1234")
                 .owner(ownerUser)
-                .status(VehicleStatus.PENDING)
+                .status(VehicleStatus.INACTIVE)
+                .approvalStatus(ApprovalDecision.PENDING)
                 .createdAt(LocalDateTime.now())
                 .build();
 
         driverProfile = DriverProfile.builder()
                 .id(200L)
-                .user(ownerUser)
+                .user(driverUser)
                 .drivingLicenseNumber("DL-98765")
                 .licenseExpiryDate(LocalDate.now().plusYears(3))
-                .willingToDrive(false)
-                .status(DriverStatus.PENDING)
+                .status(DriverStatus.INACTIVE)
+                .approvalStatus(ApprovalDecision.PENDING)
                 .createdAt(LocalDateTime.now())
                 .build();
     }
@@ -132,7 +144,7 @@ class ApprovalServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         Page<Vehicle> page = new PageImpl<>(List.of(vehicle), pageable, 1);
 
-        when(vehicleRepository.findAllByStatusWithOwner(VehicleStatus.PENDING, pageable)).thenReturn(page);
+        when(vehicleRepository.findAllByApprovalStatusWithOwner(ApprovalDecision.PENDING, pageable)).thenReturn(page);
         when(ownerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(ownerProfile));
 
         PageResponse<PendingVehicleResponse> response = approvalService.getPendingVehicles(pageable);
@@ -144,8 +156,7 @@ class ApprovalServiceTest {
 
     @Test
     @DisplayName("getVehicleDetail - success")
-    void testGetVehicleDetail_Success() {
-        vehicle.setImageUrls(List.of("http://image1.jpg"));
+    void testGetVehicleDetail() {
         when(vehicleRepository.findByIdWithOwner(100L)).thenReturn(Optional.of(vehicle));
         when(ownerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(ownerProfile));
         when(approvalRepository.findHistoryWithAdmin(any(), eq(100L))).thenReturn(Collections.emptyList());
@@ -154,7 +165,6 @@ class ApprovalServiceTest {
 
         assertThat(response).isNotNull();
         assertThat(response.vehicleId()).isEqualTo(100L);
-        assertThat(response.documents()).hasSize(1);
     }
 
     @Test
@@ -168,6 +178,7 @@ class ApprovalServiceTest {
         approvalService.decideVehicleApproval(100L, request, adminPrincipal);
 
         assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
+        assertThat(vehicle.getApprovalStatus()).isEqualTo(ApprovalDecision.APPROVED);
         verify(vehicleRepository).save(vehicle);
         verify(approvalRepository).save(any(Approval.class));
     }
@@ -180,9 +191,13 @@ class ApprovalServiceTest {
         when(vehicleRepository.findById(100L)).thenReturn(Optional.of(vehicle));
         when(userRepository.findById(1L)).thenReturn(Optional.of(adminUser));
 
-        approvalService.decideVehicleApproval(100L, request, adminPrincipal);
+        AdminVehicleDetailResponse response = approvalService.decideVehicleApproval(100L, request, adminPrincipal);
 
-        assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.REJECTED);
+        assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.INACTIVE);
+        assertThat(vehicle.getApprovalStatus()).isEqualTo(ApprovalDecision.REJECTED);
+        assertThat(vehicle.getRejectionReason()).isEqualTo("Invalid insurance documents");
+        assertThat(response.approvalStatus()).isEqualTo("REJECTED");
+        assertThat(response.rejectionReason()).isEqualTo("Invalid insurance documents");
         verify(vehicleRepository).save(vehicle);
         verify(approvalRepository).save(any(Approval.class));
     }
@@ -199,7 +214,7 @@ class ApprovalServiceTest {
     @Test
     @DisplayName("decideVehicleApproval - non-pending vehicle throws CONFLICT")
     void testDecideVehicleApproval_NonPending() {
-        vehicle.setStatus(VehicleStatus.AVAILABLE);
+        vehicle.setApprovalStatus(ApprovalDecision.APPROVED);
         ApprovalDecisionRequest request = new ApprovalDecisionRequest(ApprovalDecision.APPROVED, null);
 
         when(vehicleRepository.findById(100L)).thenReturn(Optional.of(vehicle));
@@ -214,8 +229,8 @@ class ApprovalServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         Page<DriverProfile> page = new PageImpl<>(List.of(driverProfile), pageable, 1);
 
-        when(driverProfileRepository.findAllByStatusWithDetails(DriverStatus.PENDING, pageable)).thenReturn(page);
-        when(ownerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(ownerProfile));
+        when(driverProfileRepository.findAllByApprovalStatusWithDetails(ApprovalDecision.PENDING, pageable)).thenReturn(page);
+        when(ownerProfileRepository.findByUserId(3L)).thenReturn(Optional.of(ownerProfile));
 
         PageResponse<PendingDriverResponse> response = approvalService.getPendingDrivers(pageable);
 
@@ -227,7 +242,7 @@ class ApprovalServiceTest {
     @DisplayName("getDriverDetail - success")
     void testGetDriverDetail() {
         when(driverProfileRepository.findByIdWithDetails(200L)).thenReturn(Optional.of(driverProfile));
-        when(ownerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(ownerProfile));
+        when(ownerProfileRepository.findByUserId(3L)).thenReturn(Optional.of(ownerProfile));
         when(approvalRepository.findHistoryWithAdmin(any(), eq(200L))).thenReturn(Collections.emptyList());
 
         AdminDriverDetailResponse response = approvalService.getDriverDetail(200L);
@@ -246,7 +261,8 @@ class ApprovalServiceTest {
 
         approvalService.decideDriverApproval(200L, request, adminPrincipal);
 
-        assertThat(driverProfile.getStatus()).isEqualTo(DriverStatus.APPROVED);
+        assertThat(driverProfile.getStatus()).isEqualTo(DriverStatus.ACTIVE);
+        assertThat(driverProfile.getApprovalStatus()).isEqualTo(ApprovalDecision.APPROVED);
         verify(driverProfileRepository).save(driverProfile);
         verify(approvalRepository).save(any(Approval.class));
     }
@@ -254,7 +270,7 @@ class ApprovalServiceTest {
     @Test
     @DisplayName("decideDriverApproval - owner-as-driver throws CONFLICT")
     void testDecideDriverApproval_OwnerAsDriver() {
-        driverProfile.setWillingToDrive(true);
+        driverProfile.setUser(ownerUser);
         ApprovalDecisionRequest request = new ApprovalDecisionRequest(ApprovalDecision.APPROVED, null);
 
         when(driverProfileRepository.findByIdWithDetails(200L)).thenReturn(Optional.of(driverProfile));
@@ -269,7 +285,7 @@ class ApprovalServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         Page<DriverProfile> page = new PageImpl<>(List.of(driverProfile), pageable, 1);
 
-        when(driverProfileRepository.findPendingOwnerDrivers(DriverStatus.PENDING, pageable)).thenReturn(page);
+        when(driverProfileRepository.findPendingOwnerDrivers(ApprovalDecision.PENDING, pageable)).thenReturn(page);
 
         PageResponse<PendingOwnerDriverResponse> response = approvalService.getPendingOwnerDrivers(pageable);
 
@@ -299,7 +315,46 @@ class ApprovalServiceTest {
 
         approvalService.decideOwnerDriverApproval(200L, request, adminPrincipal);
 
-        assertThat(driverProfile.getStatus()).isEqualTo(DriverStatus.APPROVED);
+        assertThat(driverProfile.getStatus()).isEqualTo(DriverStatus.ACTIVE);
+        assertThat(driverProfile.getApprovalStatus()).isEqualTo(ApprovalDecision.APPROVED);
+        verify(driverProfileRepository).save(driverProfile);
+        verify(approvalRepository).save(any(Approval.class));
+    }
+
+    @Test
+    @DisplayName("decideDriverApproval - reject driver with reason")
+    void testDecideDriverApproval_Reject() {
+        ApprovalDecisionRequest request = new ApprovalDecisionRequest(ApprovalDecision.REJECTED, "Invalid commercial license");
+
+        when(driverProfileRepository.findByIdWithDetails(200L)).thenReturn(Optional.of(driverProfile));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(adminUser));
+
+        AdminDriverDetailResponse response = approvalService.decideDriverApproval(200L, request, adminPrincipal);
+
+        assertThat(driverProfile.getStatus()).isEqualTo(DriverStatus.INACTIVE);
+        assertThat(driverProfile.getApprovalStatus()).isEqualTo(ApprovalDecision.REJECTED);
+        assertThat(driverProfile.getRejectionReason()).isEqualTo("Invalid commercial license");
+        assertThat(response.approvalStatus()).isEqualTo("REJECTED");
+        assertThat(response.rejectionReason()).isEqualTo("Invalid commercial license");
+        verify(driverProfileRepository).save(driverProfile);
+        verify(approvalRepository).save(any(Approval.class));
+    }
+
+    @Test
+    @DisplayName("decideOwnerDriverApproval - reject owner-driver with reason")
+    void testDecideOwnerDriverApproval_Reject() {
+        ApprovalDecisionRequest request = new ApprovalDecisionRequest(ApprovalDecision.REJECTED, "Failed background check");
+
+        when(driverProfileRepository.findOwnerDriverById(200L)).thenReturn(Optional.of(driverProfile));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(adminUser));
+
+        AdminOwnerDriverDetailResponse response = approvalService.decideOwnerDriverApproval(200L, request, adminPrincipal);
+
+        assertThat(driverProfile.getStatus()).isEqualTo(DriverStatus.INACTIVE);
+        assertThat(driverProfile.getApprovalStatus()).isEqualTo(ApprovalDecision.REJECTED);
+        assertThat(driverProfile.getRejectionReason()).isEqualTo("Failed background check");
+        assertThat(response.approvalStatus()).isEqualTo("REJECTED");
+        assertThat(response.rejectionReason()).isEqualTo("Failed background check");
         verify(driverProfileRepository).save(driverProfile);
         verify(approvalRepository).save(any(Approval.class));
     }

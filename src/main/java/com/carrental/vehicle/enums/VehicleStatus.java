@@ -1,12 +1,10 @@
 package com.carrental.vehicle.enums;
 
 public enum VehicleStatus {
-    PENDING,
-    APPROVED,
     AVAILABLE,
     BOOKED,
+    ON_TRIP,
     MAINTENANCE,
-    INACTIVE,
-    REJECTED
+    INACTIVE
 }
 

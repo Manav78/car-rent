@@ -53,7 +53,7 @@ class AdminAccountServiceTest {
                 .id(1L)
                 .firstName("Admin")
                 .lastName("User")
-                .role(Role.ROLE_ADMIN)
+                .role(Role.ADMIN)
                 .build();
 
         adminPrincipal = UserDetailsImpl.builder()
@@ -67,7 +67,7 @@ class AdminAccountServiceTest {
                 .firstName("John")
                 .lastName("Doe")
                 .email("john@test.com")
-                .role(Role.ROLE_CUSTOMER)
+                .role(Role.CUSTOMER)
                 .enabled(true)
                 .build();
     }
@@ -116,7 +116,7 @@ class AdminAccountServiceTest {
     @Test
     @DisplayName("softDeleteAccount - admin account throws FORBIDDEN")
     void testSoftDeleteAccount_AdminAccount() {
-        User anotherAdmin = User.builder().id(3L).role(Role.ROLE_ADMIN).build();
+        User anotherAdmin = User.builder().id(3L).role(Role.ADMIN).build();
         when(userRepository.findByIdWithDeletedBy(3L)).thenReturn(Optional.of(anotherAdmin));
 
         assertThatThrownBy(() -> adminAccountService.softDeleteAccount(3L, null, adminPrincipal))

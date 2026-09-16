@@ -1,211 +1,2240 @@
-In the existing Car Rental Spring Boot project, remove only the legacy GET-based email verification flow.
+You are working on my existing Spring Boot Car Rental Application.
 
-### Objective
+Treat the existing SRS/business rules as the **source of truth**. Do not introduce assumptions that conflict with the existing business rules. Make the changes non-destructively and preserve existing architecture, DTO patterns, MapStruct usage, ApiResponse/ApiError structure, exception handling, security, and package structure wherever possible.
 
-The application should use only the OTP-based email verification flow:
+# OBJECTIVE
 
-```text
-POST /api/auth/verify-email
+Refactor the Driver, Vehicle, and Booking status/approval enums so that:
+
+1. Admin approval lifecycle is separated from operational/business status.
+2. `PENDING`, `APPROVED`, and `REJECTED` must NOT be duplicated inside operational status enums.
+3. Driver and Vehicle must have two independent concepts:
+
+   * `approvalStatus`
+   * `status`
+4. Booking keeps its own lifecycle status.
+5. Update entities, DTOs, services, controllers, repositories/specifications, validation, database mappings, seed/data initializer code, and API responses wherever required.
+6. Do not leave old enum values or old status logic behind.
+7. Do not create duplicate enums or duplicate status concepts.
+8. Make the smallest clean refactor required by this specification.
+
+---
+
+# 1. APPROVAL STATUS
+
+Replace the existing approval enum:
+
+```java
+public enum ApprovalDecision {
+    APPROVED,
+    REJECTED
+}
 ```
 
 with:
 
-```json
-{
-  "email": "user@example.com",
-  "otp": "123456"
+```java
+public enum ApprovalDecision {
+    PENDING,
+    APPROVED,
+    REJECTED
 }
 ```
 
-### 1. AuthController
+This enum represents only the **Super Admin approval lifecycle**.
 
-In `AuthController`, remove this endpoint completely:
+It must not represent operational availability.
+
+Meaning:
+
+```text
+PENDING   = waiting for Super Admin decision
+APPROVED  = approved by Super Admin
+REJECTED  = rejected by Super Admin
+```
+
+Do not use `ApprovalDecision` as an operational status.
+
+---
+
+# 2. DRIVER STATUS
+
+Replace the existing DriverStatus values:
+
+```text
+PENDING
+APPROVED
+AVAILABLE
+ON_TRIP
+OFFLINE
+REJECTED
+```
+
+with exactly:
 
 ```java
-@GetMapping("/verify-email")
-public ResponseEntity<ApiResponse<Void>> verifyEmailByGetParam(
-        @RequestParam("token") String token) {
-
-    authService.verifyEmail(token);
-
-    return ResponseEntity.ok(
-            ApiResponse.success("Email verified successfully")
-    );
+public enum DriverStatus {
+    ACTIVE,
+    ON_TRIP,
+    INACTIVE
 }
 ```
 
-After removal, there must be only one email verification endpoint:
+Do not add any other values to `DriverStatus`.
+
+In particular, do NOT put:
+
+```text
+PENDING
+APPROVED
+REJECTED
+OFFLINE
+```
+
+inside `DriverStatus`.
+
+Those concepts must not be represented by DriverStatus.
+
+`PENDING`, `APPROVED`, and `REJECTED` belong to:
+
+```text
+approvalStatus
+```
+
+only.
+
+If the Driver entity already has an inactive-reason field, preserve and use it according to the existing architecture.
+
+Prefer Java naming:
 
 ```java
-@PostMapping("/verify-email")
-public ResponseEntity<ApiResponse<Void>> verifyEmail(
-        @Valid @RequestBody VerifyEmailRequest request) {
+private String inactiveReason;
+```
 
-    authService.verifyEmail(request);
+If the database column uses snake_case, it may remain:
 
-    return ResponseEntity.ok(
-            ApiResponse.success("Email verified successfully")
-    );
+```text
+inactive_reason
+```
+
+Business rule:
+
+```text
+inactiveReason is mandatory when status = INACTIVE.
+inactiveReason should be null/cleared when status = ACTIVE or ON_TRIP,
+unless the existing SRS explicitly requires historical retention.
+```
+
+Do not invent a new reason model if an existing field/model already exists.
+
+---
+
+# 3. DRIVER STATE MODEL
+
+Driver has both:
+
+```text
+approvalStatus
+status
+```
+
+These are independent concepts.
+
+## New driver created by Owner
+
+```text
+approvalStatus = PENDING
+status = INACTIVE
+```
+
+## Admin approves driver
+
+```text
+approvalStatus = APPROVED
+status = ACTIVE
+```
+
+## Admin rejects driver
+
+```text
+approvalStatus = REJECTED
+status = INACTIVE
+```
+
+A rejected driver must not become operationally active.
+
+## Approved driver operational states
+
+```text
+ACTIVE
+ON_TRIP
+INACTIVE
+```
+
+Meanings:
+
+```text
+ACTIVE
+Driver is approved and currently available for assignment.
+
+ON_TRIP
+Driver is currently assigned to an active trip and is busy.
+
+INACTIVE
+Driver is not operationally available.
+```
+
+Important business rule:
+
+A driver cannot be assigned to another booking while:
+
+```text
+status = ON_TRIP
+```
+
+A driver with:
+
+```text
+status = INACTIVE
+```
+
+must also not be assigned.
+
+Only suitable drivers whose approval is:
+
+```text
+approvalStatus = APPROVED
+```
+
+and whose operational status allows assignment should be considered.
+
+Do not introduce `OFFLINE` as a replacement status.
+
+---
+
+# 4. VEHICLE STATUS
+
+Replace the existing VehicleStatus values:
+
+```text
+PENDING
+APPROVED
+AVAILABLE
+BOOKED
+MAINTENANCE
+INACTIVE
+REJECTED
+```
+
+with exactly:
+
+```java
+public enum VehicleStatus {
+    AVAILABLE,
+    BOOKED,
+    ON_TRIP,
+    MAINTENANCE,
+    INACTIVE
 }
 ```
 
-### 2. Remove unused imports
+Do not add any other values to VehicleStatus.
 
-After removing the GET endpoint, remove any imports that are no longer used, especially:
-
-```java
-import org.springframework.web.bind.annotation.RequestParam;
-```
-
-Do not remove imports that are still required elsewhere.
-
-### 3. AuthService
-
-Inspect `AuthService`.
-
-If there is an overloaded method used only by the removed GET endpoint:
-
-```java
-verifyEmail(String token)
-```
-
-remove that method.
-
-Keep the OTP-based method:
-
-```java
-verifyEmail(VerifyEmailRequest request)
-```
-
-Do not remove or modify the OTP verification logic.
-
-### 4. AuthServiceImpl
-
-If `AuthServiceImpl` contains an implementation such as:
-
-```java
-verifyEmail(String token)
-```
-
-and it is used only by the removed GET endpoint, remove it.
-
-Keep the existing:
-
-```java
-verifyEmail(VerifyEmailRequest request)
-```
-
-implementation unchanged unless a compilation issue requires a minimal adjustment.
-
-### 5. EmailVerificationToken
-
-Do NOT delete `EmailVerificationToken`.
-
-Do NOT remove the temporary OTP storage mechanism.
-
-Do NOT remove:
+Do NOT put:
 
 ```text
-emailVerified
+PENDING
+APPROVED
+REJECTED
 ```
 
-from `User`.
+inside VehicleStatus.
 
-The permanent verification state must remain:
+Those belong to:
 
 ```text
-users.email_verified
+approvalStatus
 ```
 
-The verification record remains temporary:
+only.
+
+---
+
+# 5. VEHICLE STATE MODEL
+
+Vehicle must contain:
 
 ```text
-EmailVerificationToken
+approvalStatus
+status
+```
+
+## New vehicle created by Owner
+
+```text
+approvalStatus = PENDING
+status = INACTIVE
+```
+
+## Admin approves vehicle
+
+```text
+approvalStatus = APPROVED
+status = AVAILABLE
+```
+
+## Admin rejects vehicle
+
+```text
+approvalStatus = REJECTED
+status = INACTIVE
+```
+
+After approval, operational status can be:
+
+```text
+AVAILABLE
+BOOKED
+ON_TRIP
+MAINTENANCE
+INACTIVE
+```
+
+Meanings:
+
+```text
+AVAILABLE
+Vehicle can appear in Browse Vehicles and can be requested.
+
+BOOKED
+Vehicle is locked because it currently belongs to an active booking lifecycle.
+
+ON_TRIP
+Vehicle is currently being used for an ongoing trip.
+
+MAINTENANCE
+Vehicle is temporarily unavailable because of maintenance.
+
+INACTIVE
+Vehicle is intentionally disabled/not operational.
+```
+
+---
+
+# 6. VEHICLE BROWSE RULE
+
+Customer Browse Vehicles must return ONLY vehicles satisfying:
+
+```text
+approvalStatus = APPROVED
+AND
+status = AVAILABLE
+```
+
+Do not show vehicles when:
+
+```text
+approvalStatus = PENDING
+approvalStatus = REJECTED
+status = BOOKED
+status = ON_TRIP
+status = MAINTENANCE
+status = INACTIVE
+```
+
+This rule must be applied consistently in:
+
+* Vehicle repository
+* Vehicle service
+* Search/filter specification
+* Browse Vehicle API
+* Any custom query
+* Any native query
+* Any pagination/search implementation
+
+Do not rely only on frontend filtering.
+
+The backend/database query must enforce it.
+
+---
+
+# 7. IMPORTANT VEHICLE BOOKING LOCK RULE
+
+The application intentionally uses a simple vehicle-level locking model.
+
+Do NOT introduce date-overlap availability calculations unless they already exist and are explicitly required by the existing SRS.
+
+When a customer requests a specific vehicle:
+
+```text
+Booking.status = PENDING
+Vehicle.status = BOOKED
+```
+
+The vehicle must immediately disappear from Browse Vehicles.
+
+This happens even though the booking is still:
+
+```text
+PENDING
+```
+
+This is intentional.
+
+The vehicle remains locked until the booking is rejected/cancelled/completed according to the applicable existing business flow.
+
+Do not invent a different availability model.
+
+---
+
+# 8. BOOKING STATUS
+
+Keep BookingStatus exactly as:
+
+```java
+public enum BookingStatus {
+    PENDING,
+    CONFIRMED,
+    IN_PROGRESS,
+    COMPLETED,
+    CANCELLED,
+    REJECTED
+}
+```
+
+Do not add approval concepts to BookingStatus.
+
+BookingStatus represents the booking lifecycle.
+
+---
+
+# 9. BOOKING → VEHICLE STATUS MAPPING
+
+Implement the following business rules.
+
+## Customer creates booking
+
+```text
+Booking.status = PENDING
+Vehicle.status = BOOKED
+```
+
+The vehicle must immediately disappear from Browse Vehicles.
+
+This must happen atomically.
+
+---
+
+## Owner accepts booking
+
+Owner is the ONLY role allowed to accept/reject a booking.
+
+Owner acceptance is a **business decision**, but it does NOT itself make the booking `CONFIRMED`.
+
+After Owner accepts:
+
+```text
+Booking.status = PENDING
+Vehicle.status = BOOKED
+```
+
+Do NOT change the booking to `CONFIRMED` merely because the Owner accepted it.
+
+Do NOT release the vehicle.
+
+The booking becomes:
+
+```text
+CONFIRMED
+```
+
+only after the required driver assignment is completed, except for the valid approved owner-as-driver case.
+
+Therefore the flow is exactly:
+
+```text
+Customer creates booking
         ↓
-OTP + expiry
+Booking = PENDING
+Vehicle = BOOKED
         ↓
-OTP verification
+Owner accepts
         ↓
-emailVerified = true
+Booking remains PENDING
+Vehicle remains BOOKED
         ↓
-OTP consumed/deleted
+Driver assignment
+        ↓
+CONFIRMED
 ```
 
-### 6. Token Field
-
-Do not automatically remove or rename the existing `token` field.
-
-First inspect how it is currently used.
-
-Only remove/rename it if it is confirmed to exist exclusively for the old clickable-link GET verification mechanism.
-
-If the existing field is currently used to store the OTP, keep it for now to avoid unnecessary schema/code changes.
-
-###
-Do not modify:
-
-* Login
-* Signup
-* Resend OTP
-* Password reset
-* JWT
-* Spring Security
-* `emailVerified`
-* `isActive`
-* `UserDetailsImpl.isEnabled()`
-* Email sending
-* OTP generation
-* OTP validation
-* Database schema unrelated to this change
-
-### 9. Final Verification
-
-After making the change:
-
-1. Search the entire project for:
+If owner-as-driver is valid according to the existing SRS:
 
 ```text
-verifyEmail(String
+Owner accepts
+        ↓
+Approved owner-as-driver condition is verified
+        ↓
+CONFIRMED
 ```
 
-and ensure no unused legacy method remains.
+Do not interpret Owner acceptance as confirmation.
 
-2. Search for:
+---
+
+# 10. DRIVER ASSIGNMENT AND CONFIRMATION
+
+A booking can become:
 
 ```text
-GET /api/auth/verify-email
+CONFIRMED
 ```
 
-and ensure the legacy endpoint is gone.
+only when the required driver assignment/owner-as-driver condition has been successfully completed.
 
-3. Ensure there is exactly one:
+Before assigning a driver, validate that:
 
 ```text
-POST /api/auth/verify-email
+driver.approvalStatus = APPROVED
+driver.status = ACTIVE
 ```
 
-endpoint.
-
-4. Check for unused imports.
-
-5. Check compilation.
-
-6. Confirm that the final flow remains:
+Do not assign a driver whose status is:
 
 ```text
-Signup
-   ↓
-Generate OTP
-   ↓
-Save OTP
-   ↓
-Send Email
-   ↓
-POST /api/auth/verify-email
-   ↓
-Validate OTP
-   ↓
-User.emailVerified = true
+ON_TRIP
+INACTIVE
 ```
 
-Make only the changes required for removing the legacy GET/token verification flow. Do not refactor unrelated code.
+Do not assign a driver whose approval status is:
+
+```text
+PENDING
+REJECTED
+```
+
+After valid driver assignment:
+
+```text
+Booking.status = CONFIRMED
+```
+
+Vehicle remains:
+
+```text
+Vehicle.status = BOOKED
+```
+
+until the trip actually starts or the booking is otherwise released by the applicable business flow.
+
+Driver should not become `ON_TRIP` merely because the driver was assigned.
+
+Driver becomes `ON_TRIP` when the trip actually starts.
+
+---
+
+# 11. TRIP START
+
+When the trip actually starts:
+
+```text
+Booking.status = IN_PROGRESS
+Vehicle.status = ON_TRIP
+Driver.status = ON_TRIP
+```
+
+These state changes must be synchronized.
+
+Do not mark a driver or vehicle as `ON_TRIP` merely during booking creation or driver assignment.
+
+---
+
+# 12. TRIP COMPLETION
+
+When the trip is actually completed:
+
+```text
+Booking.status = COMPLETED
+Vehicle.status = AVAILABLE
+Driver.status = ACTIVE
+```
+
+Only release the vehicle/driver after the trip is actually completed.
+
+The vehicle becomes browsable again only when:
+
+```text
+approvalStatus = APPROVED
+AND
+status = AVAILABLE
+```
+
+---
+
+# 13. OWNER REJECTS BOOKING
+
+Only Owner can reject a booking.
+
+When Owner rejects:
+
+```text
+Booking.status = REJECTED
+Vehicle.status = AVAILABLE
+```
+
+Rejection reason is mandatory.
+
+The vehicle can become available again because the booking lock is released.
+
+Do not allow Admin, Driver, or Customer to perform the Owner booking rejection action.
+
+---
+
+# 14. BOOKING CANCELLATION
+
+When a booking is cancelled according to the existing cancellation business rules:
+
+```text
+Booking.status = CANCELLED
+Vehicle.status = AVAILABLE
+```
+
+Do not release a vehicle incorrectly if the booking/trip is already in a state where cancellation is not allowed.
+
+Follow the existing SRS cancellation rules.
+
+If the owner-cancellation use case exists, implement it explicitly according to the existing SRS rather than inventing a new cancellation flow.
+
+Do not assume that every booking status can be cancelled.
+
+Validate the current state before changing it.
+
+---
+
+# 15. OWNER-ONLY BOOKING DECISION
+
+Very important:
+
+Only `OWNER` can:
+
+```text
+ACCEPT booking
+REJECT booking
+```
+
+Do NOT allow:
+
+```text
+ADMIN
+DRIVER
+CUSTOMER
+```
+
+to accept or reject a booking.
+
+Security annotations, controller methods, and service-level validation must reflect this.
+
+For example, do not leave old authorization such as:
+
+```java
+@PreAuthorize("hasAnyRole('ADMIN','OWNER','DRIVER')")
+```
+
+if that endpoint performs booking accept/reject.
+
+The booking decision endpoint must be Owner-only.
+
+Also enforce ownership:
+
+The Owner must be authorized to make the decision for the relevant booking/vehicle according to the existing business model.
+
+Do not rely only on the frontend to enforce ownership.
+
+---
+
+# 16. OWNER VEHICLE STATUS CHANGES
+
+Owner can change operational vehicle state where the existing business rules permit.
+
+Examples:
+
+```text
+AVAILABLE → MAINTENANCE
+AVAILABLE → INACTIVE
+MAINTENANCE → AVAILABLE
+INACTIVE → AVAILABLE
+```
+
+But Owner must NOT be allowed to manually make an active vehicle unavailable if it is already:
+
+```text
+BOOKED
+```
+
+or:
+
+```text
+ON_TRIP
+```
+
+when that would conflict with an active booking/trip.
+
+For example, do not allow:
+
+```text
+BOOKED → MAINTENANCE
+BOOKED → INACTIVE
+ON_TRIP → MAINTENANCE
+ON_TRIP → INACTIVE
+```
+
+unless the existing SRS explicitly provides a replacement/cancellation workflow for that case.
+
+If a vehicle needs replacement during an active booking/trip, use the existing vehicle-replacement business flow and notify the customer.
+
+Do not invent a new replacement flow.
+
+---
+
+# 17. DRIVER STATUS CHANGES
+
+Driver operational state is independent of Admin approval.
+
+After approval:
+
+```text
+approvalStatus = APPROVED
+```
+
+Driver operational status can be:
+
+```text
+ACTIVE
+ON_TRIP
+INACTIVE
+```
+
+When a driver is assigned to a booking:
+
+```text
+Driver.status remains ACTIVE
+```
+
+until the trip actually starts.
+
+When the trip starts:
+
+```text
+Driver.status = ON_TRIP
+```
+
+When the trip completes:
+
+```text
+Driver.status = ACTIVE
+```
+
+Do not allow assignment of a driver who is:
+
+```text
+ON_TRIP
+INACTIVE
+```
+
+Do not allow assignment of a driver whose:
+
+```text
+approvalStatus != APPROVED
+```
+
+Only suitable approved drivers should be assigned.
+
+If the driver becomes unavailable before the trip starts, follow the existing driver-replacement/business flow rather than inventing a new status.
+
+Do not introduce `OFFLINE`.
+
+---
+
+# 18. ADMIN APPROVAL RULE
+
+Super Admin approval is separate from operational status.
+
+## Driver
+
+New/pending:
+
+```text
+approvalStatus = PENDING
+status = INACTIVE
+```
+
+Admin approves:
+
+```text
+approvalStatus = APPROVED
+status = ACTIVE
+```
+
+Admin rejects:
+
+```text
+approvalStatus = REJECTED
+status = INACTIVE
+```
+
+Do not use:
+
+```text
+status = APPROVED
+```
+
+or:
+
+```text
+status = REJECTED
+```
+
+for Driver.
+
+---
+
+## Vehicle
+
+New/pending:
+
+```text
+approvalStatus = PENDING
+status = INACTIVE
+```
+
+Admin approves:
+
+```text
+approvalStatus = APPROVED
+status = AVAILABLE
+```
+
+Admin rejects:
+
+```text
+approvalStatus = REJECTED
+status = INACTIVE
+```
+
+Do not use:
+
+```text
+status = APPROVED
+```
+
+or:
+
+```text
+status = REJECTED
+```
+
+for Vehicle.
+
+---
+
+# 19. DATABASE/JPA CHANGES
+
+Inspect the existing entities.
+
+Do NOT use ordinal enum persistence.
+
+Check and update wherever required:
+
+* Entity fields
+* Column names
+* Constructors
+* Builders
+* Getters/setters
+* DTO mapping
+* MapStruct mappings
+* Specifications
+* Repository queries
+* Service logic
+* Controller request/response objects
+* DataInitializer
+* Test data
+* Tests
+* Database migration/schema scripts, if applicable
+
+If the database uses string/varchar enum values, make sure the persisted values match the new enums.
+
+Do not modify unrelated database structures.
+
+---
+
+# 20. DTO CHANGES
+
+Update all relevant DTOs.
+
+Do not expose an old combined status field if the new model requires:
+
+```text
+approvalStatus
+status
+```
+
+For Admin approval responses, clearly expose approval state.
+
+For operational Driver/Vehicle responses, expose operational status where required.
+
+Do not unnecessarily expose internal Admin information to Customer APIs.
+
+Follow the existing DTO separation and SRS.
+
+Do not introduce duplicate DTO fields just to support old status values.
+
+Update MapStruct mappings and manual mappings wherever required.
+
+---
+
+# 21. SERVICE LAYER
+
+Move the business rules into the service layer.
+
+Do not put important business rules only inside controllers.
+
+## createBooking()
+
+`createBooking()` must atomically:
+
+```text
+create PENDING booking
++
+change vehicle to BOOKED
+```
+
+Use:
+
+```java
+@Transactional
+```
+
+for operations where Booking and Vehicle/Driver state must change together.
+
+Before creating the booking, verify that the vehicle is actually eligible:
+
+```text
+approvalStatus = APPROVED
+status = AVAILABLE
+```
+
+Do not create a new booking for:
+
+```text
+BOOKED
+ON_TRIP
+MAINTENANCE
+INACTIVE
+```
+
+or an unapproved/rejected vehicle.
+
+Handle concurrent requests according to the existing persistence/locking architecture so that two customers cannot successfully book the same vehicle through the same simple vehicle-level availability model.
+
+Do not introduce a date-overlap system.
+
+---
+
+## assignDriver()
+
+Validate:
+
+```text
+driver.approvalStatus = APPROVED
+driver.status = ACTIVE
+```
+
+Then assign the driver.
+
+After successful required driver assignment:
+
+```text
+Booking.status = CONFIRMED
+```
+
+Driver remains:
+
+```text
+ACTIVE
+```
+
+until the trip actually starts.
+
+---
+
+## startTrip()
+
+`startTrip()` must consistently update:
+
+```text
+Booking = IN_PROGRESS
+Vehicle = ON_TRIP
+Driver = ON_TRIP
+```
+
+Use a transaction.
+
+---
+
+## completeTrip()
+
+`completeTrip()` must consistently update:
+
+```text
+Booking = COMPLETED
+Vehicle = AVAILABLE
+Driver = ACTIVE
+```
+
+Use a transaction.
+
+If one related state change fails, the related state changes must roll back together.
+
+---
+
+# 22. PREVENT INVALID TRANSITIONS
+
+Add service-level validation so invalid state transitions cannot happen.
+
+Examples:
+
+Do not allow:
+
+```text
+REJECTED booking → CONFIRMED
+COMPLETED booking → PENDING
+COMPLETED booking → CONFIRMED
+CANCELLED booking → CONFIRMED
+```
+
+Do not allow a booking to skip the required confirmation process:
+
+```text
+PENDING
+  ↓
+CONFIRMED
+```
+
+unless the required driver assignment or valid owner-as-driver condition has occurred.
+
+Do not allow:
+
+```text
+ON_TRIP driver → assign another booking
+INACTIVE driver → assign another booking
+```
+
+Do not allow:
+
+```text
+ON_TRIP vehicle → new booking
+MAINTENANCE vehicle → new booking
+INACTIVE vehicle → new booking
+BOOKED vehicle → new booking
+```
+
+Do not invent a re-approval workflow if the SRS does not define one.
+
+---
+
+# 23. SEARCH/FILTER LOGIC
+
+Vehicle search should always start with:
+
+```text
+approvalStatus = APPROVED
+AND
+status = AVAILABLE
+```
+
+Then apply existing filters :
+
+Important:
+
+Do NOT add a rule saying:
+
+```text
+vehicle city == pickup city
+```
+
+Vehicle city is only a search/filter criterion.
+
+Pickup city does not have to equal vehicle city unless the existing SRS explicitly requires it.
+
+Do not reintroduce:
+
+```text
+dailyRate
+transmission
+```
+
+because these are not part of the current SRS.
+
+Do not introduce unrelated vehicle-search fields.
+
+The backend must enforce availability and approval filtering.
+
+---
+
+# 24. DATA INITIALIZER / SEED DATA
+
+Search the entire project for old enum values and status-related logic:
+
+```text
+PENDING
+APPROVED
+REJECTED
+AVAILABLE
+BOOKED
+ON_TRIP
+OFFLINE
+MAINTENANCE
+INACTIVE
+```
+
+`OFFLINE` is included in this search list specifically to locate and remove legacy DriverStatus usage. It must NOT remain as a valid DriverStatus value or business state.
+
+Update every seed/data initializer accordingly.
+
+## New pending vehicle
+
+```java
+vehicle.setApprovalStatus(ApprovalDecision.PENDING);
+vehicle.setStatus(VehicleStatus.INACTIVE);
+```
+
+## Approved vehicle
+
+```java
+vehicle.setApprovalStatus(ApprovalDecision.APPROVED);
+vehicle.setStatus(VehicleStatus.AVAILABLE);
+```
+
+## Rejected vehicle
+
+```java
+vehicle.setApprovalStatus(ApprovalDecision.REJECTED);
+vehicle.setStatus(VehicleStatus.INACTIVE);
+```
+
+## New pending driver
+
+```java
+driver.setApprovalStatus(ApprovalDecision.PENDING);
+driver.setStatus(DriverStatus.INACTIVE);
+```
+
+## Approved driver
+
+```java
+driver.setApprovalStatus(ApprovalDecision.APPROVED);
+driver.setStatus(DriverStatus.ACTIVE);
+```
+
+## Rejected driver
+
+```java
+driver.setApprovalStatus(ApprovalDecision.REJECTED);
+driver.setStatus(DriverStatus.INACTIVE);
+```
+
+Make sure any inactive driver has the required `inactiveReason` according to the existing model.
+
+Do not seed obsolete enum values.
+
+---
+
+# 25. SEARCH THE WHOLE CODEBASE
+
+Before and after making changes, search globally for:
+
+```text
+DriverStatus.
+VehicleStatus.
+ApprovalDecision.
+BookingStatus.
+getStatus()
+setStatus()
+getApprovalStatus()
+setApprovalStatus()
+PENDING
+APPROVED
+REJECTED
+AVAILABLE
+BOOKED
+ON_TRIP
+OFFLINE
+MAINTENANCE
+INACTIVE
+```
+
+Do not modify only the enum files.
+
+Trace every usage.
+
+Especially inspect:
+
+```text
+Controller
+Service
+ServiceImpl
+Repository
+Specification
+Entity
+DTO
+Mapper
+Exception
+Security
+DataInitializer
+Tests
+```
+
+Also inspect:
+
+```text
+@PreAuthorize
+hasRole(...)
+hasAnyRole(...)
+hasAuthority(...)
+```
+
+for affected endpoints.
+
+Search for string-based comparisons such as:
+
+```java
+status.equals(...)
+```
+
+and:
+
+```java
+status == ...
+```
+
+and repository queries/specifications using old values.
+
+Search for hardcoded strings such as:
+
+```text
+"PENDING"
+"APPROVED"
+"REJECTED"
+"AVAILABLE"
+"BOOKED"
+"ON_TRIP"
+"OFFLINE"
+"MAINTENANCE"
+"INACTIVE"
+```
+
+Do not leave legacy status logic hidden outside the enum classes.
+
+---
+
+# 26. DO NOT CREATE DUPLICATE ENUMS
+
+Before creating any enum, search the existing project.
+
+Do not create multiple enums representing the same concept.
+
+There should be one clear source for:
+
+```text
+ApprovalDecision
+DriverStatus
+VehicleStatus
+BookingStatus
+```
+
+Reuse the existing package/project convention.
+
+If an enum already exists in the correct package, modify and reuse it rather than creating another enum.
+
+Do not create an alternative enum such as:
+
+```text
+DriverApprovalStatus
+VehicleApprovalStatus
+BookingApprovalStatus
+OperationalDriverStatus
+OperationalVehicleStatus
+```
+
+unless an existing SRS requirement explicitly requires such a separate concept.
+
+This refactor requires:
+
+```text
+ApprovalDecision
+DriverStatus
+VehicleStatus
+BookingStatus
+```
+
+as the clear status/approval model.
+
+---
+
+# 27. DO NOT BREAK EXISTING ARCHITECTURE
+
+Do not unnecessarily:
+
+* Rename packages
+* Rename unrelated classes
+* Rewrite working authentication
+* Rewrite JWT
+* Rewrite MapStruct
+* Rewrite existing Customer module
+* Rewrite Owner module
+* Rewrite Driver module
+* Rewrite Admin module
+* Change unrelated database tables
+* Introduce a new framework
+* Change API structure unnecessarily
+* Duplicate existing services/controllers/repositories
+* Remove existing functionality unrelated to this refactor
+
+Make the smallest clean refactor required by the new status model.
+
+Preserve:
+
+```text
+Existing package structure
+Existing DTO architecture
+MapStruct
+ApiResponse
+ApiError
+Exception handling
+Existing security architecture
+Existing authentication/JWT implementation
+Existing Customer module
+Existing Owner module
+Existing Driver module
+Existing Admin module
+```
+
+Only change affected code where required.
+
+---
+
+# 28. API AND SECURITY CONSISTENCY
+
+Inspect all affected APIs and make sure their authorization matches the business rules.
+
+Booking accept/reject:
+
+```text
+OWNER only
+```
+
+Driver assignment:
+
+Follow the existing SRS authorization rules.
+
+Vehicle status management:
+
+Follow the existing Owner authorization/ownership rules.
+
+Admin approval:
+
+Super Admin/Admin according to the existing Admin architecture.
+
+Customer Browse Vehicles:
+
+Customer-facing browse/search must return only:
+
+```text
+approvalStatus = APPROVED
+AND
+status = AVAILABLE
+```
+
+Do not rely on frontend authorization or filtering.
+
+Service-level authorization/business validation must also exist where required.
+
+---
+
+# 29. API RESPONSE CONSISTENCY
+
+After changing the status model, inspect all API responses.
+
+Driver responses should expose the correct concepts where required:
+
+```text
+approvalStatus
+status
+```
+
+Vehicle responses should expose the correct concepts where required:
+
+```text
+approvalStatus
+status
+```
+
+Booking responses should expose:
+
+```text
+status
+```
+
+Do not expose obsolete combined/duplicated status information.
+
+Do not unnecessarily expose internal Admin-only information to Customer APIs.
+
+Preserve the existing:
+
+```text
+ApiResponse
+ApiError
+DTO
+MapStruct
+```
+
+patterns.
+
+---
+
+# 30. FINAL EXPECTED MODEL
+
+The final conceptual model must be exactly:
+
+## Driver
+
+```text
+approvalStatus:
+    PENDING
+    APPROVED
+    REJECTED
+
+status:
+    ACTIVE
+    ON_TRIP
+    INACTIVE
+```
+
+`OFFLINE` must NOT exist in DriverStatus.
+
+`inactiveReason` explains why a driver is `INACTIVE`.
+
+---
+
+## Vehicle
+
+```text
+approvalStatus:
+    PENDING
+    APPROVED
+    REJECTED
+
+status:
+    AVAILABLE
+    BOOKED
+    ON_TRIP
+    MAINTENANCE
+    INACTIVE
+```
+
+---
+
+## Booking
+
+```text
+status:
+    PENDING
+    CONFIRMED
+    IN_PROGRESS
+    COMPLETED
+    CANCELLED
+    REJECTED
+```
+
+---
+
+# 31. FINAL STATE FLOW
+
+Implement this exact high-level flow.
+
+## DRIVER
+
+```text
+                     DRIVER
+                     ──────
+              Create Driver
+                    |
+                    v
+         approval=PENDING
+         status=INACTIVE
+                    |
+                    v
+              Super Admin
+                    |
+             +------+------+
+             |             |
+          APPROVE        REJECT
+             |             |
+             v             v
+  approval=APPROVED   approval=REJECTED
+  status=ACTIVE       status=INACTIVE
+             |
+             v
+          ON_TRIP
+             |
+             v
+           ACTIVE
+```
+
+The driver does NOT use `OFFLINE`.
+
+For an approved driver, operational states are only:
+
+```text
+ACTIVE
+ON_TRIP
+INACTIVE
+```
+
+---
+
+## VEHICLE
+
+```text
+                     VEHICLE
+                     ───────
+              Create Vehicle
+                    |
+                    v
+         approval=PENDING
+         status=INACTIVE
+                    |
+                    v
+              Super Admin
+                    |
+             +------+------+
+             |             |
+          APPROVE        REJECT
+             |             |
+             v             v
+  approval=APPROVED   approval=REJECTED
+  status=AVAILABLE    status=INACTIVE
+             |
+             v
+           BOOKED
+             |
+             v
+          ON_TRIP
+             |
+             v
+         AVAILABLE
+```
+
+Maintenance/inactive are operational states that can occur according to the existing business rules.
+
+---
+
+## BOOKING
+
+```text
+Customer creates booking
+        |
+        v
+PENDING
++
+Vehicle = BOOKED
+        |
+        v
+Owner-customer communicate
+        |
+        |
+        v
+Driver assignment
+        |
+        v
+CONFIRMED
+        |
+        v
+Trip starts
+        |
+        v
+IN_PROGRESS
++
+Driver = ON_TRIP
++
+Vehicle = ON_TRIP
+        |
+        v
+Trip ends
+        |
+        v
+COMPLETED
++
+Driver = ACTIVE
++
+Vehicle = AVAILABLE
+```
+
+Important:
+
+```text
+Owner acceptance != Booking confirmation
+```
+
+Confirmation requires the required driver assignment or valid approved owner-as-driver condition.
+
+---
+
+## REJECTED / CANCELLED
+
+```text
+PENDING
+   |
+   +---- Owner rejects ----> REJECTED
+   |                         |
+   |                         v
+   |                  Vehicle = AVAILABLE
+   |
+   +---- Cancel -----------> CANCELLED
+                             |
+                             v
+                       Vehicle = AVAILABLE
+```
+
+Apply the existing cancellation rules before allowing cancellation.
+
+Do not invent cancellation transitions that are not supported by the existing SRS.
+
+---
+
+# 32. STATE SYNCHRONIZATION RULES
+
+Use these relationships consistently.
+
+## Booking creation
+
+```text
+Booking = PENDING
+Vehicle = BOOKED
+```
+
+## Driver assignment
+
+```text
+Booking = CONFIRMED
+Vehicle = BOOKED
+Driver = ACTIVE
+```
+
+## Trip start
+
+```text
+Booking = IN_PROGRESS
+Vehicle = ON_TRIP
+Driver = ON_TRIP
+```
+
+## Trip completion
+
+```text
+Booking = COMPLETED
+Vehicle = AVAILABLE
+Driver = ACTIVE
+```
+
+## Owner rejection
+
+```text
+Booking = REJECTED
+Vehicle = AVAILABLE
+```
+
+## Valid cancellation
+
+```text
+Booking = CANCELLED
+Vehicle = AVAILABLE
+```
+
+Do not release Vehicle or Driver prematurely.
+
+---
+
+# 33. TRANSACTIONAL REQUIREMENTS
+
+Any operation that changes multiple related states must be transactional where appropriate.
+
+At minimum inspect:
+
+```text
+createBooking()
+ownerRejectBooking()
+assignDriver()
+startTrip()
+completeTrip()
+cancelBooking()
+vehicle replacement/status operations where multiple records are affected
+```
+
+For example:
+
+```java
+@Transactional
+```
+
+must be used where Booking + Vehicle + Driver changes must succeed or fail together.
+
+The database must not be left in an inconsistent state such as:
+
+```text
+Booking = IN_PROGRESS
+Vehicle = AVAILABLE
+Driver = ACTIVE
+```
+
+or:
+
+```text
+Booking = COMPLETED
+Vehicle = ON_TRIP
+Driver = ON_TRIP
+```
+
+when the operation was supposed to complete the trip.
+
+---
+
+# 34. DO NOT INTRODUCE UNREQUESTED FEATURES
+
+Do NOT introduce:
+
+```text
+Date-overlap booking availability
+New pricing rules
+Daily rate
+Transmission
+Tracking
+OTP for trip start/end
+Reviews
+Ratings
+Payment fields
+Agreed amount
+Payment status
+New notification architecture
+New authentication mechanism
+New JWT structure
+New framework
+```
+
+unless the existing project/SRS already contains them and this refactor requires compatibility changes.
+
+Do not modify unrelated business logic.
+
+---
+
+# 35. DATABASE MIGRATION / EXISTING DATA
+
+Inspect the current database schema and migration strategy before modifying database-related code.
+
+If migrations are already used:
+
+* update/create the appropriate migration according to the existing project convention.
+
+If schema is generated through JPA:
+
+* update entity mappings consistently.
+
+Do not blindly delete production-style data.
+
+If existing persisted values contain obsolete values such as:
+
+```text
+OFFLINE
+```
+
+identify them and clearly report what migration/data conversion is required.
+
+Do not silently corrupt or discard existing data.
+
+For existing Driver records, map old states to the new model only when the mapping is unambiguous from the existing business logic.
+
+If a safe mapping cannot be determined, report it under Remaining Issues instead of guessing.
+
+---
+
+# 36. TESTING REQUIREMENTS
+
+Update existing tests and add focused tests where necessary.
+
+At minimum verify:
+
+## Approval
+
+```text
+New Driver:
+PENDING + INACTIVE
+
+Approved Driver:
+APPROVED + ACTIVE
+
+Rejected Driver:
+REJECTED + INACTIVE
+
+New Vehicle:
+PENDING + INACTIVE
+
+Approved Vehicle:
+APPROVED + AVAILABLE
+
+Rejected Vehicle:
+REJECTED + INACTIVE
+```
+
+## Vehicle Browse
+
+Verify only:
+
+```text
+APPROVED + AVAILABLE
+```
+
+vehicles are returned.
+
+Verify the following are excluded:
+
+```text
+PENDING
+REJECTED
+BOOKED
+ON_TRIP
+MAINTENANCE
+INACTIVE
+```
+
+## Booking
+
+Verify:
+
+```text
+Create booking:
+PENDING + Vehicle BOOKED
+```
+
+Verify:
+
+```text
+Owner accepts:
+Booking remains PENDING
+Vehicle remains BOOKED
+```
+
+Verify:
+
+```text
+Driver assignment:
+Booking becomes CONFIRMED
+```
+
+Verify:
+
+```text
+Trip start:
+Booking IN_PROGRESS
+Vehicle ON_TRIP
+Driver ON_TRIP
+```
+
+Verify:
+
+```text
+Trip completion:
+Booking COMPLETED
+Vehicle AVAILABLE
+Driver ACTIVE
+```
+
+Verify:
+
+```text
+Owner rejection:
+Booking REJECTED
+Vehicle AVAILABLE
+```
+
+Verify valid cancellation according to the existing SRS.
+
+## Authorization
+
+Verify:
+
+```text
+OWNER → can accept/reject booking
+ADMIN → cannot accept/reject booking
+DRIVER → cannot accept/reject booking
+CUSTOMER → cannot accept/reject booking
+```
+
+## Invalid transitions
+
+Verify invalid transitions are rejected.
+
+---
+
+# 37. CODE QUALITY REQUIREMENTS
+
+Do not solve the refactor by adding scattered conditional logic everywhere.
+
+Prefer clear service-level state validation.
+
+Avoid code such as:
+
+```java
+if ("PENDING".equals(status)) ...
+```
+
+when the existing architecture already uses enums.
+
+Use the correct enum:
+
+```java
+ApprovalDecision.PENDING
+DriverStatus.ACTIVE
+DriverStatus.ON_TRIP
+DriverStatus.INACTIVE
+VehicleStatus.AVAILABLE
+VehicleStatus.BOOKED
+VehicleStatus.ON_TRIP
+VehicleStatus.MAINTENANCE
+VehicleStatus.INACTIVE
+BookingStatus.PENDING
+BookingStatus.CONFIRMED
+...
+```
+
+Reuse existing helper methods/services if appropriate.
+
+Do not create duplicate business logic in multiple controllers.
+
+---
+
+# 38. IMPLEMENTATION PROCESS
+
+Follow this process.
+
+## Step 1 — Inspect
+
+First inspect the complete existing project.
+
+Identify:
+
+```text
+Entities
+Enums
+DTOs
+Mappers
+Repositories
+Specifications
+Services
+ServiceImpl classes
+Controllers
+Security configuration
+Exception handling
+DataInitializer/seed classes
+Database migrations/schema
+Tests
+```
+
+Do not modify anything before understanding the affected code paths.
+
+## Step 2 — Search
+
+Search globally for all affected enum values and status logic.
+
+Especially search for:
+
+```text
+DriverStatus
+VehicleStatus
+ApprovalDecision
+BookingStatus
+PENDING
+APPROVED
+REJECTED
+AVAILABLE
+BOOKED
+ON_TRIP
+OFFLINE
+MAINTENANCE
+INACTIVE
+```
+
+Also search for:
+
+```text
+getStatus
+setStatus
+getApprovalStatus
+setApprovalStatus
+@PreAuthorize
+hasRole
+hasAnyRole
+hasAuthority
+```
+
+## Step 3 — Refactor enums
+
+Apply the exact enum definitions from this specification.
+
+## Step 4 — Update entities
+
+Add/use:
+
+```text
+approvalStatus
+status
+```
+
+where required.
+
+## Step 5 — Update DTOs and mappings
+
+Update MapStruct/manual mappings.
+
+## Step 6 — Update repository/specification/search logic
+
+Especially enforce:
+
+```text
+approvalStatus = APPROVED
+AND
+status = AVAILABLE
+```
+
+for vehicle browsing.
+
+## Step 7 — Update service/business logic
+
+Implement the exact state transitions defined above.
+
+## Step 8 — Update authorization
+
+Ensure only Owner can accept/reject bookings.
+
+## Step 9 — Update seed/test data
+
+Remove obsolete enum usage.
+
+## Step 10 — Compile and test
+
+Fix all affected compilation and test failures.
+
+## Step 11 — Search again
+
+Perform another global search for obsolete enum values and status logic.
+
+Do not stop after compilation succeeds.
+
+---
+
+# 39. FINAL VALIDATION AFTER IMPLEMENTATION
+
+After completing the changes:
+
+1. Compile the project.
+2. Run tests.
+3. Fix all compilation errors caused by enum changes.
+4. Search for old enum values that should no longer exist.
+5. Verify database enum/string values if applicable.
+6. Verify Vehicle Browse API.
+7. Verify Driver assignment logic.
+8. Verify Owner booking accept/reject authorization.
+9. Verify booking → vehicle status synchronization.
+10. Verify trip start/end synchronization.
+11. Verify Admin approval/rejection.
+12. Verify invalid transitions are rejected.
+13. Verify `OFFLINE` is not present in `DriverStatus` or new business logic.
+14. Verify Owner acceptance does not incorrectly set Booking to `CONFIRMED`.
+15. Verify Booking becomes `CONFIRMED` only after the required driver assignment/owner-as-driver condition.
+16. Verify existing APIs are not unnecessarily broken.
+17. Verify no duplicate enums were created.
+18. Verify no unrelated modules were unnecessarily rewritten.
+
+---
+
+# 40. FINAL CODEBASE SEARCH CHECK
+
+At the end, confirm:
+
+## DriverStatus
+
+Must contain exactly:
+
+```text
+ACTIVE
+ON_TRIP
+INACTIVE
+```
+
+Must NOT contain:
+
+```text
+PENDING
+APPROVED
+REJECTED
+OFFLINE
+```
+
+## VehicleStatus
+
+Must contain exactly:
+
+```text
+AVAILABLE
+BOOKED
+ON_TRIP
+MAINTENANCE
+INACTIVE
+```
+
+Must NOT contain:
+
+```text
+PENDING
+APPROVED
+REJECTED
+```
+
+## ApprovalDecision
+
+Must contain exactly:
+
+```text
+PENDING
+APPROVED
+REJECTED
+```
+
+## BookingStatus
+
+Must contain exactly:
+
+```text
+PENDING
+CONFIRMED
+IN_PROGRESS
+COMPLETED
+CANCELLED
+REJECTED
+```
+
+Do not leave duplicate/legacy enum definitions.
+
+---
+
+# 41. FINAL REPORT
+
+At the end, provide the implementation report in exactly these sections:
+
+## A. Files changed
+
+List every changed file.
+
+For each file, briefly state why it was changed.
+
+## B. Business logic changed
+
+Explain each status/approval change.
+
+Especially explain:
+
+```text
+ApprovalDecision
+DriverStatus
+VehicleStatus
+BookingStatus
+Vehicle booking lock
+Owner accept/reject
+Driver assignment
+Trip start
+Trip completion
+Cancellation
+```
+
+## C. API changes
+
+List any endpoint/request/response changes.
+
+If there are no API contract changes, explicitly state that.
+
+## D. Database changes
+
+List:
+
+* Entity changes
+* Column changes
+* Migration changes
+* Existing data considerations
+
+If there are no schema changes, explicitly state that.
+
+## E. Validation
+
+Mention:
+
+```text
+Compilation result
+Test result
+Relevant validation performed
+Invalid transition validation
+Authorization validation
+Browse Vehicle validation
+```
+
+## F. Remaining issues
+
+If anything cannot be completed because the existing code conflicts with this specification, clearly report it instead of guessing.
+
+For every remaining issue:
+
+```text
+File/class
+Problem
+Why it conflicts
+What decision/input is required
+```
+
+Do not silently work around unresolved business conflicts.
+
+---
+
+# 42. ABSOLUTE RULES
+
+These rules have priority throughout the implementation:
+
+1. **Do not invent business rules.**
+2. **Existing SRS is the source of truth.**
+3. **Approval status and operational status are separate concepts.**
+4. **Do not duplicate ****`PENDING`****, ****`APPROVED`****, or ****`REJECTED`**** inside DriverStatus or VehicleStatus.**
+5. **Do not introduce ****`OFFLINE`**** into DriverStatus.**
+6. **Only Owner can accept/reject bookings.**
+7. **Owner acceptance does not equal confirmation.**
+8. **Booking becomes CONFIRMED only after required driver assignment or valid owner-as-driver verification.**
+9. **Vehicle becomes BOOKED immediately when a customer creates a booking.**
+10. **Vehicle Browse requires ****`approvalStatus=APPROVED AND status=AVAILABLE`****.**
+11. **Driver assignment requires an approved, operationally available driver.**
+12. **Driver becomes ON_TRIP only when the trip actually starts.**
+13. **Vehicle becomes ON_TRIP only when the trip actually starts.**
+14. **Vehicle and Driver are released only when the applicable business flow completes/releases them.**
+15. **Do not introduce date-overlap availability logic unless already required by the SRS.**
+16. **Do not reintroduce ****`dailyRate`**** or ****`transmission`****.**
+17. **Do not rewrite unrelated modules.**
+18. **Do not create duplicate enums.**
+19. **Do not rely only on frontend validation.**
+20. **Use service-level validation and transactions for important state changes.**
+21. **If existing code conflicts with this specification, prioritize this specification and clearly report the conflict.**
+22. **If the SRS does not define a behavior, do not silently invent one.**

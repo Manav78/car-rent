@@ -36,8 +36,14 @@ public class DriverTripController {
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('DRIVER')")
-    public ResponseEntity<ApiResponse<BookingResponse>> updateTripStatus(@PathVariable("id") Long id,
+    public ResponseEntity<ApiResponse<BookingResponse>> updateTripStatus(@AuthenticationPrincipal UserDetailsImpl userDetails,
+                                                                         @PathVariable("id") Long id,
                                                                          @RequestBody BookingStatusUpdateRequest request) {
+        BookingResponse response = bookingService.updateDriverTripStatus(userDetails, id, request);
+        return ResponseEntity.ok(ApiResponse.success("Trip status updated", response));
+    }
+
+    public ResponseEntity<ApiResponse<BookingResponse>> updateTripStatus(Long id, BookingStatusUpdateRequest request) {
         BookingResponse response = bookingService.updateBookingStatus(id, request);
         return ResponseEntity.ok(ApiResponse.success("Trip status updated", response));
     }

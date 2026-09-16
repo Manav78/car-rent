@@ -1,5 +1,6 @@
 package com.carrental.vehicle.entity;
 
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.auth.entity.User;
 import com.carrental.vehicle.enums.FuelType;
 import com.carrental.vehicle.enums.VehicleStatus;
@@ -74,10 +75,11 @@ public class Vehicle {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
-    private VehicleStatus status = VehicleStatus.AVAILABLE;
+    private VehicleStatus status = VehicleStatus.INACTIVE;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "approval_status", nullable = false, length = 30)
-    private String approvalStatus = "PENDING";
+    private ApprovalDecision approvalStatus = ApprovalDecision.PENDING;
 
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
@@ -105,7 +107,7 @@ public class Vehicle {
                    String vehicleNumber, String licensePlate,
                    VehicleType vehicleType, FuelType fuelType, Integer seatingCapacity,
                    Boolean hasAc, Integer pricePerKm,
-                   VehicleStatus status, String approvalStatus, String rejectionReason,
+                   VehicleStatus status, ApprovalDecision approvalStatus, String rejectionReason,
                    String location, LocalDateTime approvedAt, String description,
                    List<VehicleImage> images, List<String> imageUrls,
                    LocalDateTime createdAt, LocalDateTime updatedAt) {
@@ -120,8 +122,8 @@ public class Vehicle {
         this.seatingCapacity = seatingCapacity;
         this.hasAc = hasAc != null ? hasAc : false;
         this.pricePerKm = pricePerKm;
-        this.status = status != null ? status : VehicleStatus.AVAILABLE;
-        this.approvalStatus = approvalStatus != null ? approvalStatus : "PENDING";
+        this.status = status != null ? status : VehicleStatus.INACTIVE;
+        this.approvalStatus = approvalStatus != null ? approvalStatus : ApprovalDecision.PENDING;
         this.rejectionReason = rejectionReason;
         this.location = location;
         this.approvedAt = approvedAt;
@@ -145,10 +147,10 @@ public class Vehicle {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
         if (this.status == null) {
-            this.status = VehicleStatus.AVAILABLE;
+            this.status = VehicleStatus.INACTIVE;
         }
         if (this.approvalStatus == null) {
-            this.approvalStatus = "PENDING";
+            this.approvalStatus = ApprovalDecision.PENDING;
         }
         if (this.hasAc == null) {
             this.hasAc = false;
@@ -201,6 +203,16 @@ public class Vehicle {
 
     public void setLicensePlate(String licensePlate) {
         this.vehicleNumber = licensePlate;
+    }
+
+    public void setApprovalStatus(ApprovalDecision approvalStatus) {
+        this.approvalStatus = approvalStatus;
+    }
+
+    public void setApprovalStatus(String approvalStatus) {
+        if (approvalStatus != null) {
+            this.approvalStatus = ApprovalDecision.valueOf(approvalStatus.toUpperCase());
+        }
     }
 }
 

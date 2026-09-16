@@ -1,6 +1,7 @@
 package com.carrental.common.config;
 
 
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.auth.entity.User;
 import com.carrental.auth.enums.Role;
 import com.carrental.auth.repository.UserRepository;
@@ -148,13 +149,9 @@ public class DataInitializer implements CommandLineRunner {
                     .addedByOwner(savedOwner)
                     .licenseNumber("DL-MH-2020-0012345")
                     .licenseExpiryDate(LocalDate.now().plusYears(5))
-                    .status(DriverStatus.APPROVED)
-                    .approvalStatus("APPROVED")
+                    .status(DriverStatus.ACTIVE)
+                    .approvalStatus(ApprovalDecision.APPROVED)
                     .approvedAt(LocalDateTime.now())
-                    .willingToDrive(true)
-                    .yearsOfExperience(6)
-                    .rating(4.9)
-                    .totalTrips(45)
                     .build();
             driverProfileRepository.save(driverProfile);
 
@@ -215,7 +212,7 @@ public class DataInitializer implements CommandLineRunner {
                         .hasAc(true)
                         .pricePerKm(18)
                         .status(VehicleStatus.AVAILABLE)
-                        .approvalStatus("APPROVED")
+                        .approvalStatus(ApprovalDecision.APPROVED)
                         .approvedAt(LocalDateTime.now())
                         .location("Mumbai Central")
                         .description("Spacious 7-seater luxury SUV with premium comfort.")
@@ -240,7 +237,7 @@ public class DataInitializer implements CommandLineRunner {
                         .hasAc(true)
                         .pricePerKm(14)
                         .status(VehicleStatus.AVAILABLE)
-                        .approvalStatus("APPROVED")
+                        .approvalStatus(ApprovalDecision.APPROVED)
                         .approvedAt(LocalDateTime.now())
                         .location("Bandra, Mumbai")
                         .description("Feature-packed 5-seater modern SUV.")

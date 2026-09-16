@@ -2,6 +2,7 @@ package com.carrental.owner.service.impl;
 
 import com.carrental.owner.service.OwnerService;
 
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.auth.entity.User;
 import com.carrental.auth.repository.UserRepository;
 import com.carrental.common.exception.ResourceNotFoundException;
@@ -70,10 +71,11 @@ public class OwnerServiceImpl implements OwnerService {
             if (driverProfile == null) {
                 driverProfile = DriverProfile.builder()
                         .user(user)
-                        .status(DriverStatus.PENDING)
+                        .approvalStatus(ApprovalDecision.PENDING)
+                        .status(DriverStatus.INACTIVE)
+                        .inactiveReason("Pending Super Admin approval")
                         .build();
             }
-            driverProfile.setWillingToDrive(true);
             if (request.getDrivingLicenseNumber() != null) {
                 driverProfile.setDrivingLicenseNumber(request.getDrivingLicenseNumber().trim());
             }
@@ -82,8 +84,8 @@ public class OwnerServiceImpl implements OwnerService {
             }
             driverProfile = driverProfileRepository.save(driverProfile);
         } else if (Boolean.FALSE.equals(request.getWillingToDrive()) && driverProfile != null) {
-            driverProfile.setWillingToDrive(false);
-            driverProfile = driverProfileRepository.save(driverProfile);
+            driverProfileRepository.delete(driverProfile);
+            driverProfile = null;
         }
 
         log.info("Updated owner profile for user id: {}", userId);
@@ -100,7 +102,8 @@ public class OwnerServiceImpl implements OwnerService {
                 .phoneNumber(user.getPhoneNumber())
                 .role(user.getRole())
                 .status(profile != null ? profile.getStatus() : OwnerStatus.PENDING)
-                .willingToDrive(driverProfile != null && Boolean.TRUE.equals(driverProfile.getWillingToDrive()))
+                .rejectionReason(profile != null ? profile.getRejectionReason() : null)
+                .willingToDrive(driverProfile != null)
                 .drivingLicenseNumber(driverProfile != null ? driverProfile.getDrivingLicenseNumber() : null)
                 .licenseExpiryDate(driverProfile != null ? driverProfile.getLicenseExpiryDate() : null)
                 .createdAt(user.getCreatedAt())

@@ -26,6 +26,7 @@ import com.carrental.auth.repository.PasswordResetTokenRepository;
 import com.carrental.auth.repository.UserRepository;
 import com.carrental.common.exception.BadRequestException;
 import com.carrental.common.exception.ResourceNotFoundException;
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.customer.dto.request.CustomerSignupRequest;
 import com.carrental.driver.entity.DriverProfile;
 import com.carrental.driver.enums.DriverStatus;
@@ -129,8 +130,9 @@ public class AuthServiceImpl implements AuthService {
                     .user(savedUser)
                     .drivingLicenseNumber(request.getDrivingLicenseNumber())
                     .licenseExpiryDate(request.getLicenseExpiryDate())
-                    .willingToDrive(true)
-                    .status(DriverStatus.PENDING)
+                    .approvalStatus(ApprovalDecision.PENDING)
+                    .status(DriverStatus.INACTIVE)
+                    .inactiveReason("Pending Super Admin approval")
                     .build();
             driverProfileRepository.save(driverProfile);
         }
@@ -203,7 +205,7 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userDetails.getId()));
 
-        boolean isAdmin = (user.getRoles() != null && (user.getRoles().contains(Role.ADMIN) || user.getRoles().contains(Role.ROLE_ADMIN)))
+        boolean isAdmin = (user.getRoles() != null && user.getRoles().contains(Role.ADMIN))
                 || Role.ADMIN.equals(user.getRole());
 
         if (!isAdmin) {
@@ -241,14 +243,8 @@ public class AuthServiceImpl implements AuthService {
                 .map(refreshTokenService::verifyExpiration)
                 .map(RefreshToken::getUser)
                 .map(user -> {
-                    String roleName = user.getRole() != null ? user.getRole().name().replace("ROLE_", "") : "CUSTOMER";
-                    String accessToken = jwtTokenProvider.generateAccessToken(
-                            user.getId(),
-                            user.getEmail(),
-                            user.getFirstName(),
-                            user.getLastName(),
-                            roleName
-                    );
+                    UserDetailsImpl userDetails = UserDetailsImpl.build(user);
+                    String accessToken = jwtTokenProvider.generateAccessToken(userDetails);
                     return TokenRefreshResponse.builder()
                             .accessToken(accessToken)
                             .refreshToken(requestRefreshToken)

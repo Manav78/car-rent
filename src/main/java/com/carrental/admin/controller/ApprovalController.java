@@ -39,13 +39,13 @@ public class ApprovalController {
     }
 
     @PatchMapping("/vehicles/{vehicleId}")
-    public ResponseEntity<ApiResponse<Void>> decideVehicleApproval(
+    public ResponseEntity<ApiResponse<AdminVehicleDetailResponse>> decideVehicleApproval(
             @PathVariable Long vehicleId,
             @Valid @RequestBody ApprovalDecisionRequest request,
             @AuthenticationPrincipal UserDetailsImpl userPrincipal
     ) {
-        approvalService.decideVehicleApproval(vehicleId, request, userPrincipal);
-        return ResponseEntity.ok(ApiResponse.ok("Vehicle approval decision recorded successfully", null));
+        AdminVehicleDetailResponse response = approvalService.decideVehicleApproval(vehicleId, request, userPrincipal);
+        return ResponseEntity.ok(ApiResponse.ok("Vehicle approval decision recorded successfully", response));
     }
 
     @GetMapping("/drivers/pending")
@@ -63,13 +63,13 @@ public class ApprovalController {
     }
 
     @PatchMapping("/drivers/{driverId}")
-    public ResponseEntity<ApiResponse<Void>> decideDriverApproval(
+    public ResponseEntity<ApiResponse<AdminDriverDetailResponse>> decideDriverApproval(
             @PathVariable Long driverId,
             @Valid @RequestBody ApprovalDecisionRequest request,
             @AuthenticationPrincipal UserDetailsImpl userPrincipal
     ) {
-        approvalService.decideDriverApproval(driverId, request, userPrincipal);
-        return ResponseEntity.ok(ApiResponse.ok("Driver approval decision recorded successfully", null));
+        AdminDriverDetailResponse response = approvalService.decideDriverApproval(driverId, request, userPrincipal);
+        return ResponseEntity.ok(ApiResponse.ok("Driver approval decision recorded successfully", response));
     }
 
     @GetMapping("/owner-drivers/pending")
@@ -85,13 +85,13 @@ public class ApprovalController {
     }
 
     @PatchMapping("/owner-drivers/{id}")
-    public ResponseEntity<ApiResponse<Void>> decideOwnerDriverApproval(
+    public ResponseEntity<ApiResponse<AdminOwnerDriverDetailResponse>> decideOwnerDriverApproval(
             @PathVariable Long id,
             @Valid @RequestBody ApprovalDecisionRequest request,
             @AuthenticationPrincipal UserDetailsImpl principal
     ) {
-        approvalService.decideOwnerDriverApproval(id, request, principal);
-        return ResponseEntity.ok(ApiResponse.ok("Owner-driver approval decision recorded successfully", null));
+        AdminOwnerDriverDetailResponse response = approvalService.decideOwnerDriverApproval(id, request, principal);
+        return ResponseEntity.ok(ApiResponse.ok("Owner-driver approval decision recorded successfully", response));
     }
 }
 

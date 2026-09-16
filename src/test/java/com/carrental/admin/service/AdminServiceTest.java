@@ -3,6 +3,7 @@ package com.carrental.admin.service;
 import com.carrental.admin.service.impl.AdminServiceImpl;
 
 import com.carrental.admin.dto.response.AdminDashboardResponse;
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.admin.dto.response.AdminDashboardStatsResponse;
 import com.carrental.admin.dto.response.AdminProfileResponse;
 import com.carrental.admin.dto.request.AdminUserStatusUpdateRequest;
@@ -94,7 +95,7 @@ class AdminServiceTest {
                 .lastName("User")
                 .email("admin@test.com")
                 .phoneNumber("1234567890")
-                .role(Role.ROLE_ADMIN)
+                .role(Role.ADMIN)
                 .enabled(true)
                 .accountNonLocked(true)
                 .createdAt(LocalDateTime.now())
@@ -137,9 +138,9 @@ class AdminServiceTest {
         when(customerProfileRepository.count()).thenReturn(20L);
         when(driverProfileRepository.count()).thenReturn(8L);
         when(vehicleRepository.count()).thenReturn(15L);
-        when(vehicleRepository.countByStatus(VehicleStatus.PENDING)).thenReturn(2L);
-        when(driverProfileRepository.countByStatusAndWillingToDrive(DriverStatus.PENDING, false)).thenReturn(1L);
-        when(driverProfileRepository.countByStatusAndWillingToDrive(DriverStatus.PENDING, true)).thenReturn(1L);
+        when(vehicleRepository.countByApprovalStatus(ApprovalDecision.PENDING)).thenReturn(2L);
+        when(driverProfileRepository.countPendingDrivers(ApprovalDecision.PENDING)).thenReturn(1L);
+        when(driverProfileRepository.countPendingOwnerDrivers(ApprovalDecision.PENDING)).thenReturn(1L);
         when(vehicleRepository.countByStatusIn(any())).thenReturn(10L);
         when(userRepository.countByDeletedAtIsNotNull()).thenReturn(3L);
 
@@ -182,7 +183,8 @@ class AdminServiceTest {
                 .id(20L)
                 .user(adminUser)
                 .drivingLicenseNumber("DL-12345")
-                .status(DriverStatus.AVAILABLE)
+                .status(DriverStatus.ACTIVE)
+                .approvalStatus(ApprovalDecision.APPROVED)
                 .createdAt(LocalDateTime.now())
                 .build();
         Page<DriverProfile> page = new PageImpl<>(List.of(driverProfile), pageable, 1);
@@ -290,16 +292,17 @@ class AdminServiceTest {
         DriverProfile driverProfile = DriverProfile.builder()
                 .id(20L)
                 .user(adminUser)
-                .status(DriverStatus.PENDING)
+                .status(DriverStatus.INACTIVE)
+                .approvalStatus(ApprovalDecision.APPROVED)
                 .build();
 
         when(driverProfileRepository.findById(20L)).thenReturn(Optional.of(driverProfile));
         when(driverProfileRepository.save(driverProfile)).thenReturn(driverProfile);
 
-        DriverResponse response = adminService.updateDriverStatus(20L, DriverStatus.APPROVED);
+        DriverResponse response = adminService.updateDriverStatus(20L, DriverStatus.ACTIVE);
 
         assertThat(response).isNotNull();
-        assertThat(driverProfile.getStatus()).isEqualTo(DriverStatus.APPROVED);
+        assertThat(driverProfile.getStatus()).isEqualTo(DriverStatus.ACTIVE);
         verify(driverProfileRepository).save(driverProfile);
     }
 
@@ -310,7 +313,8 @@ class AdminServiceTest {
                 .id(30L)
                 .brand("Toyota")
                 .model("Camry")
-                .status(VehicleStatus.PENDING)
+                .status(VehicleStatus.INACTIVE)
+                .approvalStatus(ApprovalDecision.APPROVED)
                 .owner(adminUser)
                 .build();
 
@@ -321,6 +325,75 @@ class AdminServiceTest {
 
         assertThat(response).isNotNull();
         assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
+        verify(vehicleRepository).save(vehicle);
+    }
+
+    @Test
+    @DisplayName("updateOwnerStatus - reject owner with reason")
+    void testUpdateOwnerStatus_RejectWithReason() {
+        OwnerProfile ownerProfile = OwnerProfile.builder()
+                .id(10L)
+                .user(adminUser)
+                .status(OwnerStatus.PENDING)
+                .build();
+
+        when(ownerProfileRepository.findById(10L)).thenReturn(Optional.of(ownerProfile));
+        when(ownerProfileRepository.save(ownerProfile)).thenReturn(ownerProfile);
+
+        OwnerResponse response = adminService.updateOwnerStatus(10L, OwnerStatus.REJECTED, "Invalid business permit");
+
+        assertThat(response).isNotNull();
+        assertThat(ownerProfile.getStatus()).isEqualTo(OwnerStatus.REJECTED);
+        assertThat(ownerProfile.getRejectionReason()).isEqualTo("Invalid business permit");
+        assertThat(response.getStatus()).isEqualTo(OwnerStatus.REJECTED);
+        assertThat(response.getRejectionReason()).isEqualTo("Invalid business permit");
+        verify(ownerProfileRepository).save(ownerProfile);
+    }
+
+    @Test
+    @DisplayName("updateDriverStatus - inactive with reason sets rejectionReason")
+    void testUpdateDriverStatus_WithReason() {
+        DriverProfile driverProfile = DriverProfile.builder()
+                .id(20L)
+                .user(adminUser)
+                .status(DriverStatus.ACTIVE)
+                .approvalStatus(ApprovalDecision.APPROVED)
+                .build();
+
+        when(driverProfileRepository.findById(20L)).thenReturn(Optional.of(driverProfile));
+        when(driverProfileRepository.save(driverProfile)).thenReturn(driverProfile);
+
+        DriverResponse response = adminService.updateDriverStatus(20L, DriverStatus.INACTIVE, "Traffic violation");
+
+        assertThat(response).isNotNull();
+        assertThat(driverProfile.getStatus()).isEqualTo(DriverStatus.INACTIVE);
+        assertThat(driverProfile.getInactiveReason()).isEqualTo("Traffic violation");
+        assertThat(driverProfile.getRejectionReason()).isEqualTo("Traffic violation");
+        assertThat(response.getRejectionReason()).isEqualTo("Traffic violation");
+        verify(driverProfileRepository).save(driverProfile);
+    }
+
+    @Test
+    @DisplayName("updateVehicleStatus - with reason sets rejectionReason")
+    void testUpdateVehicleStatus_WithReason() {
+        Vehicle vehicle = Vehicle.builder()
+                .id(30L)
+                .brand("Toyota")
+                .model("Camry")
+                .status(VehicleStatus.AVAILABLE)
+                .approvalStatus(ApprovalDecision.APPROVED)
+                .owner(adminUser)
+                .build();
+
+        when(vehicleRepository.findById(30L)).thenReturn(Optional.of(vehicle));
+        when(vehicleRepository.save(vehicle)).thenReturn(vehicle);
+
+        VehicleResponse response = adminService.updateVehicleStatus(30L, VehicleStatus.INACTIVE, "Failed fitness inspection");
+
+        assertThat(response).isNotNull();
+        assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.INACTIVE);
+        assertThat(vehicle.getRejectionReason()).isEqualTo("Failed fitness inspection");
+        assertThat(response.getRejectionReason()).isEqualTo("Failed fitness inspection");
         verify(vehicleRepository).save(vehicle);
     }
 }

@@ -79,8 +79,8 @@ SELECT setval(pg_get_serial_sequence('owner_profiles', 'id'), COALESCE((SELECT M
 -- 5. Seed Driver Profiles (Independent driver model - added_by_owner_id is optional)
 INSERT INTO driver_profiles (id, user_id, added_by_owner_id, license_number, license_expiry_date, status, approval_status, approved_at, created_at, updated_at)
 VALUES 
-    (1, 5, 3, 'DL-MH-2020-0012345', '2028-12-31', 'AVAILABLE', 'APPROVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (2, 6, NULL, 'DL-MH-2021-0067890', '2029-06-30', 'AVAILABLE', 'APPROVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    (1, 5, 3, 'DL-MH-2020-0012345', '2028-12-31', 'ACTIVE', 'APPROVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (2, 6, NULL, 'DL-MH-2021-0067890', '2029-06-30', 'ACTIVE', 'APPROVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (user_id) DO NOTHING;
 
 SELECT setval(pg_get_serial_sequence('driver_profiles', 'id'), COALESCE((SELECT MAX(id) FROM driver_profiles), 1));
@@ -124,9 +124,9 @@ SELECT setval(pg_get_serial_sequence('owner_subscriptions', 'id'), COALESCE((SEL
 -- 10. Seed Vehicles
 INSERT INTO vehicles (id, owner_id, brand, model, "year", vehicle_number, vehicle_type, fuel_type, seating_capacity, has_ac, price_per_km, status, approval_status, location, approved_at, created_at, updated_at)
 VALUES 
-    (1, 3, 'Toyota', 'Innova Crysta', 2022, 'MH-01-AB-1234', 'SUV', 'DIESEL', 7, TRUE, 18, 'AVAILABLE', 'APPROVED', 'Mumbai Central', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (1, 3, 'Toyota', 'Innova Crysta', 2022, 'MH-01-AB-1234', 'SUV', 'DIESEL', 7, TRUE, 18, 'BOOKED', 'APPROVED', 'Mumbai Central', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     (2, 3, 'Hyundai', 'Creta', 2023, 'MH-01-CD-5678', 'SUV', 'PETROL', 5, TRUE, 14, 'AVAILABLE', 'APPROVED', 'Bandra, Mumbai', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (3, 4, 'Maruti Suzuki', 'Dzire', 2021, 'MH-12-EF-9012', 'SEDAN', 'CNG', 5, TRUE, 11, 'AVAILABLE', 'APPROVED', 'Shivaji Nagar, Pune', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    (3, 4, 'Maruti Suzuki', 'Dzire', 2021, 'MH-12-EF-9012', 'SEDAN', 'CNG', 5, TRUE, 11, 'BOOKED', 'APPROVED', 'Shivaji Nagar, Pune', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (vehicle_number) DO NOTHING;
 
 SELECT setval(pg_get_serial_sequence('vehicles', 'id'), COALESCE((SELECT MAX(id) FROM vehicles), 1));

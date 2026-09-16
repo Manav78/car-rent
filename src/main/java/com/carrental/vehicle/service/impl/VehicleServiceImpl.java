@@ -2,6 +2,7 @@ package com.carrental.vehicle.service.impl;
 
 import com.carrental.vehicle.service.VehicleService;
 
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.auth.entity.User;
 import com.carrental.auth.repository.UserRepository;
 import com.carrental.common.exception.BadRequestException;
@@ -48,7 +49,8 @@ public class VehicleServiceImpl implements VehicleService {
                 .seatingCapacity(request.getSeatingCapacity())
                 .vehicleType(request.getVehicleType())
                 .fuelType(request.getFuelType())
-                .status(request.getStatus() != null ? request.getStatus() : VehicleStatus.AVAILABLE)
+                .status(VehicleStatus.INACTIVE)
+                .approvalStatus(ApprovalDecision.PENDING)
                 .location(request.getLocation())
                 .imageUrls(request.getImageUrls() != null ? new ArrayList<>(request.getImageUrls()) : new ArrayList<>())
                 .description(request.getDescription())
@@ -109,7 +111,16 @@ public class VehicleServiceImpl implements VehicleService {
         vehicle.setSeatingCapacity(request.getSeatingCapacity());
         vehicle.setVehicleType(request.getVehicleType());
         vehicle.setFuelType(request.getFuelType());
-        if (request.getStatus() != null) vehicle.setStatus(request.getStatus());
+        if (request.getStatus() != null && vehicle.getApprovalStatus() == ApprovalDecision.APPROVED) {
+            if (vehicle.getStatus() == VehicleStatus.BOOKED || vehicle.getStatus() == VehicleStatus.ON_TRIP) {
+                throw new BadRequestException("Cannot change status of a vehicle that is currently " + vehicle.getStatus());
+            }
+            if (request.getStatus() == VehicleStatus.AVAILABLE || request.getStatus() == VehicleStatus.MAINTENANCE || request.getStatus() == VehicleStatus.INACTIVE) {
+                vehicle.setStatus(request.getStatus());
+            } else {
+                throw new BadRequestException("Invalid status transition for vehicle: " + request.getStatus());
+            }
+        }
         vehicle.setLocation(request.getLocation());
         if (request.getImageUrls() != null) {
             vehicle.setImageUrls(new ArrayList<>(request.getImageUrls()));
@@ -139,9 +150,6 @@ public class VehicleServiceImpl implements VehicleService {
     private VehicleResponse mapToResponse(Vehicle vehicle) {
         return VehicleResponse.builder()
                 .id(vehicle.getId())
-                .ownerId(vehicle.getOwner() != null ? vehicle.getOwner().getId() : null)
-                .ownerName(vehicle.getOwner() != null ? vehicle.getOwner().getFullName() : null)
-                .ownerEmail(vehicle.getOwner() != null ? vehicle.getOwner().getEmail() : null)
                 .brand(vehicle.getBrand())
                 .model(vehicle.getModel())
                 .year(vehicle.getYear())
@@ -151,6 +159,8 @@ public class VehicleServiceImpl implements VehicleService {
                 .vehicleType(vehicle.getVehicleType())
                 .fuelType(vehicle.getFuelType())
                 .status(vehicle.getStatus())
+                .approvalStatus(vehicle.getApprovalStatus())
+                .rejectionReason(vehicle.getRejectionReason())
                 .location(vehicle.getLocation())
                 .imageUrls(vehicle.getImageUrls() != null ? new ArrayList<>(vehicle.getImageUrls()) : new ArrayList<>())
                 .description(vehicle.getDescription())

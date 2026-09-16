@@ -73,9 +73,6 @@ public class Booking {
     @Column(name = "end_date_time")
     private LocalDateTime endDateTime;
 
-    @Column(name = "price_per_km", nullable = false)
-    private Integer pricePerKm;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
     private BookingStatus status = BookingStatus.PENDING;
@@ -101,7 +98,7 @@ public class Booking {
                    String pickupLocation, String dropoffLocation,
                    LocalDateTime startDateTime, LocalDate startDate,
                    LocalDateTime endDateTime, LocalDate endDate,
-                   Integer pricePerKm, BookingStatus status, BookingStatus bookingStatus,
+                   BookingStatus status,
                    String rejectionReason, String notes, LocalDateTime cancelledAt,
                    LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
@@ -116,8 +113,7 @@ public class Booking {
         this.dropoffLocation = dropoffLocation;
         this.startDateTime = startDateTime != null ? startDateTime : (startDate != null ? startDate.atStartOfDay() : null);
         this.endDateTime = endDateTime != null ? endDateTime : (endDate != null ? endDate.atTime(23, 59, 59) : null);
-        this.pricePerKm = pricePerKm;
-        this.status = status != null ? status : (bookingStatus != null ? bookingStatus : BookingStatus.PENDING);
+        this.status = status != null ? status : BookingStatus.PENDING;
         this.rejectionReason = rejectionReason;
         this.notes = notes;
         this.cancelledAt = cancelledAt;
@@ -157,14 +153,6 @@ public class Booking {
 
     public void setEndDate(LocalDate date) {
         this.endDateTime = date != null ? date.atTime(23, 59, 59) : null;
-    }
-
-    public BookingStatus getBookingStatus() {
-        return status;
-    }
-
-    public void setBookingStatus(BookingStatus bookingStatus) {
-        this.status = bookingStatus;
     }
 }
 

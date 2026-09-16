@@ -1,5 +1,6 @@
 package com.carrental.driver.entity;
 
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.auth.entity.User;
 import com.carrental.driver.enums.DriverStatus;
 import jakarta.persistence.Column;
@@ -51,31 +52,20 @@ public class DriverProfile {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
-    private DriverStatus status = DriverStatus.PENDING;
+    private DriverStatus status = DriverStatus.INACTIVE;
 
     @Column(name = "inactive_reason", columnDefinition = "TEXT")
     private String inactiveReason;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "approval_status", nullable = false, length = 30)
-    private String approvalStatus = "PENDING";
+    private ApprovalDecision approvalStatus = ApprovalDecision.PENDING;
 
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
 
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
-
-    @Column(name = "willing_to_drive")
-    private Boolean willingToDrive = true;
-
-    @Column(name = "years_of_experience")
-    private Integer yearsOfExperience = 0;
-
-    @Column(name = "rating")
-    private Double rating = 0.0;
-
-    @Column(name = "total_trips")
-    private Integer totalTrips = 0;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -87,24 +77,19 @@ public class DriverProfile {
     public DriverProfile(Long id, User user, User addedByOwner,
                          String licenseNumber, String drivingLicenseNumber,
                          LocalDate licenseExpiryDate, DriverStatus status,
-                         String inactiveReason, String approvalStatus, String rejectionReason,
-                         LocalDateTime approvedAt, Boolean willingToDrive,
-                         Integer yearsOfExperience, Double rating, Integer totalTrips,
+                         String inactiveReason, ApprovalDecision approvalStatus, String rejectionReason,
+                         LocalDateTime approvedAt,
                          LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.user = user;
         this.addedByOwner = addedByOwner;
         this.licenseNumber = licenseNumber != null ? licenseNumber : drivingLicenseNumber;
         this.licenseExpiryDate = licenseExpiryDate;
-        this.status = status != null ? status : DriverStatus.PENDING;
+        this.status = status != null ? status : DriverStatus.INACTIVE;
         this.inactiveReason = inactiveReason;
-        this.approvalStatus = approvalStatus != null ? approvalStatus : "PENDING";
+        this.approvalStatus = approvalStatus != null ? approvalStatus : ApprovalDecision.PENDING;
         this.rejectionReason = rejectionReason;
         this.approvedAt = approvedAt;
-        this.willingToDrive = willingToDrive != null ? willingToDrive : false;
-        this.yearsOfExperience = yearsOfExperience != null ? yearsOfExperience : 0;
-        this.rating = rating != null ? rating : 5.0;
-        this.totalTrips = totalTrips != null ? totalTrips : 0;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -114,22 +99,10 @@ public class DriverProfile {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
         if (this.status == null) {
-            this.status = DriverStatus.PENDING;
+            this.status = DriverStatus.INACTIVE;
         }
         if (this.approvalStatus == null) {
-            this.approvalStatus = "PENDING";
-        }
-        if (this.willingToDrive == null) {
-            this.willingToDrive = false;
-        }
-        if (this.yearsOfExperience == null) {
-            this.yearsOfExperience = 0;
-        }
-        if (this.rating == null) {
-            this.rating = 5.0;
-        }
-        if (this.totalTrips == null) {
-            this.totalTrips = 0;
+            this.approvalStatus = ApprovalDecision.PENDING;
         }
     }
 
@@ -145,6 +118,16 @@ public class DriverProfile {
 
     public void setDrivingLicenseNumber(String drivingLicenseNumber) {
         this.licenseNumber = drivingLicenseNumber;
+    }
+
+    public void setApprovalStatus(ApprovalDecision approvalStatus) {
+        this.approvalStatus = approvalStatus;
+    }
+
+    public void setApprovalStatus(String approvalStatus) {
+        if (approvalStatus != null) {
+            this.approvalStatus = ApprovalDecision.valueOf(approvalStatus.toUpperCase());
+        }
     }
 }
 

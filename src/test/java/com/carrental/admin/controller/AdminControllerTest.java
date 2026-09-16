@@ -166,15 +166,32 @@ class AdminControllerTest {
     }
 
     @Test
-    @DisplayName("updateDriverStatus - returns updated driver")
-    void testUpdateDriverStatus() {
-        DriverResponse response = DriverResponse.builder().id(6L).status(DriverStatus.APPROVED).build();
-        when(adminService.updateDriverStatus(6L, DriverStatus.APPROVED)).thenReturn(response);
+    @DisplayName("updateOwnerStatus - with reason returns rejection reason")
+    void testUpdateOwnerStatus_WithReason() {
+        OwnerResponse response = OwnerResponse.builder()
+                .id(5L)
+                .status(OwnerStatus.REJECTED)
+                .rejectionReason("Incomplete KYC")
+                .build();
+        when(adminService.updateOwnerStatus(5L, OwnerStatus.REJECTED, "Incomplete KYC")).thenReturn(response);
 
-        ResponseEntity<ApiResponse<DriverResponse>> result = adminController.updateDriverStatus(6L, DriverStatus.APPROVED);
+        ResponseEntity<ApiResponse<OwnerResponse>> result = adminController.updateOwnerStatus(5L, OwnerStatus.REJECTED, "Incomplete KYC");
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(result.getBody().getData().getStatus()).isEqualTo(DriverStatus.APPROVED);
+        assertThat(result.getBody().getData().getStatus()).isEqualTo(OwnerStatus.REJECTED);
+        assertThat(result.getBody().getData().getRejectionReason()).isEqualTo("Incomplete KYC");
+    }
+
+    @Test
+    @DisplayName("updateDriverStatus - returns updated driver")
+    void testUpdateDriverStatus() {
+        DriverResponse response = DriverResponse.builder().id(6L).status(DriverStatus.ACTIVE).build();
+        when(adminService.updateDriverStatus(6L, DriverStatus.ACTIVE)).thenReturn(response);
+
+        ResponseEntity<ApiResponse<DriverResponse>> result = adminController.updateDriverStatus(6L, DriverStatus.ACTIVE);
+
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody().getData().getStatus()).isEqualTo(DriverStatus.ACTIVE);
     }
 
     @Test

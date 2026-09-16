@@ -4,11 +4,13 @@ import com.carrental.admin.service.AdminService;
 
 import com.carrental.admin.dto.request.*;
 import com.carrental.admin.dto.response.*;
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.auth.dto.response.UserResponse;
 import com.carrental.auth.entity.User;
 import com.carrental.auth.enums.Role;
 import com.carrental.auth.mapper.AuthMapper;
 import com.carrental.auth.repository.UserRepository;
+import java.time.LocalDateTime;
 import com.carrental.booking.enums.BookingStatus;
 import com.carrental.booking.repository.BookingRepository;
 import com.carrental.common.exception.ResourceNotFoundException;
@@ -83,12 +85,12 @@ public class AdminServiceImpl implements AdminService {
         long totalDrivers = driverProfileRepository.count();
         long totalVehicles = vehicleRepository.count();
 
-        long pendingVehicleApprovals = vehicleRepository.countByStatus(VehicleStatus.PENDING);
-        long pendingDriverApprovals = driverProfileRepository.countByStatusAndWillingToDrive(DriverStatus.PENDING, false);
-        long pendingOwnerDriverApprovals = driverProfileRepository.countByStatusAndWillingToDrive(DriverStatus.PENDING, true);
+        long pendingVehicleApprovals = vehicleRepository.countByApprovalStatus(ApprovalDecision.PENDING);
+        long pendingDriverApprovals = driverProfileRepository.countPendingDrivers(ApprovalDecision.PENDING);
+        long pendingOwnerDriverApprovals = driverProfileRepository.countPendingOwnerDrivers(ApprovalDecision.PENDING);
         long totalPendingApprovals = pendingVehicleApprovals + pendingDriverApprovals + pendingOwnerDriverApprovals;
 
-        long activeVehicles = vehicleRepository.countByStatusIn(List.of(VehicleStatus.AVAILABLE, VehicleStatus.BOOKED, VehicleStatus.APPROVED));
+        long activeVehicles = vehicleRepository.countByStatusIn(List.of(VehicleStatus.AVAILABLE, VehicleStatus.BOOKED, VehicleStatus.ON_TRIP));
         long inactiveVehicles = vehicleRepository.countByStatusIn(List.of(VehicleStatus.INACTIVE, VehicleStatus.MAINTENANCE));
         long deletedAccounts = userRepository.countByDeletedAtIsNotNull();
 
@@ -140,8 +142,8 @@ public class AdminServiceImpl implements AdminService {
                         driver.getUser().getPhoneNumber(),
                         driver.getDrivingLicenseNumber(),
                         driver.getLicenseExpiryDate(),
-                        driver.getStatus() != null ? driver.getStatus().name() : "PENDING",
-                        (driver.getStatus() == DriverStatus.AVAILABLE || driver.getStatus() == DriverStatus.ON_TRIP) ? "ACTIVE" : "INACTIVE",
+                        driver.getApprovalStatus() != null ? driver.getApprovalStatus().name() : "PENDING",
+                        driver.getStatus() != null ? driver.getStatus().name() : "INACTIVE",
                         driver.getUser().getFullName(),
                         driver.getUser().getEmail(),
                         driver.getCreatedAt()
@@ -228,14 +230,26 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional
     public OwnerResponse updateOwnerStatus(Long ownerId, OwnerStatus status) {
+        return updateOwnerStatus(ownerId, status, null);
+    }
+
+    @Override
+    @Transactional
+    public OwnerResponse updateOwnerStatus(Long ownerId, OwnerStatus status, String reason) {
         OwnerProfile owner = ownerProfileRepository.findById(ownerId)
                 .orElseThrow(() -> new ResourceNotFoundException("OwnerProfile", "id", ownerId));
 
         owner.setStatus(status);
+        if (status == OwnerStatus.REJECTED) {
+            owner.setRejectionReason(reason);
+        } else if (status == OwnerStatus.APPROVED) {
+            owner.setRejectionReason(null);
+            owner.setApprovedAt(java.time.LocalDateTime.now());
+        }
         OwnerProfile saved = ownerProfileRepository.save(owner);
         User user = saved.getUser();
 
-        log.info("Admin updated owner status to {} for owner id: {}", status, ownerId);
+        log.info("Admin updated owner status to {} (reason: {}) for owner id: {}", status, reason, ownerId);
         return OwnerResponse.builder()
                 .id(saved.getId())
                 .userId(user != null ? user.getId() : null)
@@ -245,6 +259,7 @@ public class AdminServiceImpl implements AdminService {
                 .phoneNumber(user != null ? user.getPhoneNumber() : null)
                 .role(user != null ? user.getRole() : null)
                 .status(saved.getStatus())
+                .rejectionReason(saved.getRejectionReason())
                 .createdAt(user != null ? user.getCreatedAt() : null)
                 .build();
     }
@@ -252,10 +267,23 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional
     public DriverResponse updateDriverStatus(Long driverId, DriverStatus status) {
+        return updateDriverStatus(driverId, status, null);
+    }
+
+    @Override
+    @Transactional
+    public DriverResponse updateDriverStatus(Long driverId, DriverStatus status, String reason) {
         DriverProfile driver = driverProfileRepository.findById(driverId)
                 .orElseThrow(() -> new ResourceNotFoundException("DriverProfile", "id", driverId));
 
         driver.setStatus(status);
+        if (status == DriverStatus.ACTIVE || status == DriverStatus.ON_TRIP) {
+            driver.setInactiveReason(null);
+            driver.setRejectionReason(null);
+        } else if (reason != null && !reason.isBlank()) {
+            driver.setInactiveReason(reason);
+            driver.setRejectionReason(reason);
+        }
         DriverProfile saved = driverProfileRepository.save(driver);
         User user = saved.getUser();
 
@@ -270,8 +298,10 @@ public class AdminServiceImpl implements AdminService {
                 .role(user != null ? user.getRole() : null)
                 .drivingLicenseNumber(saved.getDrivingLicenseNumber())
                 .licenseExpiryDate(saved.getLicenseExpiryDate())
-                .willingToDrive(saved.getWillingToDrive())
                 .status(saved.getStatus())
+                .approvalStatus(saved.getApprovalStatus())
+                .inactiveReason(saved.getInactiveReason())
+                .rejectionReason(saved.getRejectionReason() != null ? saved.getRejectionReason() : saved.getInactiveReason())
                 .createdAt(user != null ? user.getCreatedAt() : null)
                 .build();
     }
@@ -279,18 +309,24 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional
     public VehicleResponse updateVehicleStatus(Long vehicleId, VehicleStatus status) {
+        return updateVehicleStatus(vehicleId, status, null);
+    }
+
+    @Override
+    @Transactional
+    public VehicleResponse updateVehicleStatus(Long vehicleId, VehicleStatus status, String reason) {
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle", "id", vehicleId));
 
         vehicle.setStatus(status);
+        if (reason != null && !reason.isBlank()) {
+            vehicle.setRejectionReason(reason);
+        }
         Vehicle saved = vehicleRepository.save(vehicle);
 
         log.info("Admin updated vehicle status to {} for vehicle id: {}", status, vehicleId);
         return VehicleResponse.builder()
                 .id(saved.getId())
-                .ownerId(saved.getOwner() != null ? saved.getOwner().getId() : null)
-                .ownerName(saved.getOwner() != null ? saved.getOwner().getFullName() : null)
-                .ownerEmail(saved.getOwner() != null ? saved.getOwner().getEmail() : null)
                 .brand(saved.getBrand())
                 .model(saved.getModel())
                 .year(saved.getYear())
@@ -300,6 +336,8 @@ public class AdminServiceImpl implements AdminService {
                 .vehicleType(saved.getVehicleType())
                 .fuelType(saved.getFuelType())
                 .status(saved.getStatus())
+                .approvalStatus(saved.getApprovalStatus())
+                .rejectionReason(saved.getRejectionReason())
                 .location(saved.getLocation())
                 .description(saved.getDescription())
                 .createdAt(saved.getCreatedAt())

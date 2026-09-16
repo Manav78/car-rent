@@ -1,5 +1,6 @@
 package com.carrental;
 
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.auth.entity.EmailVerificationToken;
 import com.carrental.auth.entity.PasswordResetToken;
 import com.carrental.auth.entity.RefreshToken;
@@ -130,7 +131,7 @@ class V2SchemaEntitiesTest {
                 .email("johndoe@test.com")
                 .mobile("9876543210")
                 .password("Password@123")
-                .role(Role.ROLE_CUSTOMER)
+                .role(Role.CUSTOMER)
                 .emailVerified(true)
                 .isActive(true)
                 .build();
@@ -190,7 +191,7 @@ class V2SchemaEntitiesTest {
                 .email("owner.smith@test.com")
                 .mobile("9123456780")
                 .password("Password@123")
-                .role(Role.ROLE_OWNER)
+                .role(Role.OWNER)
                 .emailVerified(true)
                 .isActive(true)
                 .build();
@@ -241,7 +242,7 @@ class V2SchemaEntitiesTest {
                 .email("fleet@test.com")
                 .mobile("9988776655")
                 .password("Password@123")
-                .role(Role.ROLE_OWNER)
+                .role(Role.OWNER)
                 .build();
         ownerUser = userRepository.save(ownerUser);
 
@@ -250,7 +251,7 @@ class V2SchemaEntitiesTest {
                 .email("driver1@test.com")
                 .mobile("9876501234")
                 .password("Password@123")
-                .role(Role.ROLE_DRIVER)
+                .role(Role.DRIVER)
                 .build();
         driverUser = userRepository.save(driverUser);
 
@@ -259,8 +260,8 @@ class V2SchemaEntitiesTest {
                 .addedByOwner(ownerUser)
                 .licenseNumber("DL-1234567890")
                 .licenseExpiryDate(LocalDate.now().plusYears(5))
-                .status(DriverStatus.AVAILABLE)
-                .approvalStatus("APPROVED")
+                .status(DriverStatus.ACTIVE)
+                .approvalStatus(ApprovalDecision.APPROVED)
                 .approvedAt(LocalDateTime.now())
                 .build();
         driverProfile = driverProfileRepository.save(driverProfile);
@@ -312,7 +313,7 @@ class V2SchemaEntitiesTest {
                 .email("vowner@test.com")
                 .mobile("9112233445")
                 .password("Password@123")
-                .role(Role.ROLE_OWNER)
+                .role(Role.OWNER)
                 .build();
         owner = userRepository.save(owner);
 
@@ -328,7 +329,7 @@ class V2SchemaEntitiesTest {
                 .hasAc(true)
                 .pricePerKm(15)
                 .status(VehicleStatus.AVAILABLE)
-                .approvalStatus("APPROVED")
+                .approvalStatus(ApprovalDecision.APPROVED)
                 .location("Mumbai")
                 .build();
         vehicle = vehicleRepository.save(vehicle);
@@ -372,7 +373,7 @@ class V2SchemaEntitiesTest {
                 .email("cust@test.com")
                 .mobile("9776655443")
                 .password("Password@123")
-                .role(Role.ROLE_CUSTOMER)
+                .role(Role.CUSTOMER)
                 .build();
         customer = userRepository.save(customer);
 
@@ -381,7 +382,7 @@ class V2SchemaEntitiesTest {
                 .email("host@test.com")
                 .mobile("9665544332")
                 .password("Password@123")
-                .role(Role.ROLE_OWNER)
+                .role(Role.OWNER)
                 .build();
         owner = userRepository.save(owner);
 
@@ -410,15 +411,12 @@ class V2SchemaEntitiesTest {
                 .dropoffLocation("City Center")
                 .startDateTime(LocalDateTime.now().plusDays(1))
                 .endDateTime(LocalDateTime.now().plusDays(2))
-                .pricePerKm(18)
                 .status(BookingStatus.CONFIRMED)
                 .build();
         booking = bookingRepository.save(booking);
 
         assertNotNull(booking.getId());
-        assertEquals(18, booking.getPricePerKm());
         assertEquals(BookingStatus.CONFIRMED, booking.getStatus());
-        assertEquals(BookingStatus.CONFIRMED, booking.getBookingStatus());
 
         Trip trip = Trip.builder()
                 .booking(booking)
@@ -444,7 +442,7 @@ class V2SchemaEntitiesTest {
                 .email("notify@test.com")
                 .mobile("9554433221")
                 .password("Password@123")
-                .role(Role.ROLE_CUSTOMER)
+                .role(Role.CUSTOMER)
                 .build();
         user = userRepository.save(user);
 

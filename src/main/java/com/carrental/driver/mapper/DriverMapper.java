@@ -19,11 +19,7 @@ public interface DriverMapper {
     @Mapping(target = "role", source = "user.role")
     @Mapping(target = "drivingLicenseNumber", source = "profile.drivingLicenseNumber")
     @Mapping(target = "licenseExpiryDate", source = "profile.licenseExpiryDate")
-    @Mapping(target = "willingToDrive", source = "profile.willingToDrive")
-    @Mapping(target = "yearsOfExperience", source = "profile.yearsOfExperience")
     @Mapping(target = "status", source = "profile.status")
-    @Mapping(target = "rating", source = "profile.rating")
-    @Mapping(target = "totalTrips", source = "profile.totalTrips")
     @Mapping(target = "createdAt", source = "user.createdAt")
     DriverResponse toResponse(User user, DriverProfile profile);
 }
