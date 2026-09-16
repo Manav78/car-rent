@@ -70,7 +70,7 @@ public class BookingController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
+    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<BookingResponse>> updateBookingStatus(
             @AuthenticationPrincipal UserDetailsImpl userDetails,
             @PathVariable("id") Long id,

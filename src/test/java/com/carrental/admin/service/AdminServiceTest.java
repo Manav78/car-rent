@@ -3,6 +3,7 @@ package com.carrental.admin.service;
 import com.carrental.admin.service.impl.AdminServiceImpl;
 
 import com.carrental.admin.dto.response.AdminDashboardResponse;
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.admin.dto.response.AdminDashboardStatsResponse;
 import com.carrental.admin.dto.response.AdminProfileResponse;
 import com.carrental.admin.dto.request.AdminUserStatusUpdateRequest;
@@ -137,9 +138,9 @@ class AdminServiceTest {
         when(customerProfileRepository.count()).thenReturn(20L);
         when(driverProfileRepository.count()).thenReturn(8L);
         when(vehicleRepository.count()).thenReturn(15L);
-        when(vehicleRepository.countByStatus(VehicleStatus.PENDING)).thenReturn(2L);
-        when(driverProfileRepository.countPendingDrivers(DriverStatus.PENDING)).thenReturn(1L);
-        when(driverProfileRepository.countPendingOwnerDrivers(DriverStatus.PENDING)).thenReturn(1L);
+        when(vehicleRepository.countByApprovalStatus(ApprovalDecision.PENDING)).thenReturn(2L);
+        when(driverProfileRepository.countPendingDrivers(ApprovalDecision.PENDING)).thenReturn(1L);
+        when(driverProfileRepository.countPendingOwnerDrivers(ApprovalDecision.PENDING)).thenReturn(1L);
         when(vehicleRepository.countByStatusIn(any())).thenReturn(10L);
         when(userRepository.countByDeletedAtIsNotNull()).thenReturn(3L);
 
@@ -182,7 +183,8 @@ class AdminServiceTest {
                 .id(20L)
                 .user(adminUser)
                 .drivingLicenseNumber("DL-12345")
-                .status(DriverStatus.AVAILABLE)
+                .status(DriverStatus.ACTIVE)
+                .approvalStatus(ApprovalDecision.APPROVED)
                 .createdAt(LocalDateTime.now())
                 .build();
         Page<DriverProfile> page = new PageImpl<>(List.of(driverProfile), pageable, 1);
@@ -290,16 +292,17 @@ class AdminServiceTest {
         DriverProfile driverProfile = DriverProfile.builder()
                 .id(20L)
                 .user(adminUser)
-                .status(DriverStatus.PENDING)
+                .status(DriverStatus.INACTIVE)
+                .approvalStatus(ApprovalDecision.APPROVED)
                 .build();
 
         when(driverProfileRepository.findById(20L)).thenReturn(Optional.of(driverProfile));
         when(driverProfileRepository.save(driverProfile)).thenReturn(driverProfile);
 
-        DriverResponse response = adminService.updateDriverStatus(20L, DriverStatus.APPROVED);
+        DriverResponse response = adminService.updateDriverStatus(20L, DriverStatus.ACTIVE);
 
         assertThat(response).isNotNull();
-        assertThat(driverProfile.getStatus()).isEqualTo(DriverStatus.APPROVED);
+        assertThat(driverProfile.getStatus()).isEqualTo(DriverStatus.ACTIVE);
         verify(driverProfileRepository).save(driverProfile);
     }
 
@@ -310,7 +313,8 @@ class AdminServiceTest {
                 .id(30L)
                 .brand("Toyota")
                 .model("Camry")
-                .status(VehicleStatus.PENDING)
+                .status(VehicleStatus.INACTIVE)
+                .approvalStatus(ApprovalDecision.APPROVED)
                 .owner(adminUser)
                 .build();
 

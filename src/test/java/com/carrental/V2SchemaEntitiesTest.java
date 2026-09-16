@@ -1,5 +1,6 @@
 package com.carrental;
 
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.auth.entity.EmailVerificationToken;
 import com.carrental.auth.entity.PasswordResetToken;
 import com.carrental.auth.entity.RefreshToken;
@@ -259,8 +260,8 @@ class V2SchemaEntitiesTest {
                 .addedByOwner(ownerUser)
                 .licenseNumber("DL-1234567890")
                 .licenseExpiryDate(LocalDate.now().plusYears(5))
-                .status(DriverStatus.AVAILABLE)
-                .approvalStatus("APPROVED")
+                .status(DriverStatus.ACTIVE)
+                .approvalStatus(ApprovalDecision.APPROVED)
                 .approvedAt(LocalDateTime.now())
                 .build();
         driverProfile = driverProfileRepository.save(driverProfile);
@@ -328,7 +329,7 @@ class V2SchemaEntitiesTest {
                 .hasAc(true)
                 .pricePerKm(15)
                 .status(VehicleStatus.AVAILABLE)
-                .approvalStatus("APPROVED")
+                .approvalStatus(ApprovalDecision.APPROVED)
                 .location("Mumbai")
                 .build();
         vehicle = vehicleRepository.save(vehicle);

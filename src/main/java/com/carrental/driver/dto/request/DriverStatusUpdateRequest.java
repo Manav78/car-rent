@@ -15,6 +15,16 @@ public class DriverStatusUpdateRequest {
 
     @NotNull(message = "Driver status is required")
     private DriverStatus status;
+
+    private String inactiveReason;
+
+    public DriverStatusUpdateRequest(DriverStatus status) {
+        this.status = status;
+    }
+
+    public String getInactiveReason() {
+        return inactiveReason;
+    }
 }
 
 

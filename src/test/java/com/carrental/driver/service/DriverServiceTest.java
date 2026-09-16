@@ -2,9 +2,11 @@ package com.carrental.driver.service;
 
 import com.carrental.driver.service.impl.DriverServiceImpl;
 
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.auth.entity.User;
 import com.carrental.auth.enums.Role;
 import com.carrental.auth.repository.UserRepository;
+import com.carrental.common.exception.BadRequestException;
 import com.carrental.common.exception.ResourceNotFoundException;
 import com.carrental.driver.dto.request.DriverRequest;
 import com.carrental.driver.dto.response.DriverResponse;
@@ -63,7 +65,8 @@ class DriverServiceTest {
                 .user(sampleUser)
                 .drivingLicenseNumber("DL-12345678")
                 .licenseExpiryDate(LocalDate.now().plusYears(3))
-                .status(DriverStatus.AVAILABLE)
+                .status(DriverStatus.ACTIVE)
+                .approvalStatus(ApprovalDecision.APPROVED)
                 .build();
     }
 
@@ -77,7 +80,7 @@ class DriverServiceTest {
 
         assertNotNull(response);
         assertEquals("Dave", response.getFirstName());
-        assertEquals(DriverStatus.AVAILABLE, response.getStatus());
+        assertEquals(DriverStatus.ACTIVE, response.getStatus());
     }
 
     @Test
@@ -98,9 +101,41 @@ class DriverServiceTest {
     }
 
     @Test
+    @DisplayName("Should fail when updating status to INACTIVE without reason")
+    void testUpdateStatus_InactiveWithoutReason() {
+        DriverStatusUpdateRequest request = new DriverStatusUpdateRequest();
+        request.setStatus(DriverStatus.INACTIVE);
+
+        when(userRepository.findById(30L)).thenReturn(Optional.of(sampleUser));
+        when(driverProfileRepository.findByUserId(30L)).thenReturn(Optional.of(sampleProfile));
+
+        assertThrows(BadRequestException.class, () -> driverService.updateStatus(30L, request));
+    }
+
+    @Test
+    @DisplayName("Should successfully update status to INACTIVE with reason")
+    void testUpdateStatus_InactiveWithReason() {
+        DriverStatusUpdateRequest request = DriverStatusUpdateRequest.builder()
+                .status(DriverStatus.INACTIVE)
+                .inactiveReason("On medical leave")
+                .build();
+
+        when(userRepository.findById(30L)).thenReturn(Optional.of(sampleUser));
+        when(driverProfileRepository.findByUserId(30L)).thenReturn(Optional.of(sampleProfile));
+        when(driverProfileRepository.save(any(DriverProfile.class))).thenReturn(sampleProfile);
+
+        DriverResponse response = driverService.updateStatus(30L, request);
+
+        assertNotNull(response);
+        assertEquals(DriverStatus.INACTIVE, sampleProfile.getStatus());
+        assertEquals("On medical leave", sampleProfile.getInactiveReason());
+        verify(driverProfileRepository).save(sampleProfile);
+    }
+
+    @Test
     @DisplayName("Should list available drivers")
     void testGetAvailableDrivers() {
-        when(driverProfileRepository.findByStatus(DriverStatus.AVAILABLE)).thenReturn(List.of(sampleProfile));
+        when(driverProfileRepository.findByApprovalStatusAndStatus(ApprovalDecision.APPROVED, DriverStatus.ACTIVE)).thenReturn(List.of(sampleProfile));
 
         List<DriverResponse> available = driverService.getAvailableDrivers();
 

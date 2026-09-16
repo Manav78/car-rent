@@ -23,6 +23,7 @@ public class DriverRequest {
     private LocalDate licenseExpiryDate;
 
     private DriverStatus status;
+    private String inactiveReason;
 }
 
 

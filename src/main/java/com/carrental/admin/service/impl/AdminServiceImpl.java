@@ -4,6 +4,7 @@ import com.carrental.admin.service.AdminService;
 
 import com.carrental.admin.dto.request.*;
 import com.carrental.admin.dto.response.*;
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.auth.dto.response.UserResponse;
 import com.carrental.auth.entity.User;
 import com.carrental.auth.enums.Role;
@@ -84,12 +85,12 @@ public class AdminServiceImpl implements AdminService {
         long totalDrivers = driverProfileRepository.count();
         long totalVehicles = vehicleRepository.count();
 
-        long pendingVehicleApprovals = vehicleRepository.countByStatus(VehicleStatus.PENDING);
-        long pendingDriverApprovals = driverProfileRepository.countPendingDrivers(DriverStatus.PENDING);
-        long pendingOwnerDriverApprovals = driverProfileRepository.countPendingOwnerDrivers(DriverStatus.PENDING);
+        long pendingVehicleApprovals = vehicleRepository.countByApprovalStatus(ApprovalDecision.PENDING);
+        long pendingDriverApprovals = driverProfileRepository.countPendingDrivers(ApprovalDecision.PENDING);
+        long pendingOwnerDriverApprovals = driverProfileRepository.countPendingOwnerDrivers(ApprovalDecision.PENDING);
         long totalPendingApprovals = pendingVehicleApprovals + pendingDriverApprovals + pendingOwnerDriverApprovals;
 
-        long activeVehicles = vehicleRepository.countByStatusIn(List.of(VehicleStatus.AVAILABLE, VehicleStatus.BOOKED, VehicleStatus.APPROVED));
+        long activeVehicles = vehicleRepository.countByStatusIn(List.of(VehicleStatus.AVAILABLE, VehicleStatus.BOOKED, VehicleStatus.ON_TRIP));
         long inactiveVehicles = vehicleRepository.countByStatusIn(List.of(VehicleStatus.INACTIVE, VehicleStatus.MAINTENANCE));
         long deletedAccounts = userRepository.countByDeletedAtIsNotNull();
 
@@ -141,8 +142,8 @@ public class AdminServiceImpl implements AdminService {
                         driver.getUser().getPhoneNumber(),
                         driver.getDrivingLicenseNumber(),
                         driver.getLicenseExpiryDate(),
-                        driver.getStatus() != null ? driver.getStatus().name() : "PENDING",
-                        (driver.getStatus() == DriverStatus.AVAILABLE || driver.getStatus() == DriverStatus.ON_TRIP) ? "ACTIVE" : "INACTIVE",
+                        driver.getApprovalStatus() != null ? driver.getApprovalStatus().name() : "PENDING",
+                        driver.getStatus() != null ? driver.getStatus().name() : "INACTIVE",
                         driver.getUser().getFullName(),
                         driver.getUser().getEmail(),
                         driver.getCreatedAt()
@@ -257,6 +258,9 @@ public class AdminServiceImpl implements AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("DriverProfile", "id", driverId));
 
         driver.setStatus(status);
+        if (status == DriverStatus.ACTIVE || status == DriverStatus.ON_TRIP) {
+            driver.setInactiveReason(null);
+        }
         DriverProfile saved = driverProfileRepository.save(driver);
         User user = saved.getUser();
 
@@ -272,6 +276,8 @@ public class AdminServiceImpl implements AdminService {
                 .drivingLicenseNumber(saved.getDrivingLicenseNumber())
                 .licenseExpiryDate(saved.getLicenseExpiryDate())
                 .status(saved.getStatus())
+                .approvalStatus(saved.getApprovalStatus())
+                .inactiveReason(saved.getInactiveReason())
                 .createdAt(user != null ? user.getCreatedAt() : null)
                 .build();
     }
@@ -283,14 +289,6 @@ public class AdminServiceImpl implements AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle", "id", vehicleId));
 
         vehicle.setStatus(status);
-        if (status == VehicleStatus.APPROVED || status == VehicleStatus.AVAILABLE) {
-            vehicle.setApprovalStatus("APPROVED");
-            if (vehicle.getApprovedAt() == null) {
-                vehicle.setApprovedAt(LocalDateTime.now());
-            }
-        } else if (status == VehicleStatus.REJECTED) {
-            vehicle.setApprovalStatus("REJECTED");
-        }
         Vehicle saved = vehicleRepository.save(vehicle);
 
         log.info("Admin updated vehicle status to {} for vehicle id: {}", status, vehicleId);
@@ -305,6 +303,7 @@ public class AdminServiceImpl implements AdminService {
                 .vehicleType(saved.getVehicleType())
                 .fuelType(saved.getFuelType())
                 .status(saved.getStatus())
+                .approvalStatus(saved.getApprovalStatus())
                 .location(saved.getLocation())
                 .description(saved.getDescription())
                 .createdAt(saved.getCreatedAt())

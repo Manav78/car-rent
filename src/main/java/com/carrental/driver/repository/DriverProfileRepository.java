@@ -1,5 +1,6 @@
 package com.carrental.driver.repository;
 
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.driver.entity.DriverProfile;
 import com.carrental.driver.enums.DriverStatus;
 import org.springframework.data.domain.Page;
@@ -16,6 +17,7 @@ import java.util.Optional;
 public interface DriverProfileRepository extends JpaRepository<DriverProfile, Long> {
     Optional<DriverProfile> findByUserId(Long userId);
     List<DriverProfile> findByStatus(DriverStatus status);
+    List<DriverProfile> findByApprovalStatusAndStatus(ApprovalDecision approvalStatus, DriverStatus status);
     Optional<DriverProfile> findByLicenseNumber(String licenseNumber);
     List<DriverProfile> findByAddedByOwnerId(Long ownerId);
 
@@ -27,6 +29,10 @@ public interface DriverProfileRepository extends JpaRepository<DriverProfile, Lo
            countQuery = "SELECT count(dp) FROM DriverProfile dp JOIN dp.user u WHERE dp.status = :status AND com.carrental.auth.enums.Role.DRIVER MEMBER OF u.roles")
     Page<DriverProfile> findAllByStatusWithDetails(@Param("status") DriverStatus status, Pageable pageable);
 
+    @Query(value = "SELECT dp FROM DriverProfile dp JOIN FETCH dp.user u WHERE dp.approvalStatus = :approvalStatus AND com.carrental.auth.enums.Role.DRIVER MEMBER OF u.roles",
+           countQuery = "SELECT count(dp) FROM DriverProfile dp JOIN dp.user u WHERE dp.approvalStatus = :approvalStatus AND com.carrental.auth.enums.Role.DRIVER MEMBER OF u.roles")
+    Page<DriverProfile> findAllByApprovalStatusWithDetails(@Param("approvalStatus") ApprovalDecision approvalStatus, Pageable pageable);
+
     @Query("SELECT dp FROM DriverProfile dp JOIN FETCH dp.user WHERE dp.id = :id")
     Optional<DriverProfile> findByIdWithDetails(@Param("id") Long id);
 
@@ -34,15 +40,27 @@ public interface DriverProfileRepository extends JpaRepository<DriverProfile, Lo
            countQuery = "SELECT count(dp) FROM DriverProfile dp JOIN dp.user u WHERE dp.status = :status AND com.carrental.auth.enums.Role.OWNER MEMBER OF u.roles")
     Page<DriverProfile> findPendingOwnerDrivers(@Param("status") DriverStatus status, Pageable pageable);
 
+    @Query(value = "SELECT dp FROM DriverProfile dp JOIN FETCH dp.user u WHERE dp.approvalStatus = :approvalStatus AND com.carrental.auth.enums.Role.OWNER MEMBER OF u.roles",
+           countQuery = "SELECT count(dp) FROM DriverProfile dp JOIN dp.user u WHERE dp.approvalStatus = :approvalStatus AND com.carrental.auth.enums.Role.OWNER MEMBER OF u.roles")
+    Page<DriverProfile> findPendingOwnerDrivers(@Param("approvalStatus") ApprovalDecision approvalStatus, Pageable pageable);
+
     @Query("SELECT dp FROM DriverProfile dp JOIN FETCH dp.user u WHERE dp.id = :id AND com.carrental.auth.enums.Role.OWNER MEMBER OF u.roles")
     Optional<DriverProfile> findOwnerDriverById(@Param("id") Long id);
 
     long countByStatus(DriverStatus status);
 
+    long countByApprovalStatus(ApprovalDecision approvalStatus);
+
     @Query("SELECT count(dp) FROM DriverProfile dp JOIN dp.user u WHERE dp.status = :status AND com.carrental.auth.enums.Role.DRIVER MEMBER OF u.roles")
     long countPendingDrivers(@Param("status") DriverStatus status);
 
+    @Query("SELECT count(dp) FROM DriverProfile dp JOIN dp.user u WHERE dp.approvalStatus = :approvalStatus AND com.carrental.auth.enums.Role.DRIVER MEMBER OF u.roles")
+    long countPendingDrivers(@Param("approvalStatus") ApprovalDecision approvalStatus);
+
     @Query("SELECT count(dp) FROM DriverProfile dp JOIN dp.user u WHERE dp.status = :status AND com.carrental.auth.enums.Role.OWNER MEMBER OF u.roles")
     long countPendingOwnerDrivers(@Param("status") DriverStatus status);
+
+    @Query("SELECT count(dp) FROM DriverProfile dp JOIN dp.user u WHERE dp.approvalStatus = :approvalStatus AND com.carrental.auth.enums.Role.OWNER MEMBER OF u.roles")
+    long countPendingOwnerDrivers(@Param("approvalStatus") ApprovalDecision approvalStatus);
 }
 

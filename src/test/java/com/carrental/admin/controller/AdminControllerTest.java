@@ -168,13 +168,13 @@ class AdminControllerTest {
     @Test
     @DisplayName("updateDriverStatus - returns updated driver")
     void testUpdateDriverStatus() {
-        DriverResponse response = DriverResponse.builder().id(6L).status(DriverStatus.APPROVED).build();
-        when(adminService.updateDriverStatus(6L, DriverStatus.APPROVED)).thenReturn(response);
+        DriverResponse response = DriverResponse.builder().id(6L).status(DriverStatus.ACTIVE).build();
+        when(adminService.updateDriverStatus(6L, DriverStatus.ACTIVE)).thenReturn(response);
 
-        ResponseEntity<ApiResponse<DriverResponse>> result = adminController.updateDriverStatus(6L, DriverStatus.APPROVED);
+        ResponseEntity<ApiResponse<DriverResponse>> result = adminController.updateDriverStatus(6L, DriverStatus.ACTIVE);
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(result.getBody().getData().getStatus()).isEqualTo(DriverStatus.APPROVED);
+        assertThat(result.getBody().getData().getStatus()).isEqualTo(DriverStatus.ACTIVE);
     }
 
     @Test

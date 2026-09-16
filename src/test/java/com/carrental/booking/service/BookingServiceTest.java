@@ -2,6 +2,7 @@ package com.carrental.booking.service;
 
 import com.carrental.booking.service.impl.BookingServiceImpl;
 
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.auth.entity.User;
 import com.carrental.auth.enums.Role;
 import com.carrental.auth.repository.UserRepository;
@@ -13,6 +14,7 @@ import com.carrental.booking.enums.BookingStatus;
 import com.carrental.booking.enums.TripType;
 import com.carrental.booking.mapper.BookingMapper;
 import com.carrental.booking.repository.BookingRepository;
+import com.carrental.booking.repository.TripRepository;
 import com.carrental.common.exception.BadRequestException;
 import com.carrental.common.exception.ResourceNotFoundException;
 import com.carrental.driver.entity.DriverProfile;
@@ -64,6 +66,9 @@ class BookingServiceTest {
     private DriverProfileRepository driverProfileRepository;
 
     @Mock
+    private TripRepository tripRepository;
+
+    @Mock
     private NotificationService notificationService;
 
     @Mock
@@ -78,6 +83,7 @@ class BookingServiceTest {
     private User customer;
     private User owner;
     private User driver;
+    private DriverProfile driverProfile;
     private Vehicle vehicle;
     private Booking booking;
     private BookingRequest bookingRequest;
@@ -103,13 +109,22 @@ class BookingServiceTest {
                 .role(Role.DRIVER)
                 .build();
 
+        driverProfile = DriverProfile.builder()
+                .id(300L)
+                .user(driver)
+                .drivingLicenseNumber("DL-12345")
+                .licenseExpiryDate(LocalDate.now().plusYears(2))
+                .status(DriverStatus.ACTIVE)
+                .approvalStatus(ApprovalDecision.APPROVED)
+                .build();
+
         vehicle = Vehicle.builder()
                 .id(10L)
                 .brand("Honda")
                 .model("Civic")
                 .seatingCapacity(4)
                 .status(VehicleStatus.AVAILABLE)
-                .approvalStatus("APPROVED")
+                .approvalStatus(ApprovalDecision.APPROVED)
                 .owner(owner)
                 .build();
 
@@ -420,6 +435,7 @@ class BookingServiceTest {
 
         when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
         when(userRepository.findById(3L)).thenReturn(Optional.of(driver));
+        when(driverProfileRepository.findByUserId(3L)).thenReturn(Optional.of(driverProfile));
         when(bookingRepository.save(any(Booking.class))).thenReturn(confirmedBooking);
         when(bookingMapper.toResponse(confirmedBooking)).thenReturn(confirmedResponse);
 

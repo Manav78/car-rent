@@ -1,5 +1,6 @@
 package com.carrental.driver.entity;
 
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.auth.entity.User;
 import com.carrental.driver.enums.DriverStatus;
 import jakarta.persistence.Column;
@@ -51,13 +52,14 @@ public class DriverProfile {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
-    private DriverStatus status = DriverStatus.PENDING;
+    private DriverStatus status = DriverStatus.INACTIVE;
 
     @Column(name = "inactive_reason", columnDefinition = "TEXT")
     private String inactiveReason;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "approval_status", nullable = false, length = 30)
-    private String approvalStatus = "PENDING";
+    private ApprovalDecision approvalStatus = ApprovalDecision.PENDING;
 
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
@@ -75,7 +77,7 @@ public class DriverProfile {
     public DriverProfile(Long id, User user, User addedByOwner,
                          String licenseNumber, String drivingLicenseNumber,
                          LocalDate licenseExpiryDate, DriverStatus status,
-                         String inactiveReason, String approvalStatus, String rejectionReason,
+                         String inactiveReason, ApprovalDecision approvalStatus, String rejectionReason,
                          LocalDateTime approvedAt,
                          LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
@@ -83,9 +85,9 @@ public class DriverProfile {
         this.addedByOwner = addedByOwner;
         this.licenseNumber = licenseNumber != null ? licenseNumber : drivingLicenseNumber;
         this.licenseExpiryDate = licenseExpiryDate;
-        this.status = status != null ? status : DriverStatus.PENDING;
+        this.status = status != null ? status : DriverStatus.INACTIVE;
         this.inactiveReason = inactiveReason;
-        this.approvalStatus = approvalStatus != null ? approvalStatus : "PENDING";
+        this.approvalStatus = approvalStatus != null ? approvalStatus : ApprovalDecision.PENDING;
         this.rejectionReason = rejectionReason;
         this.approvedAt = approvedAt;
         this.createdAt = createdAt;
@@ -97,10 +99,10 @@ public class DriverProfile {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
         if (this.status == null) {
-            this.status = DriverStatus.PENDING;
+            this.status = DriverStatus.INACTIVE;
         }
         if (this.approvalStatus == null) {
-            this.approvalStatus = "PENDING";
+            this.approvalStatus = ApprovalDecision.PENDING;
         }
     }
 
@@ -116,6 +118,16 @@ public class DriverProfile {
 
     public void setDrivingLicenseNumber(String drivingLicenseNumber) {
         this.licenseNumber = drivingLicenseNumber;
+    }
+
+    public void setApprovalStatus(ApprovalDecision approvalStatus) {
+        this.approvalStatus = approvalStatus;
+    }
+
+    public void setApprovalStatus(String approvalStatus) {
+        if (approvalStatus != null) {
+            this.approvalStatus = ApprovalDecision.valueOf(approvalStatus.toUpperCase());
+        }
     }
 }
 

@@ -2,6 +2,7 @@ package com.carrental.owner.service.impl;
 
 import com.carrental.owner.service.OwnerService;
 
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.auth.entity.User;
 import com.carrental.auth.repository.UserRepository;
 import com.carrental.common.exception.ResourceNotFoundException;
@@ -70,7 +71,9 @@ public class OwnerServiceImpl implements OwnerService {
             if (driverProfile == null) {
                 driverProfile = DriverProfile.builder()
                         .user(user)
-                        .status(DriverStatus.PENDING)
+                        .approvalStatus(ApprovalDecision.PENDING)
+                        .status(DriverStatus.INACTIVE)
+                        .inactiveReason("Pending Super Admin approval")
                         .build();
             }
             if (request.getDrivingLicenseNumber() != null) {

@@ -26,6 +26,7 @@ import com.carrental.auth.repository.PasswordResetTokenRepository;
 import com.carrental.auth.repository.UserRepository;
 import com.carrental.common.exception.BadRequestException;
 import com.carrental.common.exception.ResourceNotFoundException;
+import com.carrental.admin.enums.ApprovalDecision;
 import com.carrental.customer.dto.request.CustomerSignupRequest;
 import com.carrental.driver.entity.DriverProfile;
 import com.carrental.driver.enums.DriverStatus;
@@ -129,7 +130,9 @@ public class AuthServiceImpl implements AuthService {
                     .user(savedUser)
                     .drivingLicenseNumber(request.getDrivingLicenseNumber())
                     .licenseExpiryDate(request.getLicenseExpiryDate())
-                    .status(DriverStatus.PENDING)
+                    .approvalStatus(ApprovalDecision.PENDING)
+                    .status(DriverStatus.INACTIVE)
+                    .inactiveReason("Pending Super Admin approval")
                     .build();
             driverProfileRepository.save(driverProfile);
         }
