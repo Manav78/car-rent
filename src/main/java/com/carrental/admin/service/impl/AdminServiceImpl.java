@@ -230,14 +230,26 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional
     public OwnerResponse updateOwnerStatus(Long ownerId, OwnerStatus status) {
+        return updateOwnerStatus(ownerId, status, null);
+    }
+
+    @Override
+    @Transactional
+    public OwnerResponse updateOwnerStatus(Long ownerId, OwnerStatus status, String reason) {
         OwnerProfile owner = ownerProfileRepository.findById(ownerId)
                 .orElseThrow(() -> new ResourceNotFoundException("OwnerProfile", "id", ownerId));
 
         owner.setStatus(status);
+        if (status == OwnerStatus.REJECTED) {
+            owner.setRejectionReason(reason);
+        } else if (status == OwnerStatus.APPROVED) {
+            owner.setRejectionReason(null);
+            owner.setApprovedAt(java.time.LocalDateTime.now());
+        }
         OwnerProfile saved = ownerProfileRepository.save(owner);
         User user = saved.getUser();
 
-        log.info("Admin updated owner status to {} for owner id: {}", status, ownerId);
+        log.info("Admin updated owner status to {} (reason: {}) for owner id: {}", status, reason, ownerId);
         return OwnerResponse.builder()
                 .id(saved.getId())
                 .userId(user != null ? user.getId() : null)
@@ -247,6 +259,7 @@ public class AdminServiceImpl implements AdminService {
                 .phoneNumber(user != null ? user.getPhoneNumber() : null)
                 .role(user != null ? user.getRole() : null)
                 .status(saved.getStatus())
+                .rejectionReason(saved.getRejectionReason())
                 .createdAt(user != null ? user.getCreatedAt() : null)
                 .build();
     }
@@ -254,12 +267,22 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional
     public DriverResponse updateDriverStatus(Long driverId, DriverStatus status) {
+        return updateDriverStatus(driverId, status, null);
+    }
+
+    @Override
+    @Transactional
+    public DriverResponse updateDriverStatus(Long driverId, DriverStatus status, String reason) {
         DriverProfile driver = driverProfileRepository.findById(driverId)
                 .orElseThrow(() -> new ResourceNotFoundException("DriverProfile", "id", driverId));
 
         driver.setStatus(status);
         if (status == DriverStatus.ACTIVE || status == DriverStatus.ON_TRIP) {
             driver.setInactiveReason(null);
+            driver.setRejectionReason(null);
+        } else if (reason != null && !reason.isBlank()) {
+            driver.setInactiveReason(reason);
+            driver.setRejectionReason(reason);
         }
         DriverProfile saved = driverProfileRepository.save(driver);
         User user = saved.getUser();
@@ -278,6 +301,7 @@ public class AdminServiceImpl implements AdminService {
                 .status(saved.getStatus())
                 .approvalStatus(saved.getApprovalStatus())
                 .inactiveReason(saved.getInactiveReason())
+                .rejectionReason(saved.getRejectionReason() != null ? saved.getRejectionReason() : saved.getInactiveReason())
                 .createdAt(user != null ? user.getCreatedAt() : null)
                 .build();
     }
@@ -285,10 +309,19 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional
     public VehicleResponse updateVehicleStatus(Long vehicleId, VehicleStatus status) {
+        return updateVehicleStatus(vehicleId, status, null);
+    }
+
+    @Override
+    @Transactional
+    public VehicleResponse updateVehicleStatus(Long vehicleId, VehicleStatus status, String reason) {
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle", "id", vehicleId));
 
         vehicle.setStatus(status);
+        if (reason != null && !reason.isBlank()) {
+            vehicle.setRejectionReason(reason);
+        }
         Vehicle saved = vehicleRepository.save(vehicle);
 
         log.info("Admin updated vehicle status to {} for vehicle id: {}", status, vehicleId);
@@ -304,6 +337,7 @@ public class AdminServiceImpl implements AdminService {
                 .fuelType(saved.getFuelType())
                 .status(saved.getStatus())
                 .approvalStatus(saved.getApprovalStatus())
+                .rejectionReason(saved.getRejectionReason())
                 .location(saved.getLocation())
                 .description(saved.getDescription())
                 .createdAt(saved.getCreatedAt())

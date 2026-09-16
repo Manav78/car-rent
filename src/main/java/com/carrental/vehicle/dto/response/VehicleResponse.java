@@ -31,6 +31,7 @@ public class VehicleResponse {
     private VehicleStatus status;
     private ApprovalDecision approvalStatus;
     private String location;
+    private String rejectionReason;
     private List<String> imageUrls;
     private String description;
     private LocalDateTime createdAt;

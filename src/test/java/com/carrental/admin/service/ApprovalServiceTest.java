@@ -191,10 +191,13 @@ class ApprovalServiceTest {
         when(vehicleRepository.findById(100L)).thenReturn(Optional.of(vehicle));
         when(userRepository.findById(1L)).thenReturn(Optional.of(adminUser));
 
-        approvalService.decideVehicleApproval(100L, request, adminPrincipal);
+        AdminVehicleDetailResponse response = approvalService.decideVehicleApproval(100L, request, adminPrincipal);
 
         assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.INACTIVE);
         assertThat(vehicle.getApprovalStatus()).isEqualTo(ApprovalDecision.REJECTED);
+        assertThat(vehicle.getRejectionReason()).isEqualTo("Invalid insurance documents");
+        assertThat(response.approvalStatus()).isEqualTo("REJECTED");
+        assertThat(response.rejectionReason()).isEqualTo("Invalid insurance documents");
         verify(vehicleRepository).save(vehicle);
         verify(approvalRepository).save(any(Approval.class));
     }
@@ -314,6 +317,44 @@ class ApprovalServiceTest {
 
         assertThat(driverProfile.getStatus()).isEqualTo(DriverStatus.ACTIVE);
         assertThat(driverProfile.getApprovalStatus()).isEqualTo(ApprovalDecision.APPROVED);
+        verify(driverProfileRepository).save(driverProfile);
+        verify(approvalRepository).save(any(Approval.class));
+    }
+
+    @Test
+    @DisplayName("decideDriverApproval - reject driver with reason")
+    void testDecideDriverApproval_Reject() {
+        ApprovalDecisionRequest request = new ApprovalDecisionRequest(ApprovalDecision.REJECTED, "Invalid commercial license");
+
+        when(driverProfileRepository.findByIdWithDetails(200L)).thenReturn(Optional.of(driverProfile));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(adminUser));
+
+        AdminDriverDetailResponse response = approvalService.decideDriverApproval(200L, request, adminPrincipal);
+
+        assertThat(driverProfile.getStatus()).isEqualTo(DriverStatus.INACTIVE);
+        assertThat(driverProfile.getApprovalStatus()).isEqualTo(ApprovalDecision.REJECTED);
+        assertThat(driverProfile.getRejectionReason()).isEqualTo("Invalid commercial license");
+        assertThat(response.approvalStatus()).isEqualTo("REJECTED");
+        assertThat(response.rejectionReason()).isEqualTo("Invalid commercial license");
+        verify(driverProfileRepository).save(driverProfile);
+        verify(approvalRepository).save(any(Approval.class));
+    }
+
+    @Test
+    @DisplayName("decideOwnerDriverApproval - reject owner-driver with reason")
+    void testDecideOwnerDriverApproval_Reject() {
+        ApprovalDecisionRequest request = new ApprovalDecisionRequest(ApprovalDecision.REJECTED, "Failed background check");
+
+        when(driverProfileRepository.findOwnerDriverById(200L)).thenReturn(Optional.of(driverProfile));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(adminUser));
+
+        AdminOwnerDriverDetailResponse response = approvalService.decideOwnerDriverApproval(200L, request, adminPrincipal);
+
+        assertThat(driverProfile.getStatus()).isEqualTo(DriverStatus.INACTIVE);
+        assertThat(driverProfile.getApprovalStatus()).isEqualTo(ApprovalDecision.REJECTED);
+        assertThat(driverProfile.getRejectionReason()).isEqualTo("Failed background check");
+        assertThat(response.approvalStatus()).isEqualTo("REJECTED");
+        assertThat(response.rejectionReason()).isEqualTo("Failed background check");
         verify(driverProfileRepository).save(driverProfile);
         verify(approvalRepository).save(any(Approval.class));
     }

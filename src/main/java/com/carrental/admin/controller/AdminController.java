@@ -88,28 +88,49 @@ public class AdminController {
     @PatchMapping("/owners/{id}/status")
     public ResponseEntity<ApiResponse<OwnerResponse>> updateOwnerStatus(
             @PathVariable("id") Long id,
-            @RequestParam("status") OwnerStatus status
+            @RequestParam("status") OwnerStatus status,
+            @RequestParam(value = "reason", required = false) String reason
     ) {
-        OwnerResponse response = adminService.updateOwnerStatus(id, status);
+        OwnerResponse response = reason != null
+                ? adminService.updateOwnerStatus(id, status, reason)
+                : adminService.updateOwnerStatus(id, status);
         return ResponseEntity.ok(ApiResponse.success("Owner status updated successfully", response));
     }
 
     @PatchMapping("/drivers/{id}/status")
     public ResponseEntity<ApiResponse<DriverResponse>> updateDriverStatus(
             @PathVariable("id") Long id,
-            @RequestParam("status") DriverStatus status
+            @RequestParam("status") DriverStatus status,
+            @RequestParam(value = "reason", required = false) String reason
     ) {
-        DriverResponse response = adminService.updateDriverStatus(id, status);
+        DriverResponse response = reason != null
+                ? adminService.updateDriverStatus(id, status, reason)
+                : adminService.updateDriverStatus(id, status);
         return ResponseEntity.ok(ApiResponse.success("Driver status updated successfully", response));
     }
 
     @PatchMapping("/vehicles/{id}/status")
     public ResponseEntity<ApiResponse<VehicleResponse>> updateVehicleStatus(
             @PathVariable("id") Long id,
-            @RequestParam("status") VehicleStatus status
+            @RequestParam("status") VehicleStatus status,
+            @RequestParam(value = "reason", required = false) String reason
     ) {
-        VehicleResponse response = adminService.updateVehicleStatus(id, status);
+        VehicleResponse response = reason != null
+                ? adminService.updateVehicleStatus(id, status, reason)
+                : adminService.updateVehicleStatus(id, status);
         return ResponseEntity.ok(ApiResponse.success("Vehicle status updated successfully", response));
+    }
+
+    public ResponseEntity<ApiResponse<OwnerResponse>> updateOwnerStatus(Long id, OwnerStatus status) {
+        return updateOwnerStatus(id, status, null);
+    }
+
+    public ResponseEntity<ApiResponse<DriverResponse>> updateDriverStatus(Long id, DriverStatus status) {
+        return updateDriverStatus(id, status, null);
+    }
+
+    public ResponseEntity<ApiResponse<VehicleResponse>> updateVehicleStatus(Long id, VehicleStatus status) {
+        return updateVehicleStatus(id, status, null);
     }
 }
 

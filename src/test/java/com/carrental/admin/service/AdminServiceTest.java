@@ -327,5 +327,74 @@ class AdminServiceTest {
         assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
         verify(vehicleRepository).save(vehicle);
     }
+
+    @Test
+    @DisplayName("updateOwnerStatus - reject owner with reason")
+    void testUpdateOwnerStatus_RejectWithReason() {
+        OwnerProfile ownerProfile = OwnerProfile.builder()
+                .id(10L)
+                .user(adminUser)
+                .status(OwnerStatus.PENDING)
+                .build();
+
+        when(ownerProfileRepository.findById(10L)).thenReturn(Optional.of(ownerProfile));
+        when(ownerProfileRepository.save(ownerProfile)).thenReturn(ownerProfile);
+
+        OwnerResponse response = adminService.updateOwnerStatus(10L, OwnerStatus.REJECTED, "Invalid business permit");
+
+        assertThat(response).isNotNull();
+        assertThat(ownerProfile.getStatus()).isEqualTo(OwnerStatus.REJECTED);
+        assertThat(ownerProfile.getRejectionReason()).isEqualTo("Invalid business permit");
+        assertThat(response.getStatus()).isEqualTo(OwnerStatus.REJECTED);
+        assertThat(response.getRejectionReason()).isEqualTo("Invalid business permit");
+        verify(ownerProfileRepository).save(ownerProfile);
+    }
+
+    @Test
+    @DisplayName("updateDriverStatus - inactive with reason sets rejectionReason")
+    void testUpdateDriverStatus_WithReason() {
+        DriverProfile driverProfile = DriverProfile.builder()
+                .id(20L)
+                .user(adminUser)
+                .status(DriverStatus.ACTIVE)
+                .approvalStatus(ApprovalDecision.APPROVED)
+                .build();
+
+        when(driverProfileRepository.findById(20L)).thenReturn(Optional.of(driverProfile));
+        when(driverProfileRepository.save(driverProfile)).thenReturn(driverProfile);
+
+        DriverResponse response = adminService.updateDriverStatus(20L, DriverStatus.INACTIVE, "Traffic violation");
+
+        assertThat(response).isNotNull();
+        assertThat(driverProfile.getStatus()).isEqualTo(DriverStatus.INACTIVE);
+        assertThat(driverProfile.getInactiveReason()).isEqualTo("Traffic violation");
+        assertThat(driverProfile.getRejectionReason()).isEqualTo("Traffic violation");
+        assertThat(response.getRejectionReason()).isEqualTo("Traffic violation");
+        verify(driverProfileRepository).save(driverProfile);
+    }
+
+    @Test
+    @DisplayName("updateVehicleStatus - with reason sets rejectionReason")
+    void testUpdateVehicleStatus_WithReason() {
+        Vehicle vehicle = Vehicle.builder()
+                .id(30L)
+                .brand("Toyota")
+                .model("Camry")
+                .status(VehicleStatus.AVAILABLE)
+                .approvalStatus(ApprovalDecision.APPROVED)
+                .owner(adminUser)
+                .build();
+
+        when(vehicleRepository.findById(30L)).thenReturn(Optional.of(vehicle));
+        when(vehicleRepository.save(vehicle)).thenReturn(vehicle);
+
+        VehicleResponse response = adminService.updateVehicleStatus(30L, VehicleStatus.INACTIVE, "Failed fitness inspection");
+
+        assertThat(response).isNotNull();
+        assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.INACTIVE);
+        assertThat(vehicle.getRejectionReason()).isEqualTo("Failed fitness inspection");
+        assertThat(response.getRejectionReason()).isEqualTo("Failed fitness inspection");
+        verify(vehicleRepository).save(vehicle);
+    }
 }
 

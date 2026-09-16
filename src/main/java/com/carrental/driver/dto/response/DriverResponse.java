@@ -28,6 +28,7 @@ public class DriverResponse {
     private DriverStatus status;
     private ApprovalDecision approvalStatus;
     private String inactiveReason;
+    private String rejectionReason;
     private LocalDateTime createdAt;
 }
 

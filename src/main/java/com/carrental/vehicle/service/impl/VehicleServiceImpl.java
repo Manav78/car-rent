@@ -160,6 +160,7 @@ public class VehicleServiceImpl implements VehicleService {
                 .fuelType(vehicle.getFuelType())
                 .status(vehicle.getStatus())
                 .approvalStatus(vehicle.getApprovalStatus())
+                .rejectionReason(vehicle.getRejectionReason())
                 .location(vehicle.getLocation())
                 .imageUrls(vehicle.getImageUrls() != null ? new ArrayList<>(vehicle.getImageUrls()) : new ArrayList<>())
                 .description(vehicle.getDescription())

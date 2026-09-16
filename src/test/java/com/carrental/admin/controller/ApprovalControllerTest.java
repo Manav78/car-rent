@@ -79,13 +79,17 @@ class ApprovalControllerTest {
     }
 
     @Test
-    @DisplayName("decideVehicleApproval - records decision")
+    @DisplayName("decideVehicleApproval - records decision and returns detail")
     void testDecideVehicleApproval() {
-        ApprovalDecisionRequest request = new ApprovalDecisionRequest(ApprovalDecision.APPROVED, null);
+        ApprovalDecisionRequest request = new ApprovalDecisionRequest(ApprovalDecision.REJECTED, "Invalid documents");
+        AdminVehicleDetailResponse detail = new AdminVehicleDetailResponse(1L, "Honda Civic", "XYZ-123", "Honda", "Civic", "SEDAN", 2022, 4, "PETROL", null, null, null, null, null, "REJECTED", "INACTIVE", "Invalid documents", null, null, null, null, null, null, null, null);
+        when(approvalService.decideVehicleApproval(1L, request, userPrincipal)).thenReturn(detail);
 
-        ResponseEntity<ApiResponse<Void>> result = approvalController.decideVehicleApproval(1L, request, userPrincipal);
+        ResponseEntity<ApiResponse<AdminVehicleDetailResponse>> result = approvalController.decideVehicleApproval(1L, request, userPrincipal);
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody().getData().rejectionReason()).isEqualTo("Invalid documents");
+        assertThat(result.getBody().getData().approvalStatus()).isEqualTo("REJECTED");
         verify(approvalService).decideVehicleApproval(1L, request, userPrincipal);
     }
 
@@ -113,13 +117,17 @@ class ApprovalControllerTest {
     }
 
     @Test
-    @DisplayName("decideDriverApproval - records decision")
+    @DisplayName("decideDriverApproval - records decision and returns detail")
     void testDecideDriverApproval() {
-        ApprovalDecisionRequest request = new ApprovalDecisionRequest(ApprovalDecision.APPROVED, null);
+        ApprovalDecisionRequest request = new ApprovalDecisionRequest(ApprovalDecision.REJECTED, "Expired license");
+        AdminDriverDetailResponse detail = new AdminDriverDetailResponse(2L, 10L, "Driver Name", "driver@test.com", "12345", null, "DL123", null, "REJECTED", "INACTIVE", "Expired license", null, null, null, null, null, null);
+        when(approvalService.decideDriverApproval(2L, request, userPrincipal)).thenReturn(detail);
 
-        ResponseEntity<ApiResponse<Void>> result = approvalController.decideDriverApproval(2L, request, userPrincipal);
+        ResponseEntity<ApiResponse<AdminDriverDetailResponse>> result = approvalController.decideDriverApproval(2L, request, userPrincipal);
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody().getData().rejectionReason()).isEqualTo("Expired license");
+        assertThat(result.getBody().getData().approvalStatus()).isEqualTo("REJECTED");
         verify(approvalService).decideDriverApproval(2L, request, userPrincipal);
     }
 
@@ -147,13 +155,17 @@ class ApprovalControllerTest {
     }
 
     @Test
-    @DisplayName("decideOwnerDriverApproval - records decision")
+    @DisplayName("decideOwnerDriverApproval - records decision and returns detail")
     void testDecideOwnerDriverApproval() {
-        ApprovalDecisionRequest request = new ApprovalDecisionRequest(ApprovalDecision.APPROVED, null);
+        ApprovalDecisionRequest request = new ApprovalDecisionRequest(ApprovalDecision.REJECTED, "Invalid license");
+        AdminOwnerDriverDetailResponse detail = new AdminOwnerDriverDetailResponse(3L, 10L, "Owner Driver", "od@test.com", "12345", "Fleet", "DL123", null, "REJECTED", "Invalid license", null, null, null);
+        when(approvalService.decideOwnerDriverApproval(3L, request, userPrincipal)).thenReturn(detail);
 
-        ResponseEntity<ApiResponse<Void>> result = approvalController.decideOwnerDriverApproval(3L, request, userPrincipal);
+        ResponseEntity<ApiResponse<AdminOwnerDriverDetailResponse>> result = approvalController.decideOwnerDriverApproval(3L, request, userPrincipal);
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody().getData().rejectionReason()).isEqualTo("Invalid license");
+        assertThat(result.getBody().getData().approvalStatus()).isEqualTo("REJECTED");
         verify(approvalService).decideOwnerDriverApproval(3L, request, userPrincipal);
     }
 }

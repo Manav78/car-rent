@@ -121,6 +121,7 @@ public class DriverServiceImpl implements DriverService {
                 .approvalStatus(profile != null ? profile.getApprovalStatus() : null)
                 .status(profile != null && profile.getStatus() != null ? profile.getStatus() : DriverStatus.INACTIVE)
                 .inactiveReason(profile != null ? profile.getInactiveReason() : null)
+                .rejectionReason(profile != null ? (profile.getRejectionReason() != null ? profile.getRejectionReason() : profile.getInactiveReason()) : null)
                 .createdAt(profile != null && profile.getCreatedAt() != null ? profile.getCreatedAt() : user.getCreatedAt())
                 .build();
     }

@@ -166,6 +166,23 @@ class AdminControllerTest {
     }
 
     @Test
+    @DisplayName("updateOwnerStatus - with reason returns rejection reason")
+    void testUpdateOwnerStatus_WithReason() {
+        OwnerResponse response = OwnerResponse.builder()
+                .id(5L)
+                .status(OwnerStatus.REJECTED)
+                .rejectionReason("Incomplete KYC")
+                .build();
+        when(adminService.updateOwnerStatus(5L, OwnerStatus.REJECTED, "Incomplete KYC")).thenReturn(response);
+
+        ResponseEntity<ApiResponse<OwnerResponse>> result = adminController.updateOwnerStatus(5L, OwnerStatus.REJECTED, "Incomplete KYC");
+
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody().getData().getStatus()).isEqualTo(OwnerStatus.REJECTED);
+        assertThat(result.getBody().getData().getRejectionReason()).isEqualTo("Incomplete KYC");
+    }
+
+    @Test
     @DisplayName("updateDriverStatus - returns updated driver")
     void testUpdateDriverStatus() {
         DriverResponse response = DriverResponse.builder().id(6L).status(DriverStatus.ACTIVE).build();

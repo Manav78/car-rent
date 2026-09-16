@@ -19,6 +19,7 @@ public interface OwnerMapper {
     @Mapping(target = "phoneNumber", source = "user.phoneNumber")
     @Mapping(target = "role", source = "user.role")
     @Mapping(target = "status", expression = "java(profile != null ? profile.getStatus() : com.carrental.owner.enums.OwnerStatus.PENDING)")
+    @Mapping(target = "rejectionReason", source = "profile.rejectionReason")
     @Mapping(target = "willingToDrive", expression = "java(driverProfile != null)")
     @Mapping(target = "drivingLicenseNumber", source = "driverProfile.drivingLicenseNumber")
     @Mapping(target = "licenseExpiryDate", source = "driverProfile.licenseExpiryDate")

@@ -102,6 +102,7 @@ public class OwnerServiceImpl implements OwnerService {
                 .phoneNumber(user.getPhoneNumber())
                 .role(user.getRole())
                 .status(profile != null ? profile.getStatus() : OwnerStatus.PENDING)
+                .rejectionReason(profile != null ? profile.getRejectionReason() : null)
                 .willingToDrive(driverProfile != null)
                 .drivingLicenseNumber(driverProfile != null ? driverProfile.getDrivingLicenseNumber() : null)
                 .licenseExpiryDate(driverProfile != null ? driverProfile.getLicenseExpiryDate() : null)
