@@ -1,9 +1,13 @@
 package com.carrental.security.jwt;
 
+import com.carrental.security.service.UserDetailsImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.util.ReflectionTestUtils;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -24,7 +28,13 @@ class JwtTokenProviderTest {
     @Test
     @DisplayName("Should generate valid token and extract claims")
     void testGenerateAndExtractClaims() {
-        String token = jwtTokenProvider.generateAccessToken(100L, "user@example.com", "John", "Doe", "ROLE_CUSTOMER");
+        UserDetailsImpl userDetails = UserDetailsImpl.builder()
+                .id(100L)
+                .email("user@example.com")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER")))
+                .build();
+
+        String token = jwtTokenProvider.generateAccessToken(userDetails);
 
         assertNotNull(token);
         assertTrue(jwtTokenProvider.validateToken(token));
@@ -46,7 +56,13 @@ class JwtTokenProviderTest {
     void testExpiredToken() {
         // Set expiration to negative value (already expired)
         ReflectionTestUtils.setField(jwtTokenProvider, "accessTokenExpirationMs", -1000L);
-        String token = jwtTokenProvider.generateAccessToken(101L, "expired@example.com", "Jane", "Doe", "ROLE_CUSTOMER");
+        UserDetailsImpl userDetails = UserDetailsImpl.builder()
+                .id(101L)
+                .email("expired@example.com")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER")))
+                .build();
+
+        String token = jwtTokenProvider.generateAccessToken(userDetails);
 
         assertFalse(jwtTokenProvider.validateToken(token));
         assertTrue(jwtTokenProvider.isTokenExpired(token));
@@ -55,14 +71,14 @@ class JwtTokenProviderTest {
     @Test
     @DisplayName("Should generate minimal token for multi-role UserDetailsImpl")
     void testGenerateAccessToken_UserDetailsImpl_MultiRole() {
-        com.carrental.security.service.UserDetailsImpl userDetails = com.carrental.security.service.UserDetailsImpl.builder()
+        UserDetailsImpl userDetails = UserDetailsImpl.builder()
                 .id(11L)
                 .email("amit.shinde@test.com")
                 .firstName("Amit")
                 .lastName("Shinde")
-                .authorities(java.util.List.of(
-                        new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_OWNER"),
-                        new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_DRIVER")
+                .authorities(List.of(
+                        new SimpleGrantedAuthority("ROLE_OWNER"),
+                        new SimpleGrantedAuthority("ROLE_DRIVER")
                 ))
                 .build();
 
@@ -78,8 +94,8 @@ class JwtTokenProviderTest {
         assertNull(claims.get("firstName"), "firstName claim should be omitted for minimal payload");
         assertNull(claims.get("lastName"), "lastName claim should be omitted for minimal payload");
 
-        java.util.List<String> roles = jwtTokenProvider.extractRoles(token);
-        assertEquals(java.util.List.of("OWNER", "DRIVER"), roles);
+        List<String> roles = jwtTokenProvider.extractRoles(token);
+        assertEquals(List.of("OWNER", "DRIVER"), roles);
     }
 }
 

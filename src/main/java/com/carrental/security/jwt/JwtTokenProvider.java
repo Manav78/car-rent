@@ -12,7 +12,6 @@ import io.jsonwebtoken.security.SecurityException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -42,11 +41,6 @@ public class JwtTokenProvider {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateAccessToken(Authentication authentication) {
-        UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
-        return generateAccessToken(userPrincipal);
-    }
-
     public String generateAccessToken(UserDetailsImpl userDetails) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("id", userDetails.getId());
@@ -57,15 +51,6 @@ public class JwtTokenProvider {
         claims.put("roles", roles);
 
         return createToken(claims, userDetails.getUsername(), accessTokenExpirationMs);
-    }
-
-    public String generateAccessToken(Long userId, String email, String firstName, String lastName, String role) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("id", userId);
-        String baseRole = role != null ? role.replace("ROLE_", "") : "CUSTOMER";
-        claims.put("roles", java.util.List.of(baseRole));
-
-        return createToken(claims, email, accessTokenExpirationMs);
     }
 
     @SuppressWarnings("unchecked")
