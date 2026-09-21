@@ -384,6 +384,10 @@ public class ApprovalServiceImpl implements ApprovalService {
             dp.setInactiveReason(null);
             dp.setRejectionReason(null);
             dp.setApprovedAt(java.time.LocalDateTime.now());
+            if (dp.getUser() != null) {
+                dp.getUser().addRole(Role.DRIVER);
+                userRepository.save(dp.getUser());
+            }
         } else {
             dp.setApprovalStatus(ApprovalDecision.REJECTED);
             dp.setStatus(DriverStatus.INACTIVE);

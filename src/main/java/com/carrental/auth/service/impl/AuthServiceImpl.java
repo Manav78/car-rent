@@ -290,6 +290,14 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    public void sendVerificationOtp(User user) {
+        if (user != null) {
+            createAndSendVerificationToken(user);
+        }
+    }
+
+    @Override
+    @Transactional
     public void resendVerificationOtp(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));

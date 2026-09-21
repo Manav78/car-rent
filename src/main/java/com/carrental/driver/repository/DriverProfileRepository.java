@@ -19,6 +19,7 @@ public interface DriverProfileRepository extends JpaRepository<DriverProfile, Lo
     List<DriverProfile> findByStatus(DriverStatus status);
     List<DriverProfile> findByApprovalStatusAndStatus(ApprovalDecision approvalStatus, DriverStatus status);
     Optional<DriverProfile> findByLicenseNumber(String licenseNumber);
+    boolean existsByLicenseNumber(String licenseNumber);
     List<DriverProfile> findByAddedByOwnerId(Long ownerId);
 
     @Query(value = "SELECT dp FROM DriverProfile dp JOIN FETCH dp.user",

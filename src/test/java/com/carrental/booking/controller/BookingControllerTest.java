@@ -138,10 +138,10 @@ class BookingControllerTest {
                 .status(BookingStatus.CANCELLED)
                 .build();
 
-        when(bookingService.updateBookingStatus(eq(100L), any(BookingStatusUpdateRequest.class)))
+        when(bookingService.updateBookingStatus(eq(userDetails), eq(100L), any(BookingStatusUpdateRequest.class)))
                 .thenReturn(cancelledResponse);
 
-        ResponseEntity<ApiResponse<BookingResponse>> result = bookingController.updateBookingStatus(100L, request);
+        ResponseEntity<ApiResponse<BookingResponse>> result = bookingController.updateBookingStatus(userDetails, 100L, request);
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(result.getBody()).isNotNull();

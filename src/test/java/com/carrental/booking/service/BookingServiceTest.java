@@ -22,6 +22,7 @@ import com.carrental.driver.enums.DriverStatus;
 import com.carrental.driver.repository.DriverProfileRepository;
 import com.carrental.notification.service.EmailService;
 import com.carrental.notification.service.NotificationService;
+import com.carrental.owner.repository.OwnerDriverUsageHistoryRepository;
 import com.carrental.security.service.UserDetailsImpl;
 import com.carrental.vehicle.entity.Vehicle;
 import com.carrental.vehicle.enums.VehicleStatus;
@@ -64,6 +65,9 @@ class BookingServiceTest {
 
     @Mock
     private DriverProfileRepository driverProfileRepository;
+
+    @Mock
+    private OwnerDriverUsageHistoryRepository ownerDriverUsageHistoryRepository;
 
     @Mock
     private TripRepository tripRepository;
@@ -499,9 +503,44 @@ class BookingServiceTest {
     }
 
     @Test
-    @DisplayName("cancel - customer is forbidden from cancelling")
-    void testCancel_CustomerForbidden() {
+    @DisplayName("cancel - customer can cancel pending booking")
+    void testCancel_CustomerCanCancelPendingBooking_Success() {
         UserDetailsImpl customerDetails = UserDetailsImpl.builder().id(1L).email("customer@test.com")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER"))).build();
+        Booking cancelledBooking = Booking.builder().id(100L).status(BookingStatus.CANCELLED).customer(customer).vehicle(vehicle).build();
+        BookingResponse cancelledResponse = BookingResponse.builder().id(100L).status(BookingStatus.CANCELLED).build();
+
+        when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
+        when(bookingRepository.save(any(Booking.class))).thenReturn(cancelledBooking);
+        when(bookingMapper.toResponse(cancelledBooking)).thenReturn(cancelledResponse);
+
+        BookingStatusUpdateRequest request = new BookingStatusUpdateRequest(BookingStatus.CANCELLED);
+        BookingResponse response = bookingService.updateBookingStatus(customerDetails, 100L, request);
+
+        assertThat(response.getStatus()).isEqualTo(BookingStatus.CANCELLED);
+        verify(notificationService).createNotification(eq(customer), eq("Booking Cancelled"), any(), any());
+        verify(notificationService).createNotification(eq(owner), eq("Booking Cancelled by Customer"), any(), any());
+    }
+
+    @Test
+    @DisplayName("cancel - customer cannot cancel confirmed booking")
+    void testCancel_CustomerCannotCancelConfirmedBooking() {
+        UserDetailsImpl customerDetails = UserDetailsImpl.builder().id(1L).email("customer@test.com")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER"))).build();
+        booking.setStatus(BookingStatus.CONFIRMED);
+        when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
+
+        BookingStatusUpdateRequest request = new BookingStatusUpdateRequest(BookingStatus.CANCELLED);
+
+        assertThatThrownBy(() -> bookingService.updateBookingStatus(customerDetails, 100L, request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Customers can only cancel bookings that are in PENDING status");
+    }
+
+    @Test
+    @DisplayName("cancel - customer cannot cancel another customer's booking")
+    void testCancel_CustomerCannotCancelOthersBooking() {
+        UserDetailsImpl customerDetails = UserDetailsImpl.builder().id(99L).email("other@test.com")
                 .authorities(List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER"))).build();
         when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
 
@@ -509,7 +548,113 @@ class BookingServiceTest {
 
         assertThatThrownBy(() -> bookingService.updateBookingStatus(customerDetails, 100L, request))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("Customers are not permitted to change booking status or cancel bookings");
+                .hasMessageContaining("You are not authorized to cancel this booking");
+    }
+
+    @Test
+    @DisplayName("cancel - customer cannot reject booking")
+    void testCancel_CustomerCannotRejectBooking() {
+        UserDetailsImpl customerDetails = UserDetailsImpl.builder().id(1L).email("customer@test.com")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER"))).build();
+        when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
+
+        BookingStatusUpdateRequest request = new BookingStatusUpdateRequest(BookingStatus.REJECTED);
+
+        assertThatThrownBy(() -> bookingService.updateBookingStatus(customerDetails, 100L, request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Customers are only permitted to cancel bookings");
+    }
+
+    @Test
+    @DisplayName("assignDriver - owner-driver can only be assigned to their own vehicles")
+    void testAssignDriver_OwnerAsDriver_OnlyAllowedForOwnVehicle() {
+        UserDetailsImpl ownerDetails = UserDetailsImpl.builder().id(2L).email("owner@test.com")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_OWNER"))).build();
+
+        User anotherOwnerDriver = User.builder()
+                .id(4L)
+                .email("anotherowner@test.com")
+                .roles(Set.of(Role.OWNER, Role.DRIVER))
+                .isActive(true)
+                .build();
+
+        when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
+        when(userRepository.findById(4L)).thenReturn(Optional.of(anotherOwnerDriver));
+
+        assertThatThrownBy(() -> bookingService.assignDriver(ownerDetails, 100L, 4L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("An owner-driver can only be assigned to their own vehicles");
+    }
+
+    @Test
+    @DisplayName("assignDriver - fails when driver approval status is PENDING (Test 5)")
+    void testAssignDriver_FailsWhenDriverApprovalStatusPending() {
+        UserDetailsImpl ownerDetails = UserDetailsImpl.builder().id(2L).email("owner@test.com")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_OWNER"))).build();
+
+        driverProfile.setApprovalStatus(ApprovalDecision.PENDING);
+        driverProfile.setStatus(DriverStatus.INACTIVE);
+
+        when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
+        when(userRepository.findById(3L)).thenReturn(Optional.of(driver));
+        when(driverProfileRepository.findByUserId(3L)).thenReturn(Optional.of(driverProfile));
+
+        assertThatThrownBy(() -> bookingService.assignDriver(ownerDetails, 100L, 3L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Driver has not been approved by admin");
+    }
+
+    @Test
+    @DisplayName("assignDriver - fails when driver status is INACTIVE (Test 5)")
+    void testAssignDriver_FailsWhenDriverStatusInactive() {
+        UserDetailsImpl ownerDetails = UserDetailsImpl.builder().id(2L).email("owner@test.com")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_OWNER"))).build();
+
+        driverProfile.setApprovalStatus(ApprovalDecision.APPROVED);
+        driverProfile.setStatus(DriverStatus.INACTIVE);
+
+        when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
+        when(userRepository.findById(3L)).thenReturn(Optional.of(driver));
+        when(driverProfileRepository.findByUserId(3L)).thenReturn(Optional.of(driverProfile));
+
+        assertThatThrownBy(() -> bookingService.assignDriver(ownerDetails, 100L, 3L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Driver is not available for assignment");
+    }
+
+    @Test
+    @DisplayName("assignDriver - succeeds when driver is APPROVED and ACTIVE (Test 6)")
+    void testAssignDriver_SucceedsWhenDriverApprovedAndActive() {
+        UserDetailsImpl ownerDetails = UserDetailsImpl.builder().id(2L).email("owner@test.com")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_OWNER"))).build();
+
+        driverProfile.setApprovalStatus(ApprovalDecision.APPROVED);
+        driverProfile.setStatus(DriverStatus.ACTIVE);
+
+        Booking confirmedBooking = Booking.builder()
+                .id(100L)
+                .bookingReference("BK-TEST001")
+                .customer(customer)
+                .vehicle(vehicle)
+                .driver(driver)
+                .status(BookingStatus.CONFIRMED)
+                .build();
+        BookingResponse confirmedResponse = BookingResponse.builder()
+                .id(100L)
+                .bookingReference("BK-TEST001")
+                .status(BookingStatus.CONFIRMED)
+                .build();
+
+        when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
+        when(userRepository.findById(3L)).thenReturn(Optional.of(driver));
+        when(driverProfileRepository.findByUserId(3L)).thenReturn(Optional.of(driverProfile));
+        when(bookingRepository.save(any(Booking.class))).thenReturn(confirmedBooking);
+        when(bookingMapper.toResponse(confirmedBooking)).thenReturn(confirmedResponse);
+
+        BookingResponse response = bookingService.assignDriver(ownerDetails, 100L, 3L);
+
+        assertThat(response.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+        verify(bookingRepository).save(booking);
     }
 
     @Test

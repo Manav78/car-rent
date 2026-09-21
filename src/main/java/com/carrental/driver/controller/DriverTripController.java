@@ -42,9 +42,4 @@ public class DriverTripController {
         BookingResponse response = bookingService.updateDriverTripStatus(userDetails, id, request);
         return ResponseEntity.ok(ApiResponse.success("Trip status updated", response));
     }
-
-    public ResponseEntity<ApiResponse<BookingResponse>> updateTripStatus(Long id, BookingStatusUpdateRequest request) {
-        BookingResponse response = bookingService.updateBookingStatus(id, request);
-        return ResponseEntity.ok(ApiResponse.success("Trip status updated", response));
-    }
 }

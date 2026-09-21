@@ -61,6 +61,15 @@ public class DriverController {
     }
 
     @GetMapping("/available")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<List<DriverResponse>>> getAvailableDrivers(@AuthenticationPrincipal UserDetailsImpl userDetails) {
+        Long ownerId = (userDetails != null && userDetails.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_OWNER")))
+                ? userDetails.getId()
+                : null;
+        List<DriverResponse> drivers = driverService.getAvailableDrivers(ownerId);
+        return ResponseEntity.ok(ApiResponse.success("Available drivers retrieved", drivers));
+    }
+
     public ResponseEntity<ApiResponse<List<DriverResponse>>> getAvailableDrivers() {
         List<DriverResponse> drivers = driverService.getAvailableDrivers();
         return ResponseEntity.ok(ApiResponse.success("Available drivers retrieved", drivers));

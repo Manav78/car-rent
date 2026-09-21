@@ -119,5 +119,21 @@ class DriverControllerTest {
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(result.getBody().getData()).hasSize(1);
     }
+
+    @Test
+    @DisplayName("getAvailableDrivers - with owner principal returns prioritized drivers")
+    void testGetAvailableDrivers_WithOwnerPrincipal() {
+        UserDetailsImpl ownerPrincipal = UserDetailsImpl.builder()
+                .id(2L)
+                .email("owner@test.com")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_OWNER")))
+                .build();
+        when(driverService.getAvailableDrivers(2L)).thenReturn(List.of(sampleResponse));
+
+        ResponseEntity<ApiResponse<List<DriverResponse>>> result = driverController.getAvailableDrivers(ownerPrincipal);
+
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody().getData()).hasSize(1);
+    }
 }
 

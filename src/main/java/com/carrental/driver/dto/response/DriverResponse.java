@@ -23,6 +23,7 @@ public class DriverResponse {
     private String email;
     private String phoneNumber;
     private Role role;
+    private Boolean emailVerified;
     private String drivingLicenseNumber;
     private LocalDate licenseExpiryDate;
     private DriverStatus status;

@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.carrental.booking.repository.BookingRepository;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -28,6 +30,7 @@ public class VehicleServiceImpl implements VehicleService {
 
     private final VehicleRepository vehicleRepository;
     private final UserRepository userRepository;
+    private final BookingRepository bookingRepository;
 
     @Override
     @Transactional
@@ -143,8 +146,15 @@ public class VehicleServiceImpl implements VehicleService {
             throw new BadRequestException("You do not have permission to delete this vehicle");
         }
 
-        vehicleRepository.delete(vehicle);
-        log.info("Deleted vehicle id: {}", vehicleId);
+        boolean hasBookings = bookingRepository.existsByVehicleId(vehicleId);
+        if (hasBookings) {
+            vehicle.setStatus(VehicleStatus.INACTIVE);
+            vehicleRepository.save(vehicle);
+            log.info("Vehicle id {} has associated booking history; marked as INACTIVE (soft-deleted)", vehicleId);
+        } else {
+            vehicleRepository.delete(vehicle);
+            log.info("Deleted vehicle id: {}", vehicleId);
+        }
     }
 
     private VehicleResponse mapToResponse(Vehicle vehicle) {

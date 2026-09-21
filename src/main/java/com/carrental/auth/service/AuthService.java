@@ -8,6 +8,7 @@ import com.carrental.auth.dto.response.AuthResponse;
 import com.carrental.auth.dto.response.TokenRefreshResponse;
 import com.carrental.auth.dto.response.UserResponse;
 import com.carrental.auth.dto.request.VerifyEmailRequest;
+import com.carrental.auth.entity.User;
 import com.carrental.customer.dto.request.CustomerSignupRequest;
 import com.carrental.owner.dto.request.OwnerSignupRequest;
 
@@ -24,6 +25,8 @@ public interface AuthService {
     TokenRefreshResponse refreshToken(RefreshTokenRequest request);
 
     void verifyEmail(VerifyEmailRequest request);
+
+    void sendVerificationOtp(User user);
 
     void resendVerificationOtp(String email);
 

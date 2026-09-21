@@ -13,6 +13,7 @@ import com.carrental.vehicle.entity.Vehicle;
 import com.carrental.vehicle.enums.FuelType;
 import com.carrental.vehicle.enums.VehicleStatus;
 import com.carrental.vehicle.enums.VehicleType;
+import com.carrental.booking.repository.BookingRepository;
 import com.carrental.vehicle.repository.VehicleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -39,6 +40,9 @@ class VehicleServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private BookingRepository bookingRepository;
 
     @InjectMocks
     private VehicleServiceImpl vehicleService;
@@ -159,6 +163,31 @@ class VehicleServiceTest {
         assertEquals("City", response.getModel());
         assertEquals("MH12AB1234", response.getLicensePlate());
         assertEquals(VehicleStatus.AVAILABLE, response.getStatus());
+    }
+
+    @Test
+    @DisplayName("Should soft delete vehicle to INACTIVE when bookings exist")
+    void testDeleteVehicle_WithBookings_SoftDeletes() {
+        when(vehicleRepository.findById(100L)).thenReturn(Optional.of(sampleVehicle));
+        when(bookingRepository.existsByVehicleId(100L)).thenReturn(true);
+
+        vehicleService.deleteVehicle(20L, 100L);
+
+        assertEquals(VehicleStatus.INACTIVE, sampleVehicle.getStatus());
+        verify(vehicleRepository).save(sampleVehicle);
+        verify(vehicleRepository, never()).delete(sampleVehicle);
+    }
+
+    @Test
+    @DisplayName("Should hard delete vehicle when no bookings exist")
+    void testDeleteVehicle_NoBookings_HardDeletes() {
+        when(vehicleRepository.findById(100L)).thenReturn(Optional.of(sampleVehicle));
+        when(bookingRepository.existsByVehicleId(100L)).thenReturn(false);
+
+        vehicleService.deleteVehicle(20L, 100L);
+
+        verify(vehicleRepository).delete(sampleVehicle);
+        verify(vehicleRepository, never()).save(sampleVehicle);
     }
 }
 

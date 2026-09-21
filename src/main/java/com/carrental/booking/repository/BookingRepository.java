@@ -18,6 +18,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     Optional<Booking> findByBookingReference(String bookingReference);
 
+    boolean existsByVehicleId(Long vehicleId);
+
     List<Booking> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
 
     @Query("SELECT b FROM Booking b WHERE b.customer.id = :customerId AND b.status IN :statuses ORDER BY b.createdAt DESC")

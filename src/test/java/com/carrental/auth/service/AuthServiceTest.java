@@ -2,11 +2,14 @@ package com.carrental.auth.service;
 
 import com.carrental.auth.service.impl.AuthServiceImpl;
 
+import com.carrental.auth.dto.request.ForgotPasswordRequest;
 import com.carrental.auth.dto.request.LoginRequest;
+import com.carrental.auth.dto.request.ResetPasswordRequest;
 import com.carrental.auth.dto.request.VerifyEmailRequest;
 import com.carrental.auth.dto.response.AuthResponse;
 import com.carrental.auth.dto.response.UserResponse;
 import com.carrental.auth.entity.EmailVerificationToken;
+import com.carrental.auth.entity.PasswordResetToken;
 import com.carrental.auth.entity.RefreshToken;
 import com.carrental.auth.entity.User;
 import com.carrental.auth.enums.Role;
@@ -382,6 +385,127 @@ class AuthServiceTest {
         assertFalse(freshUser.isEmailVerified());
         assertTrue(freshUser.isEnabled());
         assertEquals(Role.OWNER, freshUser.getRole());
+    }
+
+    @Test
+    @DisplayName("Should reject driver login when email is unverified (Test 3)")
+    void testDriverLogin_UnverifiedEmail_Rejected() {
+        User driverUser = User.builder()
+                .id(10L)
+                .email("driver@example.com")
+                .role(Role.DRIVER)
+                .emailVerified(false)
+                .isActive(true)
+                .build();
+        LoginRequest loginRequest = new LoginRequest("driver@example.com", "SecretPass@123");
+        Authentication authentication = mock(Authentication.class);
+        UserDetailsImpl userDetails = UserDetailsImpl.builder().id(10L).email("driver@example.com").build();
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(userDetails);
+        when(userRepository.findById(10L)).thenReturn(Optional.of(driverUser));
+
+        org.springframework.security.authentication.DisabledException ex =
+                assertThrows(org.springframework.security.authentication.DisabledException.class,
+                        () -> authService.login(loginRequest));
+        assertTrue(ex.getMessage().contains("Account is disabled. Please verify your email first."));
+    }
+
+    @Test
+    @DisplayName("Should login driver successfully when email is verified (Test 4)")
+    void testDriverLogin_VerifiedEmail_Success() {
+        User driverUser = User.builder()
+                .id(10L)
+                .email("driver@example.com")
+                .role(Role.DRIVER)
+                .emailVerified(true)
+                .isActive(true)
+                .build();
+        UserResponse driverResponse = UserResponse.builder()
+                .id(10L)
+                .email("driver@example.com")
+                .role(Role.DRIVER)
+                .emailVerified(true)
+                .isActive(true)
+                .build();
+        LoginRequest loginRequest = new LoginRequest("driver@example.com", "SecretPass@123");
+        Authentication authentication = mock(Authentication.class);
+        UserDetailsImpl userDetails = UserDetailsImpl.builder().id(10L).email("driver@example.com").build();
+        RefreshToken refreshToken = RefreshToken.builder().token("driver-refresh-token").build();
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(userDetails);
+        when(userRepository.findById(10L)).thenReturn(Optional.of(driverUser));
+        when(jwtTokenProvider.generateAccessToken(userDetails)).thenReturn("driver-jwt-token");
+        when(refreshTokenService.createRefreshToken(driverUser)).thenReturn(refreshToken);
+        when(authMapper.toUserResponse(driverUser)).thenReturn(driverResponse);
+
+        AuthResponse authResponse = authService.login(loginRequest);
+
+        assertNotNull(authResponse);
+        assertEquals("driver-jwt-token", authResponse.getAccessToken());
+        assertEquals("driver-refresh-token", authResponse.getRefreshToken());
+        assertEquals(Role.DRIVER, authResponse.getUser().getRole());
+    }
+
+    @Test
+    @DisplayName("Should send verification OTP token via common auth service (Test 2 & 8)")
+    void testSendVerificationOtp_Success() {
+        User driverUser = User.builder()
+                .id(10L)
+                .email("driver@example.com")
+                .role(Role.DRIVER)
+                .emailVerified(false)
+                .isActive(true)
+                .build();
+
+        authService.sendVerificationOtp(driverUser);
+
+        verify(emailVerificationTokenRepository).deleteByUser(driverUser);
+        verify(emailVerificationTokenRepository).save(any(EmailVerificationToken.class));
+        verify(emailService).sendVerificationEmail(eq("driver@example.com"), any(), anyString());
+    }
+
+    @Test
+    @DisplayName("Should allow driver to use common forgot and reset password flow (Test 9)")
+    void testDriverForgotPasswordAndResetPasswordFlow_Success() {
+        User driverUser = User.builder()
+                .id(10L)
+                .email("driver@example.com")
+                .firstName("Dan")
+                .lastName("Driver")
+                .role(Role.DRIVER)
+                .password("oldEncodedPass")
+                .build();
+
+        when(userRepository.findByEmail("driver@example.com")).thenReturn(Optional.of(driverUser));
+
+        // 1. Forgot password
+        authService.forgotPassword(new ForgotPasswordRequest("driver@example.com"));
+
+        verify(passwordResetTokenRepository).deleteByUser(driverUser);
+        verify(passwordResetTokenRepository).save(any(PasswordResetToken.class));
+        verify(emailService).sendPasswordResetEmail(eq("driver@example.com"), any(), anyString());
+
+        // 2. Reset password
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .id(1L)
+                .user(driverUser)
+                .token("reset-token-123")
+                .expiryDate(Instant.now().plusSeconds(600))
+                .used(false)
+                .build();
+
+        when(passwordResetTokenRepository.findByToken("reset-token-123")).thenReturn(Optional.of(resetToken));
+        when(passwordEncoder.encode("NewDriverPassword@123")).thenReturn("newEncodedPass");
+
+        authService.resetPassword(new ResetPasswordRequest("reset-token-123", "NewDriverPassword@123"));
+
+        assertEquals("newEncodedPass", driverUser.getPassword());
+        assertTrue(resetToken.isUsed());
+        verify(userRepository).save(driverUser);
+        verify(passwordResetTokenRepository).save(resetToken);
+        verify(refreshTokenService).deleteByUser(driverUser);
     }
 }
 

@@ -15,6 +15,10 @@ public interface DriverService {
 
     DriverResponse updateStatus(Long userId, DriverStatusUpdateRequest request);
 
+    DriverResponse createDriverForOwner(Long ownerId, com.carrental.driver.dto.request.CreateDriverRequest request);
+
     List<DriverResponse> getAvailableDrivers();
+
+    List<DriverResponse> getAvailableDrivers(Long ownerId);
 }
 
