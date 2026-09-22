@@ -4,7 +4,8 @@ import com.carrental.vehicle.service.impl.VehicleServiceImpl;
 
 import com.carrental.auth.entity.User;
 import com.carrental.auth.enums.Role;
-import com.carrental.auth.repository.UserRepository;
+import com.carrental.owner.entity.OwnerProfile;
+import com.carrental.owner.repository.OwnerProfileRepository;
 import com.carrental.common.exception.BadRequestException;
 import com.carrental.common.exception.ResourceNotFoundException;
 import com.carrental.vehicle.dto.request.VehicleRequest;
@@ -39,7 +40,7 @@ class VehicleServiceTest {
     private VehicleRepository vehicleRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private OwnerProfileRepository ownerProfileRepository;
 
     @Mock
     private BookingRepository bookingRepository;
@@ -48,6 +49,7 @@ class VehicleServiceTest {
     private VehicleServiceImpl vehicleService;
 
     private User sampleOwner;
+    private OwnerProfile sampleOwnerProfile;
     private Vehicle sampleVehicle;
 
     @BeforeEach
@@ -60,9 +62,14 @@ class VehicleServiceTest {
                 .role(Role.OWNER)
                 .build();
 
+        sampleOwnerProfile = OwnerProfile.builder()
+                .id(200L)
+                .user(sampleOwner)
+                .build();
+
         sampleVehicle = Vehicle.builder()
                 .id(100L)
-                .owner(sampleOwner)
+                .owner(sampleOwnerProfile)
                 .brand("Honda")
                 .model("City")
                 .year(2023)
@@ -91,7 +98,7 @@ class VehicleServiceTest {
         request.setFuelType(FuelType.PETROL);
         request.setLocation("Pune");
 
-        when(userRepository.findById(20L)).thenReturn(Optional.of(sampleOwner));
+        when(ownerProfileRepository.findByUserId(20L)).thenReturn(Optional.of(sampleOwnerProfile));
         when(vehicleRepository.existsByLicensePlate("MH12AB1234")).thenReturn(false);
         when(vehicleRepository.save(any(Vehicle.class))).thenReturn(sampleVehicle);
 
@@ -109,7 +116,7 @@ class VehicleServiceTest {
         VehicleRequest request = new VehicleRequest();
         request.setLicensePlate("MH12AB1234");
 
-        when(userRepository.findById(20L)).thenReturn(Optional.of(sampleOwner));
+        when(ownerProfileRepository.findByUserId(20L)).thenReturn(Optional.of(sampleOwnerProfile));
         when(vehicleRepository.existsByLicensePlate("MH12AB1234")).thenReturn(true);
 
         assertThrows(BadRequestException.class, () -> vehicleService.createVehicle(20L, request));
@@ -138,7 +145,8 @@ class VehicleServiceTest {
     @Test
     @DisplayName("Should get vehicles by owner")
     void testGetVehiclesByOwner() {
-        when(vehicleRepository.findByOwnerId(20L)).thenReturn(List.of(sampleVehicle));
+        when(ownerProfileRepository.findByUserId(20L)).thenReturn(Optional.of(sampleOwnerProfile));
+        when(vehicleRepository.findByOwnerId(200L)).thenReturn(List.of(sampleVehicle));
 
         List<VehicleResponse> list = vehicleService.getVehiclesByOwner(20L);
 

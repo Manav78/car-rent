@@ -6,6 +6,8 @@ import com.carrental.booking.enums.BookingStatus;
 import com.carrental.booking.service.BookingService;
 import com.carrental.common.dto.ApiResponse;
 import com.carrental.owner.dto.request.DriverAssignmentRequest;
+import com.carrental.owner.dto.request.DriverReplacementRequest;
+import com.carrental.owner.dto.request.VehicleReplacementRequest;
 import com.carrental.security.service.UserDetailsImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -157,5 +159,59 @@ class OwnerBookingControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().getData().getStatus()).isEqualTo(BookingStatus.CANCELLED);
+    }
+
+    @Test
+    @DisplayName("replaceDriver - owner replaces driver on booking")
+    void testReplaceDriver() {
+        DriverReplacementRequest request = DriverReplacementRequest.builder()
+                .newDriverId(8L)
+                .reason("Driver unavailable")
+                .build();
+        BookingResponse replacedResponse = BookingResponse.builder()
+                .id(101L)
+                .bookingReference("BK-TEST001")
+                .status(BookingStatus.CONFIRMED)
+                .driverId(8L)
+                .driverName("New Driver")
+                .build();
+
+        when(bookingService.replaceDriver(eq(ownerDetails), eq(101L), any(DriverReplacementRequest.class)))
+                .thenReturn(replacedResponse);
+
+        ResponseEntity<ApiResponse<BookingResponse>> response =
+                ownerBookingController.replaceDriver(ownerDetails, 101L, request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getData().getDriverId()).isEqualTo(8L);
+        verify(bookingService).replaceDriver(ownerDetails, 101L, request);
+    }
+
+    @Test
+    @DisplayName("replaceVehicle - owner replaces vehicle on booking")
+    void testReplaceVehicle() {
+        VehicleReplacementRequest request = VehicleReplacementRequest.builder()
+                .newVehicleId(25L)
+                .reason("Engine breakdown")
+                .build();
+        BookingResponse replacedResponse = BookingResponse.builder()
+                .id(101L)
+                .bookingReference("BK-TEST001")
+                .status(BookingStatus.CONFIRMED)
+                .vehicleId(25L)
+                .vehicleName("Honda Accord")
+                .build();
+
+        when(bookingService.replaceVehicle(eq(ownerDetails), eq(101L), any(VehicleReplacementRequest.class)))
+                .thenReturn(replacedResponse);
+
+        ResponseEntity<ApiResponse<BookingResponse>> response =
+                ownerBookingController.replaceVehicle(ownerDetails, 101L, request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getData().getVehicleId()).isEqualTo(25L);
+        verify(bookingService).replaceVehicle(ownerDetails, 101L, request);
     }
 }

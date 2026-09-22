@@ -1,742 +1,130 @@
-# FINAL CLARIFICATION — SIMPLIFY DRIVER ACCOUNT CREATION FLOW
-
-Discard the previous staged-user / verify-before-create architecture.
-
-Do NOT implement:
-
-* staged User accounts
-* `send-verification-otp` before Driver creation
-* separate email verification before account creation
-* temporary/incomplete User records
-* special cleanup for staged Driver accounts
-* Owner-specific verification APIs
-
-Use the existing application's traditional account creation + email verification architecture.
-
-The existing Customer signup/email verification flow should be the primary reference.
-
----
-
-# 1. FINAL BUSINESS FLOW
-
-The Owner creates the Driver account first.
-
-Owner enters:
-
-* Driver Name
-* Mobile
-* Email
-* Initial Password
-* License Number
-* License Expiry Date
-* License Front Image
-* License Back Image
-* Other Driver fields required by the existing SRS
-
-Then Owner clicks:
-
-```text
-[ Create Driver ]
-```
-
-Backend creates the Driver account normally.
-
-After successful account creation, the frontend redirects the Owner to the email verification UI.
-
-Expected flow:
-
-```text
-OWNER
-   |
-   | Driver details
-   | Email
-   | Initial Password
-   | License details/images
-   |
-   v
-[ CREATE DRIVER ]
-   |
-   v
-Driver Account Created
-   |
-   +--> emailVerified = false
-   +--> approvalStatus = PENDING
-   +--> DriverStatus = INACTIVE
-   |
-   v
-Redirect to Email Verification UI
-   |
-   v
-OTP sent to Driver Email
-   |
-   v
-Enter OTP
-   |
-   v
-Existing Common Auth Email Verification
-   |
-   v
-emailVerified = true
-   |
-   v
-Driver can login
-```
+The implementation report looks correct. Do NOT make further architectural changes.
 
----
+Before considering this task complete, perform a final verification of the actual implementation and database.
 
-# 2. NO PRE-CREATION EMAIL VERIFICATION
+1. Inspect the actual implementation of:
 
-Do NOT implement:
+   driverProfileRepository.findByIdWithDetails(driverId)
 
-```text
-Enter email
-   ↓
-Verify email
-   ↓
-OTP
-   ↓
-Create Driver
-```
+   and verify that both findByIdWithDetails(driverId) and any fallback findById(driverId) use DRIVER_PROFILE.ID.
 
-That previous approach is no longer required.
+   There must be NO fallback from DriverProfile.id to User.id.
 
-The correct flow is:
+2. Verify BookingServiceImpl.assignDriver() end-to-end:
 
-```text
-Enter Driver details
-   ↓
-Create Driver
-   ↓
-Email verification
-   ↓
-Driver login
-```
+   DriverAssignmentRequest.driverId
+        -> DriverProfile.id
+        -> driverProfileRepository
+        -> Booking.driver = DriverProfile
+        -> bookings.driver_id
 
-This matches the traditional Customer-style account creation architecture.
+   Confirm userRepository.findById(driverId) is never used for driver assignment.
 
----
+3. Verify replaceDriver() uses DriverProfile.id consistently for:
+   - old driver comparison
+   - new driver lookup
+   - conflict checking
+   - booking.setDriver()
 
-# 3. DRIVER ACCOUNT CREATION
+4. Verify authenticated driver operations:
 
-Use the existing Driver creation flow.
+   UserDetailsImpl.getId()
+        -> driverProfileRepository.findByUserId(userId)
+        -> DriverProfile.id
+        -> BookingRepository driver queries
 
-The Owner provides the initial password.
+5. Verify customer boundary:
 
-The backend must:
+   UserDetailsImpl.getId()
+        -> customerProfileRepository.findByUserId(userId)
+        -> CustomerProfile.id
+        -> BookingRepository customer queries
 
-```text
-Owner-provided password
-        ↓
-PasswordEncoder
-        ↓
-encoded password
-        ↓
-User.password
-```
+6. Verify owner boundary:
 
-Do NOT:
+   UserDetailsImpl.getId()
+        -> ownerProfileRepository.findByUserId(userId)
+        -> OwnerProfile.id
+        -> VehicleRepository / BookingRepository owner queries
 
-* generate a random password
-* generate a temporary password
-* replace the Owner-provided password
-* send the password by email
+7. Inspect the actual V5 migration SQL and verify the final FK constraints in PostgreSQL.
 
-The Owner manually communicates the Driver credentials to the Driver.
+Expected:
 
----
+   bookings.driver_id
+       REFERENCES driver_profiles(id)
 
-# 4. INITIAL DRIVER STATE
+   bookings.customer_id
+       REFERENCES customer_profiles(id)
 
-Immediately after successful Driver account creation:
+   vehicles.owner_id
+       REFERENCES owner_profiles(id)
 
-```text
-emailVerified = false
-approvalStatus = PENDING
-DriverStatus = INACTIVE
-```
+8. Verify no old FK remains:
 
-The Driver account exists.
+   bookings.driver_id -> users(id)
+   bookings.customer_id -> users(id)
+   vehicles.owner_id -> users(id)
 
-The Driver Profile exists.
+9. Verify actual seed/runtime data after migration.
 
-The Driver is NOT yet operational because:
+Expected example:
 
-```text
-approvalStatus = PENDING
-DriverStatus = INACTIVE
-```
+   driver_profiles:
+       id = 1
+       user_id = 5
 
-The Driver must not be assignable to bookings.
+   bookings:
+       driver_id = 1
 
----
+   NOT:
 
-# 5. EMAIL VERIFICATION
+       driver_id = 5
 
-After Driver creation, use the existing common email verification flow.
+   owner_profiles:
+       id = 1
+       user_id = 3
 
-The frontend should redirect the Owner to the existing/reusable email verification UI.
+   vehicles:
+       owner_id = 1
 
-Expected frontend flow:
+   NOT:
 
-```text
-Create Driver successful
-        ↓
-Redirect to Email Verification
-        ↓
-Enter/confirm Driver email
-        ↓
-Send OTP using existing Auth mechanism
-        ↓
-Enter OTP
-        ↓
-Verify OTP
-        ↓
-emailVerified = true
-```
+       owner_id = 3
 
-Reuse the existing:
+10. Verify the following intentionally remain User.id relationships:
 
-* AuthController
-* AuthService
-* EmailVerificationToken
-* OTP generation
-* OTP persistence
-* OTP expiry
-* OTP verification
-* EmailService
-* verification state update
-* resend OTP mechanism
-* existing frontend email verification UI/components
+   driver_profiles.added_by_owner_id -> users.id
+   owner_driver_applications.owner_id -> users.id
+   owner_driver_usage_history.owner_id -> users.id
+   owner_subscriptions.owner_id -> users.id
 
-Do NOT create Driver-specific OTP infrastructure.
+11. Run the full test suite again.
 
----
+12. If possible, perform one real integration/API flow:
 
-# 6. EMAIL VERIFICATION IS A SEPARATE STATE FROM ADMIN APPROVAL
+   - login as owner
+   - fetch drivers
+   - select DriverResponse.id
+   - assign driver to booking
+   - verify booking response.driverId
+   - verify DB bookings.driver_id
+   - fetch driver's bookings
+   - verify the same booking appears for the driver
 
-After email verification:
+13. Specifically test the ID collision scenario:
 
-```text
-emailVerified = true
-approvalStatus = PENDING
-DriverStatus = INACTIVE
-```
+   User.id = 4
+   DriverProfile.id = 1
+   driverId sent by frontend = 1
 
-Email verification does NOT mean Admin approval.
+   Confirm the correct driver is assigned.
 
-The Driver can now authenticate using the normal login flow, but remains operationally restricted.
+Do not change architecture or add new relationships during this verification.
 
-After Super Admin approval:
-
-```text
-approvalStatus = APPROVED
-DriverStatus = ACTIVE
-```
-
-Then Driver becomes eligible for assignment.
-
----
-
-# 7. DRIVER LOGIN
-
-After successful email verification, Driver independently logs in using:
-
-```text
-Driver Email
-+
-Owner-provided Initial Password
-```
-
-Use the existing common login flow:
-
-```text
-Driver
-   ↓
-/api/auth/login
-   ↓
-AuthenticationManager
-   ↓
-UserDetailsService
-   ↓
-UserDetailsImpl
-   ↓
-PasswordEncoder
-   ↓
-JWT
-   ↓
-Refresh Token
-```
-
-Do NOT create:
-
-```text
-/driver/login
-DriverLoginController
-DriverLoginService
-```
-
-or any Driver-specific authentication mechanism.
-
----
-
-# 8. DRIVER LOGIN CONDITIONS
-
-Follow the existing common authentication rules.
-
-Email verification is required for normal Driver login.
-
-Therefore:
-
-```text
-emailVerified = false
-```
-
-→ Driver login should be rejected according to the existing Auth implementation.
-
-After:
-
-```text
-emailVerified = true
-```
-
-→ Driver can login, subject to the existing common User active/authentication conditions.
-
-Approval is separate from authentication.
-
-Therefore:
-
-```text
-emailVerified = true
-approval = PENDING
-status = INACTIVE
-```
-
-can authenticate, but cannot perform Admin-approved operational actions.
-
----
-
-# 9. DRIVER DASHBOARD
-
-After Driver login, Driver should be able to see:
-
-* own profile details
-* approval status
-* Driver status
-* license information
-* relevant account information
-
-For example:
-
-```text
-Approval Status: PENDING
-Driver Status: INACTIVE
-Email: Verified
-```
-
-After Admin approval:
-
-```text
-Approval Status: APPROVED
-Driver Status: ACTIVE
-```
-
-The Driver then becomes eligible for assignment.
-
----
-
-# 10. NO CREDENTIAL EMAIL
-
-Do NOT implement any credential email.
-
-The system must NOT send:
-
-```text
-Driver password
-Temporary password
-Generated password
-Credential email
-```
-
-The Owner manually communicates:
-
-```text
-Driver Email
-+
-Initial Password
-```
-
-to the Driver.
-
-This is intentional.
-
----
-
-# 11. PASSWORD RESET
-
-If Driver later wants to change/reset the password:
-
-Use the existing common:
-
-```text
-Forgot Password
-      ↓
-Existing OTP/token
-      ↓
-Reset Password
-      ↓
-PasswordEncoder
-```
-
-Do NOT create:
-
-* Driver-specific Forgot Password
-* Driver-specific Reset Password
-* Driver-specific Change Password
-* Driver-specific OTP
-
-Reuse the existing Auth implementation.
-
----
-
-# 12. DRIVER STATUS / APPROVAL FLOW
-
-Keep the finalized status architecture unchanged.
-
-New Driver:
-
-```text
-approvalStatus = PENDING
-DriverStatus = INACTIVE
-```
-
-After Admin approval:
-
-```text
-approvalStatus = APPROVED
-DriverStatus = ACTIVE
-```
-
-Trip starts:
-
-```text
-DriverStatus = ON_TRIP
-```
-
-Trip completes:
-
-```text
-DriverStatus = ACTIVE
-```
-
-Rejected Driver:
-
-```text
-approvalStatus = REJECTED
-DriverStatus = INACTIVE
-```
-
-Do not add PENDING/APPROVED/REJECTED values to DriverStatus.
-
-Approval and operational status remain separate.
-
----
-
-# 13. FRONTEND FLOW
-
-The Owner UI should now be simple:
-
-```text
-Owner Driver Form
-        |
-        | Name
-        | Mobile
-        | Email
-        | Password
-        | License details
-        | License images
-        |
-        v
-[ Create Driver ]
-        |
-        v
-Success
-        |
-        v
-Redirect to Email Verification
-        |
-        v
-OTP verification UI
-        |
-        v
-Email Verified
-```
-
-After successful Driver creation, the frontend should NOT ask the Owner to fill the Driver form again.
-
-The created Driver ID/email/context should be carried into the verification screen using the existing frontend state/routing pattern.
-
-Do not store sensitive raw passwords in localStorage/sessionStorage.
-
----
-
-# 14. BACKEND SECURITY
-
-Driver creation must still be protected by:
-
-```java
-@PreAuthorize("hasRole('OWNER')")
-```
-
-and authenticated Owner context.
-
-The backend must validate:
-
-* Owner authorization
-* email uniqueness
-* Driver data validation
-* password validation
-* license validation
-* existing business rules
-
-Do not rely on frontend validation.
-
-The Driver is created only under the authenticated Owner's authorized context.
-
----
-
-# 15. EMAIL VERIFICATION SECURITY
-
-Reuse the existing common email verification mechanism.
-
-Verify:
-
-* OTP expiry
-* OTP validation
-* OTP cannot be reused
-* resend behavior
-* emailVerified update
-* unauthorized verification attempts are rejected according to existing Auth rules
-
-Do NOT create:
-
-```text
-DriverEmailVerificationToken
-DriverOtpRepository
-DriverOtpService
-```
-
-Reuse existing Auth infrastructure.
-
----
-
-# 16. TESTING
-
-Add/update tests for the final flow.
-
-### Test 1 — Driver account creation
-
-```text
-Owner
-→ Create Driver
-→ User created
-→ DriverProfile created
-→ emailVerified = false
-→ approval = PENDING
-→ status = INACTIVE
-```
-
-### Test 2 — Email verification
-
-```text
-Created Driver
-→ existing email OTP
-→ correct OTP
-→ emailVerified = true
-```
-
-### Test 3 — Login before email verification
-
-```text
-emailVerified = false
-→ Driver login
-→ rejected
-```
-
-### Test 4 — Login after email verification
-
-```text
-emailVerified = true
-→ Driver email + Owner-provided password
-→ existing login
-→ JWT
-```
-
-### Test 5 — Pending approval
-
-```text
-emailVerified = true
-approval = PENDING
-status = INACTIVE
-
-→ login allowed
-→ assignment blocked
-```
-
-### Test 6 — Admin approval
-
-```text
-approval = APPROVED
-status = ACTIVE
-
-→ assignment eligible
-```
-
-### Test 7 — Owner-provided password
-
-Confirm:
-
-```text
-Owner password
-→ PasswordEncoder
-→ encoded password
-```
-
-and:
-
-* raw password is never stored
-* raw password is never returned
-* raw password is never logged
-
-### Test 8 — No credential email
-
-Confirm no credential email is sent.
-
-### Test 9 — Forgot Password
-
-Confirm Driver can use the existing common Forgot Password / Reset Password flow.
-
----
-
-# 17. IMPLEMENTATION CONSTRAINTS
-
-Before changing code:
-
-1. Inspect existing Customer signup flow.
-2. Inspect existing email verification flow.
-3. Inspect existing frontend email verification UI.
-4. Inspect existing Driver creation implementation.
-5. Inspect existing User/emailVerified/isActive behavior.
-6. Inspect existing AuthController/AuthService.
-7. Reuse existing architecture wherever possible.
-
-Do NOT implement:
-
-* staged Users
-* pre-creation OTP verification
-* `sendDriverVerificationOtp`
-* Driver-specific Auth
-* Driver-specific OTP
-* credential email
-* generated password
-* Driver-specific Forgot Password
-* Driver-specific Change Password
-
-Do not change unrelated modules.
-
-Do not change finalized DriverStatus, VehicleStatus, BookingStatus, JWT architecture, Owner-as-Driver behavior, or subscription implementation.
-
----
-
-# 18. FINAL EXPECTED FLOW
-
-The final implementation must follow exactly:
-
-```text
-OWNER
-  |
-  | Driver details
-  | Email
-  | Initial Password
-  | License details/images
-  |
-  v
-CREATE DRIVER
-  |
-  v
-User + DriverProfile created
-  |
-  +--> emailVerified = false
-  +--> approvalStatus = PENDING
-  +--> DriverStatus = INACTIVE
-  |
-  v
-FRONTEND REDIRECT
-  |
-  v
-EMAIL VERIFICATION UI
-  |
-  v
-Existing Auth OTP
-  |
-  v
-OTP verification
-  |
-  v
-emailVerified = true
-  |
-  v
-OWNER MANUALLY COMMUNICATES
-Driver Email + Initial Password
-  |
-  v
-DRIVER LOGIN
-  |
-  v
-Existing Common Auth
-  |
-  v
-JWT
-  |
-  v
-DRIVER DASHBOARD
-  |
-  +--> See profile
-  +--> See approval status
-  +--> See Driver status
-  +--> See license details
-  |
-  v
-ADMIN APPROVAL
-  |
-  v
-approvalStatus = APPROVED
-DriverStatus = ACTIVE
-  |
-  v
-Driver eligible for assignment
-```
-
-## FINAL ACCEPTANCE CRITERIA
-
-The implementation is correct only if:
-
-* Driver account is created normally first.
-* DriverProfile is created during account creation.
-* Email verification happens after account creation.
-* Frontend redirects to email verification after successful Driver creation.
-* Existing common Auth email verification is reused.
-* No staged User architecture exists.
-* No pre-creation verification API exists.
-* Owner provides the initial password.
-* Password is encoded using PasswordEncoder.
-* No system-generated password exists.
-* No credential email is sent.
-* Owner manually communicates credentials.
-* Driver can login after email verification.
-* Pending Driver can login but cannot be assigned.
-* Approved Driver becomes ACTIVE and assignable.
-* Driver uses existing common Forgot Password / Reset Password.
-* No Driver-specific authentication or OTP mechanism is created.
-* Existing Customer signup/email verification remains unaffected.
-
-Implement only the minimum changes required for this final flow.
+Return only:
+- PASS/FAIL for each verification
+- actual FK mappings
+- actual sample IDs from the database
+- whether the end-to-end driver assignment flow succeeds
+- any remaining ambiguity, if found.

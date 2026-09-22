@@ -1,7 +1,7 @@
 package com.carrental.vehicle.entity;
 
 import com.carrental.admin.enums.ApprovalDecision;
-import com.carrental.auth.entity.User;
+import com.carrental.owner.entity.OwnerProfile;
 import com.carrental.vehicle.enums.FuelType;
 import com.carrental.vehicle.enums.VehicleStatus;
 import com.carrental.vehicle.enums.VehicleType;
@@ -42,7 +42,7 @@ public class Vehicle {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "owner_id", nullable = false)
-    private User owner;
+    private OwnerProfile owner;
 
     @Column(name = "brand", nullable = false, length = 50)
     private String brand;
@@ -103,7 +103,7 @@ public class Vehicle {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Vehicle(Long id, User owner, String brand, String model, Integer year,
+    public Vehicle(Long id, OwnerProfile owner, String brand, String model, Integer year,
                    String vehicleNumber, String licensePlate,
                    VehicleType vehicleType, FuelType fuelType, Integer seatingCapacity,
                    Boolean hasAc, Integer pricePerKm,

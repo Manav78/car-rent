@@ -10,14 +10,14 @@ import org.mapstruct.ReportingPolicy;
 public interface BookingMapper {
 
     @Mapping(target = "customerId", source = "customer.id")
-    @Mapping(target = "customerName", expression = "java(booking.getCustomer() != null ? booking.getCustomer().getFullName() : null)")
-    @Mapping(target = "customerEmail", source = "customer.email")
+    @Mapping(target = "customerName", expression = "java(booking.getCustomer() != null && booking.getCustomer().getUser() != null ? booking.getCustomer().getUser().getFullName() : null)")
+    @Mapping(target = "customerEmail", expression = "java(booking.getCustomer() != null && booking.getCustomer().getUser() != null ? booking.getCustomer().getUser().getEmail() : null)")
     @Mapping(target = "vehicleId", source = "vehicle.id")
     @Mapping(target = "vehicleName", expression = "java(booking.getVehicle() != null ? booking.getVehicle().getBrand() + \" \" + booking.getVehicle().getModel() : null)")
     @Mapping(target = "vehicleLicensePlate", source = "vehicle.licensePlate")
     @Mapping(target = "driverId", source = "driver.id")
-    @Mapping(target = "driverName", expression = "java(booking.getDriver() != null ? booking.getDriver().getFullName() : null)")
-    @Mapping(target = "driverPhoneNumber", expression = "java(booking.getDriver() != null ? booking.getDriver().getPhoneNumber() : null)")
+    @Mapping(target = "driverName", expression = "java(booking.getDriver() != null && booking.getDriver().getUser() != null ? booking.getDriver().getUser().getFullName() : null)")
+    @Mapping(target = "driverPhoneNumber", expression = "java(booking.getDriver() != null && booking.getDriver().getUser() != null ? booking.getDriver().getUser().getPhoneNumber() : null)")
     @Mapping(target = "status", source = "status")
     BookingResponse toResponse(Booking booking);
 }

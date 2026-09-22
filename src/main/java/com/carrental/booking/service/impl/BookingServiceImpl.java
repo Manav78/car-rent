@@ -17,14 +17,20 @@ import com.carrental.booking.repository.BookingRepository;
 import com.carrental.booking.repository.TripRepository;
 import com.carrental.common.exception.BadRequestException;
 import com.carrental.common.exception.ResourceNotFoundException;
+import com.carrental.customer.entity.CustomerProfile;
+import com.carrental.customer.repository.CustomerProfileRepository;
 import com.carrental.driver.entity.DriverProfile;
 import com.carrental.driver.enums.DriverStatus;
 import com.carrental.driver.repository.DriverProfileRepository;
 import com.carrental.notification.enums.NotificationType;
 import com.carrental.notification.service.EmailService;
 import com.carrental.notification.service.NotificationService;
+import com.carrental.owner.dto.request.DriverReplacementRequest;
+import com.carrental.owner.dto.request.VehicleReplacementRequest;
 import com.carrental.owner.entity.OwnerDriverUsageHistory;
+import com.carrental.owner.entity.OwnerProfile;
 import com.carrental.owner.repository.OwnerDriverUsageHistoryRepository;
+import com.carrental.owner.repository.OwnerProfileRepository;
 import com.carrental.security.service.UserDetailsImpl;
 import com.carrental.vehicle.entity.Vehicle;
 import com.carrental.vehicle.enums.VehicleStatus;
@@ -33,9 +39,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -47,6 +56,8 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final VehicleRepository vehicleRepository;
     private final UserRepository userRepository;
+    private final CustomerProfileRepository customerProfileRepository;
+    private final OwnerProfileRepository ownerProfileRepository;
     private final DriverProfileRepository driverProfileRepository;
     private final OwnerDriverUsageHistoryRepository ownerDriverUsageHistoryRepository;
     private final NotificationService notificationService;
@@ -57,8 +68,8 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingResponse createBooking(Long customerId, BookingRequest request) {
-        User customer = userRepository.findById(customerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer", "id", customerId));
+        CustomerProfile customerProfile = customerProfileRepository.findByUserId(customerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer profile not found for user: " + customerId));
 
         Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle", "id", request.getVehicleId()));
@@ -88,7 +99,7 @@ public class BookingServiceImpl implements BookingService {
 
         Booking booking = Booking.builder()
                 .bookingReference(bookingReference)
-                .customer(customer)
+                .customer(customerProfile)
                 .vehicle(vehicle)
                 .driver(null)
                 .startDate(request.getStartDate())
@@ -110,15 +121,17 @@ public class BookingServiceImpl implements BookingService {
         vehicleRepository.save(vehicle);
 
         // Send notifications
-        notificationService.createNotification(customer, "Booking Request Submitted",
-                "Your booking request " + bookingReference + " has been submitted and is pending owner review.", NotificationType.SYSTEM);
+        if (customerProfile.getUser() != null) {
+            notificationService.createNotification(customerProfile.getUser(), "Booking Request Submitted",
+                    "Your booking request " + bookingReference + " has been submitted and is pending owner review.", NotificationType.SYSTEM);
+        }
 
-        if (vehicle.getOwner() != null) {
-            notificationService.createNotification(vehicle.getOwner(), "New Booking Request Received",
+        if (vehicle.getOwner() != null && vehicle.getOwner().getUser() != null) {
+            notificationService.createNotification(vehicle.getOwner().getUser(), "New Booking Request Received",
                     "New booking request " + bookingReference + " received for vehicle " + vehicle.getBrand() + " " + vehicle.getModel() + ".", NotificationType.SYSTEM);
         }
 
-        log.info("Booking request created successfully: {} for user: {}", bookingReference, customer.getEmail());
+        log.info("Booking request created successfully: {} for user: {}", bookingReference, customerProfile.getUser() != null ? customerProfile.getUser().getEmail() : customerId);
 
         return bookingMapper.toResponse(savedBooking);
     }
@@ -143,8 +156,12 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public List<BookingResponse> getCustomerBookings(Long customerId) {
+        CustomerProfile customerProfile = customerProfileRepository.findByUserId(customerId).orElse(null);
+        if (customerProfile == null) {
+            return Collections.emptyList();
+        }
         List<BookingStatus> activeStatuses = List.of(BookingStatus.PENDING, BookingStatus.CONFIRMED);
-        return bookingRepository.findByCustomerIdAndBookingStatusInOrderByCreatedAtDesc(customerId, activeStatuses)
+        return bookingRepository.findByCustomerIdAndBookingStatusInOrderByCreatedAtDesc(customerProfile.getId(), activeStatuses)
                 .stream()
                 .map(bookingMapper::toResponse)
                 .toList();
@@ -153,8 +170,12 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public List<BookingResponse> getCustomerHistory(Long customerId) {
+        CustomerProfile customerProfile = customerProfileRepository.findByUserId(customerId).orElse(null);
+        if (customerProfile == null) {
+            return Collections.emptyList();
+        }
         List<BookingStatus> historyStatuses = List.of(BookingStatus.COMPLETED, BookingStatus.CANCELLED, BookingStatus.REJECTED);
-        return bookingRepository.findByCustomerIdAndBookingStatusInOrderByCreatedAtDesc(customerId, historyStatuses)
+        return bookingRepository.findByCustomerIdAndBookingStatusInOrderByCreatedAtDesc(customerProfile.getId(), historyStatuses)
                 .stream()
                 .map(bookingMapper::toResponse)
                 .toList();
@@ -163,7 +184,11 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public List<BookingResponse> getOwnerBookings(Long ownerId) {
-        return bookingRepository.findByVehicleOwnerIdOrderByCreatedAtDesc(ownerId)
+        OwnerProfile ownerProfile = ownerProfileRepository.findByUserId(ownerId).orElse(null);
+        if (ownerProfile == null) {
+            return Collections.emptyList();
+        }
+        return bookingRepository.findByVehicleOwnerIdOrderByCreatedAtDesc(ownerProfile.getId())
                 .stream()
                 .map(bookingMapper::toResponse)
                 .toList();
@@ -172,7 +197,11 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public List<BookingResponse> getOwnerBookingsByStatus(Long ownerId, BookingStatus status) {
-        return bookingRepository.findByVehicleOwnerIdAndStatusOrderByCreatedAtDesc(ownerId, status)
+        OwnerProfile ownerProfile = ownerProfileRepository.findByUserId(ownerId).orElse(null);
+        if (ownerProfile == null) {
+            return Collections.emptyList();
+        }
+        return bookingRepository.findByVehicleOwnerIdAndStatusOrderByCreatedAtDesc(ownerProfile.getId(), status)
                 .stream()
                 .map(bookingMapper::toResponse)
                 .toList();
@@ -181,7 +210,11 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public List<BookingResponse> getDriverBookings(Long driverId) {
-        return bookingRepository.findByDriverIdOrderByCreatedAtDesc(driverId)
+        DriverProfile driverProfile = driverProfileRepository.findByUserId(driverId).orElse(null);
+        if (driverProfile == null) {
+            return Collections.emptyList();
+        }
+        return bookingRepository.findByDriverIdOrderByCreatedAtDesc(driverProfile.getId())
                 .stream()
                 .map(bookingMapper::toResponse)
                 .toList();
@@ -199,8 +232,8 @@ public class BookingServiceImpl implements BookingService {
             throw new BadRequestException("Driver can only be assigned to a booking in PENDING status. Current status: " + booking.getStatus());
         }
 
-        User driver = validateAndGetEligibleDriver(booking, driverId);
-        booking.setDriver(driver);
+        DriverProfile driverProfile = validateAndGetEligibleDriver(booking, driverId);
+        booking.setDriver(driverProfile);
         booking.setStatus(BookingStatus.CONFIRMED);
 
         Booking saved = bookingRepository.save(booking);
@@ -208,25 +241,23 @@ public class BookingServiceImpl implements BookingService {
 
         // Record or update OwnerDriverUsageHistory
         try {
-            User owner = (booking.getVehicle() != null) ? booking.getVehicle().getOwner() : null;
+            User owner = (booking.getVehicle() != null && booking.getVehicle().getOwner() != null)
+                    ? booking.getVehicle().getOwner().getUser() : null;
             if (owner != null) {
-                DriverProfile driverProfile = driverProfileRepository.findByUserId(driver.getId()).orElse(null);
-                if (driverProfile != null) {
-                    OwnerDriverUsageHistory history = ownerDriverUsageHistoryRepository
-                            .findFirstByOwnerIdAndDriverId(owner.getId(), driverProfile.getId())
-                            .orElse(null);
-                    if (history != null) {
-                        history.setLastUsedAt(LocalDateTime.now());
-                        ownerDriverUsageHistoryRepository.save(history);
-                    } else {
-                        OwnerDriverUsageHistory newHistory = OwnerDriverUsageHistory.builder()
-                                .owner(owner)
-                                .driver(driverProfile)
-                                .firstUsedAt(LocalDateTime.now())
-                                .lastUsedAt(LocalDateTime.now())
-                                .build();
-                        ownerDriverUsageHistoryRepository.save(newHistory);
-                    }
+                OwnerDriverUsageHistory history = ownerDriverUsageHistoryRepository
+                        .findFirstByOwnerIdAndDriverId(owner.getId(), driverProfile.getId())
+                        .orElse(null);
+                if (history != null) {
+                    history.setLastUsedAt(LocalDateTime.now());
+                    ownerDriverUsageHistoryRepository.save(history);
+                } else {
+                    OwnerDriverUsageHistory newHistory = OwnerDriverUsageHistory.builder()
+                            .owner(owner)
+                            .driver(driverProfile)
+                            .firstUsedAt(LocalDateTime.now())
+                            .lastUsedAt(LocalDateTime.now())
+                            .build();
+                    ownerDriverUsageHistoryRepository.save(newHistory);
                 }
             }
         } catch (Exception e) {
@@ -240,28 +271,295 @@ public class BookingServiceImpl implements BookingService {
             log.warn("Failed to send booking confirmation email for booking {}: {}", saved.getBookingReference(), e.getMessage());
         }
 
-        if (saved.getCustomer() != null) {
-            String driverInfo = (saved.getDriver() != null)
-                    ? saved.getDriver().getFullName() + " (Phone: " + saved.getDriver().getPhoneNumber() + ")"
+        if (saved.getCustomer() != null && saved.getCustomer().getUser() != null) {
+            String driverInfo = (saved.getDriver() != null && saved.getDriver().getUser() != null)
+                    ? saved.getDriver().getUser().getFullName() + " (Phone: " + saved.getDriver().getUser().getPhoneNumber() + ")"
                     : "Assigned driver";
             String vehicleInfo = (saved.getVehicle() != null)
                     ? saved.getVehicle().getBrand() + " " + saved.getVehicle().getModel()
                     : "vehicle";
-            notificationService.createNotification(saved.getCustomer(), "Booking Confirmed",
+            notificationService.createNotification(saved.getCustomer().getUser(), "Booking Confirmed",
                     "Your booking " + saved.getBookingReference() + " for " + vehicleInfo + " has been confirmed. Driver: " + driverInfo,
                     NotificationType.SYSTEM);
         }
 
-        if (saved.getDriver() != null) {
+        if (saved.getDriver() != null && saved.getDriver().getUser() != null) {
             String vehicleInfo = (saved.getVehicle() != null)
                     ? saved.getVehicle().getBrand() + " " + saved.getVehicle().getModel()
                     : "vehicle";
-            notificationService.createNotification(saved.getDriver(), "New Trip Assigned",
+            notificationService.createNotification(saved.getDriver().getUser(), "New Trip Assigned",
                     "You have been assigned to trip " + saved.getBookingReference() + " for " + vehicleInfo + ".",
                     NotificationType.SYSTEM);
         }
 
         return bookingMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse replaceDriver(UserDetailsImpl userDetails, Long bookingId, DriverReplacementRequest request) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+
+        validateOwnerAccess(userDetails, booking);
+
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
+            throw new BadRequestException("Driver replacement is not allowed for CANCELLED bookings");
+        }
+        if (booking.getStatus() == BookingStatus.REJECTED) {
+            throw new BadRequestException("Driver replacement is not allowed for REJECTED bookings");
+        }
+        if (booking.getStatus() == BookingStatus.COMPLETED) {
+            throw new BadRequestException("Driver replacement is not allowed for COMPLETED bookings");
+        }
+
+        DriverProfile oldDriver = booking.getDriver();
+        if (oldDriver == null) {
+            throw new BadRequestException("No driver is currently assigned to this booking. Use assign-driver instead.");
+        }
+
+        if (request == null || request.getEffectiveDriverId() == null) {
+            throw new BadRequestException("New driver ID is required");
+        }
+        Long newDriverId = request.getEffectiveDriverId();
+
+        if (oldDriver.getId().equals(newDriverId)) {
+            throw new BadRequestException("Replacement driver cannot be the same as the currently assigned driver");
+        }
+
+        DriverProfile newDriverProfile = validateAndGetEligibleDriver(booking, newDriverId);
+        User newDriverUser = newDriverProfile.getUser();
+
+        // Release old driver
+        boolean oldDriverHasOtherTrips = bookingRepository.hasOtherInProgressBookingForDriver(oldDriver.getId(), booking.getId());
+        if (!oldDriverHasOtherTrips) {
+            oldDriver.setStatus(DriverStatus.ACTIVE);
+            oldDriver.setInactiveReason(null);
+            driverProfileRepository.save(oldDriver);
+        }
+
+        // Assign new driver
+        booking.setDriver(newDriverProfile);
+
+        if (booking.getStatus() == BookingStatus.IN_PROGRESS) {
+            newDriverProfile.setStatus(DriverStatus.ON_TRIP);
+            driverProfileRepository.save(newDriverProfile);
+        }
+
+        if (request.getReason() != null && !request.getReason().isBlank()) {
+            String oldName = oldDriver.getUser() != null ? oldDriver.getUser().getFullName() : "Driver " + oldDriver.getId();
+            String newName = newDriverUser != null ? newDriverUser.getFullName() : "Driver " + newDriverProfile.getId();
+            String note = "[Driver Replacement] Old: " + oldName + ", New: " + newName + ", Reason: " + request.getReason();
+            booking.setNotes(booking.getNotes() != null ? booking.getNotes() + "\n" + note : note);
+        }
+
+        // Update driver usage history
+        try {
+            User owner = (booking.getVehicle() != null && booking.getVehicle().getOwner() != null)
+                    ? booking.getVehicle().getOwner().getUser() : null;
+            if (owner != null) {
+                OwnerDriverUsageHistory history = ownerDriverUsageHistoryRepository
+                        .findFirstByOwnerIdAndDriverId(owner.getId(), newDriverProfile.getId())
+                        .orElse(null);
+                if (history != null) {
+                    history.setLastUsedAt(LocalDateTime.now());
+                    ownerDriverUsageHistoryRepository.save(history);
+                } else {
+                    OwnerDriverUsageHistory newHistory = OwnerDriverUsageHistory.builder()
+                            .owner(owner)
+                            .driver(newDriverProfile)
+                            .firstUsedAt(LocalDateTime.now())
+                            .lastUsedAt(LocalDateTime.now())
+                            .build();
+                    ownerDriverUsageHistoryRepository.save(newHistory);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to record owner driver usage history for replacement: {}", e.getMessage());
+        }
+
+        Booking saved = bookingRepository.save(booking);
+        log.info("Owner {} replaced driver for booking {} from {} to {}", userDetails.getId(), bookingId, oldDriver.getId(), newDriverId);
+
+        executeAfterCommitOrDirectly(() -> {
+            if (saved.getCustomer() != null && saved.getCustomer().getUser() != null) {
+                notificationService.createNotification(
+                        saved.getCustomer().getUser(),
+                        "Driver Replaced",
+                        "The driver for your booking " + saved.getBookingReference() + " has been changed to " + (newDriverUser != null ? newDriverUser.getFullName() : "new driver") + " (Phone: " + (newDriverUser != null ? newDriverUser.getPhoneNumber() : "N/A") + ").",
+                        NotificationType.SYSTEM
+                );
+                try {
+                    emailService.sendDriverReplacementEmail(saved, oldDriver, newDriverProfile, request.getReason());
+                } catch (Exception e) {
+                    log.warn("Failed to send driver replacement email: {}", e.getMessage());
+                }
+            }
+            if (oldDriver.getUser() != null) {
+                notificationService.createNotification(
+                        oldDriver.getUser(),
+                        "Trip Assignment Reassigned",
+                        "You have been unassigned from booking " + saved.getBookingReference() + ".",
+                        NotificationType.SYSTEM
+                );
+            }
+            if (newDriverUser != null) {
+                notificationService.createNotification(
+                        newDriverUser,
+                        "New Trip Assigned",
+                        "You have been assigned to trip " + saved.getBookingReference() + ".",
+                        NotificationType.SYSTEM
+                );
+            }
+        });
+
+        return bookingMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse replaceVehicle(UserDetailsImpl userDetails, Long bookingId, VehicleReplacementRequest request) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+
+        validateOwnerAccess(userDetails, booking);
+
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
+            throw new BadRequestException("Vehicle replacement is not allowed for CANCELLED bookings");
+        }
+        if (booking.getStatus() == BookingStatus.REJECTED) {
+            throw new BadRequestException("Vehicle replacement is not allowed for REJECTED bookings");
+        }
+        if (booking.getStatus() == BookingStatus.COMPLETED) {
+            throw new BadRequestException("Vehicle replacement is not allowed for COMPLETED bookings");
+        }
+
+        Vehicle oldVehicle = booking.getVehicle();
+        if (oldVehicle == null) {
+            throw new BadRequestException("No vehicle is currently assigned to this booking");
+        }
+
+        if (request == null || request.getEffectiveVehicleId() == null) {
+            throw new BadRequestException("New vehicle ID is required");
+        }
+        Long newVehicleId = request.getEffectiveVehicleId();
+
+        if (oldVehicle.getId().equals(newVehicleId)) {
+            throw new BadRequestException("Replacement vehicle cannot be the same as the currently assigned vehicle");
+        }
+
+        Vehicle newVehicle = vehicleRepository.findById(newVehicleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + newVehicleId));
+
+        if (newVehicle.getOwner() == null || newVehicle.getOwner().getUser() == null || !newVehicle.getOwner().getUser().getId().equals(userDetails.getId())) {
+            throw new BadRequestException("Replacement vehicle must belong to your fleet");
+        }
+
+        if (newVehicle.getApprovalStatus() == ApprovalDecision.PENDING) {
+            throw new BadRequestException("Vehicle is pending admin approval");
+        }
+        if (newVehicle.getApprovalStatus() == ApprovalDecision.REJECTED) {
+            throw new BadRequestException("Vehicle has been rejected by admin");
+        }
+        if (newVehicle.getApprovalStatus() != ApprovalDecision.APPROVED) {
+            throw new BadRequestException("Vehicle is not approved by admin");
+        }
+
+        if (newVehicle.getStatus() == VehicleStatus.INACTIVE) {
+            throw new BadRequestException("Vehicle is inactive");
+        }
+        if (newVehicle.getStatus() == VehicleStatus.MAINTENANCE) {
+            throw new BadRequestException("Vehicle is under maintenance");
+        }
+        if (newVehicle.getStatus() == VehicleStatus.ON_TRIP) {
+            throw new BadRequestException("Vehicle is currently on another trip");
+        }
+        if (newVehicle.getStatus() != VehicleStatus.AVAILABLE) {
+            throw new BadRequestException("Vehicle is not available (status: " + newVehicle.getStatus() + ")");
+        }
+
+        if (newVehicle.getSeatingCapacity() != null && booking.getPassengerCount() != null
+                && newVehicle.getSeatingCapacity() < booking.getPassengerCount()) {
+            throw new BadRequestException("Replacement vehicle seating capacity (" + newVehicle.getSeatingCapacity()
+                    + ") is less than required passenger count (" + booking.getPassengerCount() + ")");
+        }
+
+        LocalDateTime start = booking.getStartDateTime();
+        LocalDateTime end = booking.getEndDateTime() != null ? booking.getEndDateTime() : start.plusDays(1);
+        if (bookingRepository.existsConflictingVehicleBooking(newVehicleId, booking.getId(), start, end)) {
+            throw new BadRequestException("Vehicle has a conflicting booking during this period");
+        }
+
+        // Release old vehicle
+        boolean oldVehicleHasOtherTrips = bookingRepository.hasOtherInProgressBookingForVehicle(oldVehicle.getId(), booking.getId());
+        if (!oldVehicleHasOtherTrips && oldVehicle.getStatus() == VehicleStatus.ON_TRIP) {
+            oldVehicle.setStatus(VehicleStatus.AVAILABLE);
+            vehicleRepository.save(oldVehicle);
+        }
+
+        // Assign new vehicle
+        booking.setVehicle(newVehicle);
+
+        if (booking.getStatus() == BookingStatus.IN_PROGRESS) {
+            newVehicle.setStatus(VehicleStatus.ON_TRIP);
+            vehicleRepository.save(newVehicle);
+        }
+
+        if (request.getReason() != null && !request.getReason().isBlank()) {
+            String note = "[Vehicle Replacement] Old: " + oldVehicle.getBrand() + " " + oldVehicle.getModel() + " (" + oldVehicle.getLicensePlate()
+                    + "), New: " + newVehicle.getBrand() + " " + newVehicle.getModel() + " (" + newVehicle.getLicensePlate() + "), Reason: " + request.getReason();
+            booking.setNotes(booking.getNotes() != null ? booking.getNotes() + "\n" + note : note);
+        }
+
+        Booking saved = bookingRepository.save(booking);
+        log.info("Owner {} replaced vehicle for booking {} from {} to {}", userDetails.getId(), bookingId, oldVehicle.getId(), newVehicleId);
+
+        executeAfterCommitOrDirectly(() -> {
+            if (saved.getCustomer() != null && saved.getCustomer().getUser() != null) {
+                notificationService.createNotification(
+                        saved.getCustomer().getUser(),
+                        "Vehicle Replaced",
+                        "The vehicle for your booking " + saved.getBookingReference() + " has been changed to " + newVehicle.getBrand() + " " + newVehicle.getModel() + " (" + newVehicle.getLicensePlate() + ").",
+                        NotificationType.SYSTEM
+                );
+                try {
+                    emailService.sendVehicleReplacementEmail(saved, oldVehicle, newVehicle, request.getReason());
+                } catch (Exception e) {
+                    log.warn("Failed to send vehicle replacement email: {}", e.getMessage());
+                }
+            }
+            if (saved.getDriver() != null && saved.getDriver().getUser() != null) {
+                notificationService.createNotification(
+                        saved.getDriver().getUser(),
+                        "Vehicle Updated for Trip",
+                        "The vehicle for trip " + saved.getBookingReference() + " has been changed to " + newVehicle.getBrand() + " " + newVehicle.getModel() + " (" + newVehicle.getLicensePlate() + ").",
+                        NotificationType.SYSTEM
+                );
+            }
+        });
+
+        return bookingMapper.toResponse(saved);
+    }
+
+    private void executeAfterCommitOrDirectly(Runnable action) {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        action.run();
+                    } catch (Exception e) {
+                        log.warn("Post-commit action failed: {}", e.getMessage());
+                    }
+                }
+            });
+        } else {
+            try {
+                action.run();
+            } catch (Exception e) {
+                log.warn("Action failed: {}", e.getMessage());
+            }
+        }
     }
 
     @Override
@@ -317,7 +615,9 @@ public class BookingServiceImpl implements BookingService {
                 if (newStatus != BookingStatus.CANCELLED) {
                     throw new BadRequestException("Customers are only permitted to cancel bookings");
                 }
-                boolean isBookingCustomer = booking.getCustomer() != null && booking.getCustomer().getId().equals(userDetails.getId());
+                boolean isBookingCustomer = booking.getCustomer() != null
+                        && booking.getCustomer().getUser() != null
+                        && booking.getCustomer().getUser().getId().equals(userDetails.getId());
                 if (!isBookingCustomer) {
                     throw new BadRequestException("You are not authorized to cancel this booking");
                 }
@@ -327,7 +627,8 @@ public class BookingServiceImpl implements BookingService {
             } else if (userIsOwner) {
                 boolean isVehicleOwner = booking.getVehicle() != null
                         && booking.getVehicle().getOwner() != null
-                        && booking.getVehicle().getOwner().getId().equals(userDetails.getId());
+                        && booking.getVehicle().getOwner().getUser() != null
+                        && booking.getVehicle().getOwner().getUser().getId().equals(userDetails.getId());
                 if (!isVehicleOwner) {
                     throw new BadRequestException("Only the vehicle owner can perform this operation on this booking");
                 }
@@ -387,37 +688,37 @@ public class BookingServiceImpl implements BookingService {
 
         // Notifications & Emails
         if (newStatus == BookingStatus.PENDING) {
-            if (saved.getCustomer() != null) {
-                notificationService.createNotification(saved.getCustomer(), "Booking Accepted by Owner",
+            if (saved.getCustomer() != null && saved.getCustomer().getUser() != null) {
+                notificationService.createNotification(saved.getCustomer().getUser(), "Booking Accepted by Owner",
                         "Your booking request " + saved.getBookingReference() + " has been accepted by the owner and is pending driver assignment.",
                         NotificationType.SYSTEM);
             }
         } else if (newStatus == BookingStatus.REJECTED) {
-            if (saved.getCustomer() != null) {
-                notificationService.createNotification(saved.getCustomer(), "Booking Rejected",
+            if (saved.getCustomer() != null && saved.getCustomer().getUser() != null) {
+                notificationService.createNotification(saved.getCustomer().getUser(), "Booking Rejected",
                         "Your booking request " + saved.getBookingReference() + " has been rejected by the owner. Reason: " + saved.getRejectionReason(),
                         NotificationType.SYSTEM);
             }
         } else if (newStatus == BookingStatus.CANCELLED) {
             if (isCustomer) {
-                if (saved.getCustomer() != null) {
-                    notificationService.createNotification(saved.getCustomer(), "Booking Cancelled",
+                if (saved.getCustomer() != null && saved.getCustomer().getUser() != null) {
+                    notificationService.createNotification(saved.getCustomer().getUser(), "Booking Cancelled",
                             "Your booking " + saved.getBookingReference() + " has been cancelled.",
                             NotificationType.SYSTEM);
                 }
-                if (saved.getVehicle() != null && saved.getVehicle().getOwner() != null) {
-                    notificationService.createNotification(saved.getVehicle().getOwner(), "Booking Cancelled by Customer",
+                if (saved.getVehicle() != null && saved.getVehicle().getOwner() != null && saved.getVehicle().getOwner().getUser() != null) {
+                    notificationService.createNotification(saved.getVehicle().getOwner().getUser(), "Booking Cancelled by Customer",
                             "Booking " + saved.getBookingReference() + " has been cancelled by the customer.",
                             NotificationType.SYSTEM);
                 }
             } else {
-                if (saved.getCustomer() != null) {
-                    notificationService.createNotification(saved.getCustomer(), "Booking Cancelled",
+                if (saved.getCustomer() != null && saved.getCustomer().getUser() != null) {
+                    notificationService.createNotification(saved.getCustomer().getUser(), "Booking Cancelled",
                             "Your booking " + saved.getBookingReference() + " has been cancelled by the vehicle owner.",
                             NotificationType.SYSTEM);
                 }
-                if (saved.getDriver() != null) {
-                    notificationService.createNotification(saved.getDriver(), "Trip Cancelled",
+                if (saved.getDriver() != null && saved.getDriver().getUser() != null) {
+                    notificationService.createNotification(saved.getDriver().getUser(), "Trip Cancelled",
                             "Trip " + saved.getBookingReference() + " has been cancelled.",
                             NotificationType.SYSTEM);
                 }
@@ -441,7 +742,8 @@ public class BookingServiceImpl implements BookingService {
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
         boolean isAssignedDriver = booking.getDriver() != null
-                && booking.getDriver().getId().equals(userDetails.getId());
+                && booking.getDriver().getUser() != null
+                && booking.getDriver().getUser().getId().equals(userDetails.getId());
 
         if (!isAdmin && !isAssignedDriver) {
             throw new BadRequestException("Only the assigned driver can update the trip status");
@@ -467,12 +769,10 @@ public class BookingServiceImpl implements BookingService {
                 vehicleRepository.save(booking.getVehicle());
             }
             if (booking.getDriver() != null) {
-                DriverProfile driverProfile = driverProfileRepository.findByUserId(booking.getDriver().getId()).orElse(null);
-                if (driverProfile != null) {
-                    driverProfile.setStatus(DriverStatus.ON_TRIP);
-                    driverProfile.setInactiveReason(null);
-                    driverProfileRepository.save(driverProfile);
-                }
+                DriverProfile driverProfile = booking.getDriver();
+                driverProfile.setStatus(DriverStatus.ON_TRIP);
+                driverProfile.setInactiveReason(null);
+                driverProfileRepository.save(driverProfile);
             }
             Trip trip = tripRepository.findByBookingId(booking.getId()).orElse(null);
             if (trip == null) {
@@ -497,8 +797,9 @@ public class BookingServiceImpl implements BookingService {
                 vehicleRepository.save(booking.getVehicle());
             }
             if (booking.getDriver() != null) {
-                DriverProfile driverProfile = driverProfileRepository.findByUserId(booking.getDriver().getId()).orElse(null);
-                if (driverProfile != null) {
+                DriverProfile driverProfile = booking.getDriver();
+                boolean hasOtherTrips = bookingRepository.hasOtherInProgressBookingForDriver(driverProfile.getId(), booking.getId());
+                if (!hasOtherTrips) {
                     driverProfile.setStatus(DriverStatus.ACTIVE);
                     driverProfile.setInactiveReason(null);
                     driverProfileRepository.save(driverProfile);
@@ -546,20 +847,27 @@ public class BookingServiceImpl implements BookingService {
 
         boolean isVehicleOwner = booking.getVehicle() != null
                 && booking.getVehicle().getOwner() != null
-                && booking.getVehicle().getOwner().getId().equals(userDetails.getId());
+                && booking.getVehicle().getOwner().getUser() != null
+                && booking.getVehicle().getOwner().getUser().getId().equals(userDetails.getId());
 
         if (!isVehicleOwner) {
             throw new BadRequestException("Only the vehicle owner can perform this operation on this booking");
         }
     }
 
-    private User validateAndGetEligibleDriver(Booking booking, Long driverId) {
+    private DriverProfile validateAndGetEligibleDriver(Booking booking, Long driverId) {
         if (driverId == null) {
             throw new BadRequestException("Driver ID must be specified");
         }
 
-        User driverUser = userRepository.findById(driverId)
-                .orElseThrow(() -> new ResourceNotFoundException("Driver user not found with id: " + driverId));
+        DriverProfile profile = driverProfileRepository.findByIdWithDetails(driverId)
+                .or(() -> driverProfileRepository.findById(driverId))
+                .orElseThrow(() -> new ResourceNotFoundException("Driver profile not found with id: " + driverId));
+
+        User driverUser = profile.getUser();
+        if (driverUser == null) {
+            throw new BadRequestException("Driver user profile is invalid");
+        }
 
         boolean hasDriverRole = (driverUser.getRoles() != null && driverUser.getRoles().contains(Role.DRIVER))
                 || driverUser.getRole() == Role.DRIVER;
@@ -577,18 +885,28 @@ public class BookingServiceImpl implements BookingService {
                 || driverUser.getRole() == Role.OWNER;
         if (isOwnerDriver) {
             if (booking == null || booking.getVehicle() == null || booking.getVehicle().getOwner() == null
-                    || !booking.getVehicle().getOwner().getId().equals(driverUser.getId())) {
+                    || booking.getVehicle().getOwner().getUser() == null
+                    || !booking.getVehicle().getOwner().getUser().getId().equals(driverUser.getId())) {
                 throw new BadRequestException("An owner-driver can only be assigned to their own vehicles");
             }
         }
 
-        DriverProfile profile = driverProfileRepository.findByUserId(driverId)
-                .orElseThrow(() -> new BadRequestException("Driver profile not found for selected driver"));
-
+        if (profile.getApprovalStatus() == ApprovalDecision.PENDING) {
+            throw new BadRequestException("Driver has not been approved by admin (status: PENDING)");
+        }
+        if (profile.getApprovalStatus() == ApprovalDecision.REJECTED) {
+            throw new BadRequestException("Driver has been rejected by admin");
+        }
         if (profile.getApprovalStatus() != ApprovalDecision.APPROVED) {
             throw new BadRequestException("Driver has not been approved by admin");
         }
 
+        if (profile.getStatus() == DriverStatus.INACTIVE) {
+            throw new BadRequestException("Driver is inactive");
+        }
+        if (profile.getStatus() == DriverStatus.ON_TRIP) {
+            throw new BadRequestException("Driver is currently on another trip");
+        }
         if (profile.getStatus() != DriverStatus.ACTIVE) {
             throw new BadRequestException("Driver is not available for assignment (status: " + profile.getStatus() + ")");
         }
@@ -597,7 +915,16 @@ public class BookingServiceImpl implements BookingService {
             throw new BadRequestException("Driver's driving license has expired");
         }
 
-        return driverUser;
+        if (booking != null && booking.getStartDateTime() != null) {
+            LocalDateTime start = booking.getStartDateTime();
+            LocalDateTime end = booking.getEndDateTime() != null ? booking.getEndDateTime() : start.plusDays(1);
+            Long excludeBookingId = booking.getId() != null ? booking.getId() : -1L;
+            if (bookingRepository.existsConflictingDriverBooking(profile.getId(), excludeBookingId, start, end)) {
+                throw new BadRequestException("Driver has a conflicting booking during this period");
+            }
+        }
+
+        return profile;
     }
 
     private void validateBookingAccess(UserDetailsImpl userDetails, Booking booking) {
@@ -611,10 +938,16 @@ public class BookingServiceImpl implements BookingService {
             return;
         }
 
-        boolean isCustomer = booking.getCustomer() != null && booking.getCustomer().getId().equals(userDetails.getId());
-        boolean isOwner = booking.getVehicle() != null && booking.getVehicle().getOwner() != null
-                && booking.getVehicle().getOwner().getId().equals(userDetails.getId());
-        boolean isDriver = booking.getDriver() != null && booking.getDriver().getId().equals(userDetails.getId());
+        boolean isCustomer = booking.getCustomer() != null
+                && booking.getCustomer().getUser() != null
+                && booking.getCustomer().getUser().getId().equals(userDetails.getId());
+        boolean isOwner = booking.getVehicle() != null
+                && booking.getVehicle().getOwner() != null
+                && booking.getVehicle().getOwner().getUser() != null
+                && booking.getVehicle().getOwner().getUser().getId().equals(userDetails.getId());
+        boolean isDriver = booking.getDriver() != null
+                && booking.getDriver().getUser() != null
+                && booking.getDriver().getUser().getId().equals(userDetails.getId());
 
         if (!isCustomer && !isOwner && !isDriver) {
             throw new BadRequestException("You do not have permission to view this booking");

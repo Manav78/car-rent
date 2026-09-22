@@ -3,8 +3,9 @@ package com.carrental.booking.service;
 import com.carrental.booking.dto.request.BookingRequest;
 import com.carrental.booking.dto.response.BookingResponse;
 import com.carrental.booking.dto.request.BookingStatusUpdateRequest;
-
 import com.carrental.booking.enums.BookingStatus;
+import com.carrental.owner.dto.request.DriverReplacementRequest;
+import com.carrental.owner.dto.request.VehicleReplacementRequest;
 import com.carrental.security.service.UserDetailsImpl;
 
 import java.util.List;
@@ -28,6 +29,10 @@ public interface BookingService {
     List<BookingResponse> getDriverBookings(Long driverId);
 
     BookingResponse assignDriver(UserDetailsImpl userDetails, Long bookingId, Long driverId);
+
+    BookingResponse replaceDriver(UserDetailsImpl userDetails, Long bookingId, DriverReplacementRequest request);
+
+    BookingResponse replaceVehicle(UserDetailsImpl userDetails, Long bookingId, VehicleReplacementRequest request);
 
     BookingResponse updateBookingStatus(Long bookingId, BookingStatusUpdateRequest request);
 

@@ -47,7 +47,8 @@ public class ApprovalServiceImpl implements ApprovalService {
         Page<Vehicle> vehiclePage = vehicleRepository.findAllByApprovalStatusWithOwner(ApprovalDecision.PENDING, pageable);
 
         Page<PendingVehicleResponse> responsePage = vehiclePage.map(vehicle -> {
-            OwnerProfile ownerProfile = ownerProfileRepository.findByUserId(vehicle.getOwner().getId()).orElse(null);
+            OwnerProfile ownerProfile = vehicle.getOwner();
+            User ownerUser = ownerProfile != null ? ownerProfile.getUser() : null;
             return new PendingVehicleResponse(
                     vehicle.getId(),
                     (vehicle.getBrand() != null ? vehicle.getBrand() : "") + " " + (vehicle.getModel() != null ? vehicle.getModel() : ""),
@@ -65,10 +66,10 @@ public class ApprovalServiceImpl implements ApprovalService {
                     vehicle.getDescription(),
 
                     ownerProfile != null ? ownerProfile.getId() : null,
-                    vehicle.getOwner().getId(),
-                    vehicle.getOwner().getFullName(),
-                    vehicle.getOwner().getEmail(),
-                    vehicle.getOwner().getPhoneNumber(),
+                    ownerUser != null ? ownerUser.getId() : null,
+                    ownerUser != null ? ownerUser.getFullName() : null,
+                    ownerUser != null ? ownerUser.getEmail() : null,
+                    ownerUser != null ? ownerUser.getPhoneNumber() : null,
 
                     vehicle.getCreatedAt()
             );
@@ -86,9 +87,8 @@ public class ApprovalServiceImpl implements ApprovalService {
     }
 
     private AdminVehicleDetailResponse toVehicleDetailResponse(Vehicle vehicle) {
-        OwnerProfile ownerProfile = vehicle.getOwner() != null
-                ? ownerProfileRepository.findByUserId(vehicle.getOwner().getId()).orElse(null)
-                : null;
+        OwnerProfile ownerProfile = vehicle.getOwner();
+        User ownerUser = ownerProfile != null ? ownerProfile.getUser() : null;
 
         List<DocumentResponse> documents = new ArrayList<>();
         if (vehicle.getImageUrls() != null) {
@@ -127,9 +127,9 @@ public class ApprovalServiceImpl implements ApprovalService {
                 vehicle.getRejectionReason(),
 
                 ownerProfile != null ? ownerProfile.getId() : null,
-                vehicle.getOwner() != null ? vehicle.getOwner().getFullName() : null,
-                vehicle.getOwner() != null ? vehicle.getOwner().getEmail() : null,
-                vehicle.getOwner() != null ? vehicle.getOwner().getPhoneNumber() : null,
+                ownerUser != null ? ownerUser.getFullName() : null,
+                ownerUser != null ? ownerUser.getEmail() : null,
+                ownerUser != null ? ownerUser.getPhoneNumber() : null,
                 null,
 
                 documents,

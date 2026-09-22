@@ -3,10 +3,11 @@ package com.carrental.vehicle.service.impl;
 import com.carrental.vehicle.service.VehicleService;
 
 import com.carrental.admin.enums.ApprovalDecision;
-import com.carrental.auth.entity.User;
-import com.carrental.auth.repository.UserRepository;
+import com.carrental.booking.repository.BookingRepository;
 import com.carrental.common.exception.BadRequestException;
 import com.carrental.common.exception.ResourceNotFoundException;
+import com.carrental.owner.entity.OwnerProfile;
+import com.carrental.owner.repository.OwnerProfileRepository;
 import com.carrental.vehicle.dto.request.VehicleRequest;
 import com.carrental.vehicle.dto.response.VehicleResponse;
 import com.carrental.vehicle.entity.Vehicle;
@@ -19,9 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-
-import com.carrental.booking.repository.BookingRepository;
 
 @Slf4j
 @Service
@@ -29,21 +29,21 @@ import com.carrental.booking.repository.BookingRepository;
 public class VehicleServiceImpl implements VehicleService {
 
     private final VehicleRepository vehicleRepository;
-    private final UserRepository userRepository;
+    private final OwnerProfileRepository ownerProfileRepository;
     private final BookingRepository bookingRepository;
 
     @Override
     @Transactional
     public VehicleResponse createVehicle(Long ownerId, VehicleRequest request) {
-        User owner = userRepository.findById(ownerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Owner", "id", ownerId));
+        OwnerProfile ownerProfile = ownerProfileRepository.findByUserId(ownerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Owner profile not found for user: " + ownerId));
 
         if (vehicleRepository.existsByLicensePlate(request.getLicensePlate())) {
             throw new BadRequestException("Vehicle with license plate already exists: " + request.getLicensePlate());
         }
 
         Vehicle vehicle = Vehicle.builder()
-                .owner(owner)
+                .owner(ownerProfile)
                 .brand(request.getBrand())
                 .model(request.getModel())
                 .year(request.getYear())
@@ -60,7 +60,7 @@ public class VehicleServiceImpl implements VehicleService {
                 .build();
 
         Vehicle saved = vehicleRepository.save(vehicle);
-        log.info("Registered new vehicle: {} {} [{}] by owner: {}", saved.getBrand(), saved.getModel(), saved.getLicensePlate(), owner.getEmail());
+        log.info("Registered new vehicle: {} {} [{}] by owner: {}", saved.getBrand(), saved.getModel(), saved.getLicensePlate(), ownerProfile.getUser().getEmail());
 
         return mapToResponse(saved);
     }
@@ -76,7 +76,11 @@ public class VehicleServiceImpl implements VehicleService {
     @Override
     @Transactional(readOnly = true)
     public List<VehicleResponse> getVehiclesByOwner(Long ownerId) {
-        return vehicleRepository.findByOwnerId(ownerId)
+        OwnerProfile ownerProfile = ownerProfileRepository.findByUserId(ownerId).orElse(null);
+        if (ownerProfile == null) {
+            return Collections.emptyList();
+        }
+        return vehicleRepository.findByOwnerId(ownerProfile.getId())
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -97,7 +101,7 @@ public class VehicleServiceImpl implements VehicleService {
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle", "id", vehicleId));
 
-        if (!vehicle.getOwner().getId().equals(ownerId)) {
+        if (!vehicle.getOwner().getUser().getId().equals(ownerId)) {
             throw new BadRequestException("You do not have permission to update this vehicle");
         }
 
@@ -142,7 +146,7 @@ public class VehicleServiceImpl implements VehicleService {
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle", "id", vehicleId));
 
-        if (!vehicle.getOwner().getId().equals(ownerId)) {
+        if (!vehicle.getOwner().getUser().getId().equals(ownerId)) {
             throw new BadRequestException("You do not have permission to delete this vehicle");
         }
 

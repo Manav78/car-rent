@@ -1,8 +1,9 @@
 package com.carrental.booking.entity;
 
-import com.carrental.auth.entity.User;
 import com.carrental.booking.enums.BookingStatus;
 import com.carrental.booking.enums.TripType;
+import com.carrental.customer.entity.CustomerProfile;
+import com.carrental.driver.entity.DriverProfile;
 import com.carrental.vehicle.entity.Vehicle;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -41,7 +42,7 @@ public class Booking {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "customer_id", nullable = false)
-    private User customer;
+    private CustomerProfile customer;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "vehicle_id", nullable = false)
@@ -49,7 +50,7 @@ public class Booking {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "driver_id")
-    private User driver;
+    private DriverProfile driver;
 
     @Column(name = "customer_phone_number", nullable = false, length = 20)
     private String customerPhoneNumber;
@@ -93,7 +94,7 @@ public class Booking {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Booking(Long id, String bookingReference, User customer, Vehicle vehicle, User driver,
+    public Booking(Long id, String bookingReference, CustomerProfile customer, Vehicle vehicle, DriverProfile driver,
                    String customerPhoneNumber, TripType tripType, Integer passengerCount,
                    String pickupLocation, String dropoffLocation,
                    LocalDateTime startDateTime, LocalDate startDate,

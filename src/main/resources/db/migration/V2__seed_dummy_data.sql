@@ -124,9 +124,9 @@ SELECT setval(pg_get_serial_sequence('owner_subscriptions', 'id'), COALESCE((SEL
 -- 10. Seed Vehicles
 INSERT INTO vehicles (id, owner_id, brand, model, "year", vehicle_number, vehicle_type, fuel_type, seating_capacity, has_ac, price_per_km, status, approval_status, location, approved_at, created_at, updated_at)
 VALUES 
-    (1, 3, 'Toyota', 'Innova Crysta', 2022, 'MH-01-AB-1234', 'SUV', 'DIESEL', 7, TRUE, 18, 'BOOKED', 'APPROVED', 'Mumbai Central', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (2, 3, 'Hyundai', 'Creta', 2023, 'MH-01-CD-5678', 'SUV', 'PETROL', 5, TRUE, 14, 'AVAILABLE', 'APPROVED', 'Bandra, Mumbai', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (3, 4, 'Maruti Suzuki', 'Dzire', 2021, 'MH-12-EF-9012', 'SEDAN', 'CNG', 5, TRUE, 11, 'BOOKED', 'APPROVED', 'Shivaji Nagar, Pune', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    (1, 1, 'Toyota', 'Innova Crysta', 2022, 'MH-01-AB-1234', 'SUV', 'DIESEL', 7, TRUE, 18, 'BOOKED', 'APPROVED', 'Mumbai Central', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (2, 1, 'Hyundai', 'Creta', 2023, 'MH-01-CD-5678', 'SUV', 'PETROL', 5, TRUE, 14, 'AVAILABLE', 'APPROVED', 'Bandra, Mumbai', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (3, 2, 'Maruti Suzuki', 'Dzire', 2021, 'MH-12-EF-9012', 'SEDAN', 'CNG', 5, TRUE, 11, 'BOOKED', 'APPROVED', 'Shivaji Nagar, Pune', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (vehicle_number) DO NOTHING;
 
 SELECT setval(pg_get_serial_sequence('vehicles', 'id'), COALESCE((SELECT MAX(id) FROM vehicles), 1));
@@ -155,7 +155,7 @@ SELECT setval(pg_get_serial_sequence('vehicle_documents', 'id'), COALESCE((SELEC
 -- 13. Seed Bookings
 INSERT INTO bookings (id, booking_reference, customer_id, vehicle_id, driver_id, customer_phone_number, trip_type, passenger_count, pickup_location, dropoff_location, start_date_time, end_date_time, price_per_km, status, created_at)
 VALUES 
-    (1, 'BK-2026-001001', 1, 1, 5, '9876543211', 'ROUND_TRIP', 4, 'Mumbai Airport Terminal 2', 'Lonavala', CURRENT_TIMESTAMP + INTERVAL '1 day', CURRENT_TIMESTAMP + INTERVAL '2 days', 18, 'CONFIRMED', CURRENT_TIMESTAMP),
+    (1, 'BK-2026-001001', 1, 1, 1, '9876543211', 'ROUND_TRIP', 4, 'Mumbai Airport Terminal 2', 'Lonavala', CURRENT_TIMESTAMP + INTERVAL '1 day', CURRENT_TIMESTAMP + INTERVAL '2 days', 18, 'CONFIRMED', CURRENT_TIMESTAMP),
     (2, 'BK-2026-001002', 2, 3, NULL, '9876543212', 'ONE_WAY', 2, 'Pune Railway Station', 'Mahabaleshwar', CURRENT_TIMESTAMP + INTERVAL '3 days', CURRENT_TIMESTAMP + INTERVAL '4 days', 11, 'PENDING', CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO NOTHING;
 

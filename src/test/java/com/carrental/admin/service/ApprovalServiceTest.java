@@ -121,7 +121,7 @@ class ApprovalServiceTest {
                 .brand("Toyota")
                 .model("Camry")
                 .licensePlate("ABC-1234")
-                .owner(ownerUser)
+                .owner(ownerProfile)
                 .status(VehicleStatus.INACTIVE)
                 .approvalStatus(ApprovalDecision.PENDING)
                 .createdAt(LocalDateTime.now())
@@ -145,7 +145,6 @@ class ApprovalServiceTest {
         Page<Vehicle> page = new PageImpl<>(List.of(vehicle), pageable, 1);
 
         when(vehicleRepository.findAllByApprovalStatusWithOwner(ApprovalDecision.PENDING, pageable)).thenReturn(page);
-        when(ownerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(ownerProfile));
 
         PageResponse<PendingVehicleResponse> response = approvalService.getPendingVehicles(pageable);
 
@@ -158,7 +157,6 @@ class ApprovalServiceTest {
     @DisplayName("getVehicleDetail - success")
     void testGetVehicleDetail() {
         when(vehicleRepository.findByIdWithOwner(100L)).thenReturn(Optional.of(vehicle));
-        when(ownerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(ownerProfile));
         when(approvalRepository.findHistoryWithAdmin(any(), eq(100L))).thenReturn(Collections.emptyList());
 
         AdminVehicleDetailResponse response = approvalService.getVehicleDetail(100L);

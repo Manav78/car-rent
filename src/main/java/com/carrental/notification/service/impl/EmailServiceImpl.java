@@ -87,8 +87,8 @@ public class EmailServiceImpl implements EmailService {
             return;
         }
 
-        String toEmail = booking.getCustomer().getEmail();
-        String name = booking.getCustomer().getFullName();
+        String toEmail = booking.getCustomer().getUser().getEmail();
+        String name = booking.getCustomer().getUser().getFullName();
         String bookingReference = booking.getBookingReference();
         String subject = "Booking Confirmation - " + bookingReference;
 
@@ -110,8 +110,8 @@ public class EmailServiceImpl implements EmailService {
             context.setVariable("endDate", booking.getEndDate());
             context.setVariable("tripType", booking.getTripType() != null ? booking.getTripType().name() : "N/A");
             context.setVariable("passengerCount", booking.getPassengerCount());
-            context.setVariable("driverName", booking.getDriver() != null ? booking.getDriver().getFullName() : null);
-            context.setVariable("driverPhone", booking.getDriver() != null ? booking.getDriver().getPhoneNumber() : null);
+            context.setVariable("driverName", (booking.getDriver() != null && booking.getDriver().getUser() != null) ? booking.getDriver().getUser().getFullName() : null);
+            context.setVariable("driverPhone", (booking.getDriver() != null && booking.getDriver().getUser() != null) ? booking.getDriver().getUser().getPhoneNumber() : null);
 
             try {
                 htmlContent = templateEngine.process("email/booking-confirmation", context);
@@ -182,6 +182,74 @@ public class EmailServiceImpl implements EmailService {
         }
 
         sendHtmlEmail(toEmail, subject, htmlContent, "Booking Ref: " + bookingReference);
+    }
+
+    @Override
+    public void sendDriverReplacementEmail(com.carrental.booking.entity.Booking booking, com.carrental.driver.entity.DriverProfile oldDriver, com.carrental.driver.entity.DriverProfile newDriver, String reason) {
+        if (booking == null || booking.getCustomer() == null) {
+            log.warn("Cannot send driver replacement email: booking or customer is null");
+            return;
+        }
+
+        String toEmail = booking.getCustomer().getUser().getEmail();
+        String name = booking.getCustomer().getUser().getFullName();
+        String bookingReference = booking.getBookingReference();
+        String subject = "Driver Updated - Booking " + bookingReference;
+
+        String oldDriverName = (oldDriver != null && oldDriver.getUser() != null) ? oldDriver.getUser().getFullName() : "Previous Driver";
+        String newDriverName = (newDriver != null && newDriver.getUser() != null) ? newDriver.getUser().getFullName() : "New Driver";
+        String newDriverPhone = (newDriver != null && newDriver.getUser() != null) ? newDriver.getUser().getPhoneNumber() : "N/A";
+        String reasonText = (reason != null && !reason.isBlank()) ? "<p><strong>Reason:</strong> " + reason + "</p>" : "";
+
+        String htmlContent = """
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+                    <h2 style="color: #2563eb; text-align: center;">Driver Updated for Your Booking</h2>
+                    <p>Hello %s,</p>
+                    <p>The driver assigned to your booking <strong>%s</strong> has been updated.</p>
+                    <div style="background-color: #f8fafc; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                        <p><strong>Previous Driver:</strong> %s</p>
+                        <p><strong>New Driver:</strong> %s</p>
+                        <p><strong>Driver Contact:</strong> %s</p>
+                        %s
+                    </div>
+                    <p>Your trip schedule and vehicle details remain unchanged.</p>
+                </div>
+                """.formatted(name, bookingReference, oldDriverName, newDriverName, newDriverPhone, reasonText);
+
+        sendHtmlEmail(toEmail, subject, htmlContent, "Driver replaced for booking: " + bookingReference);
+    }
+
+    @Override
+    public void sendVehicleReplacementEmail(com.carrental.booking.entity.Booking booking, com.carrental.vehicle.entity.Vehicle oldVehicle, com.carrental.vehicle.entity.Vehicle newVehicle, String reason) {
+        if (booking == null || booking.getCustomer() == null) {
+            log.warn("Cannot send vehicle replacement email: booking or customer is null");
+            return;
+        }
+
+        String toEmail = booking.getCustomer().getUser().getEmail();
+        String name = booking.getCustomer().getUser().getFullName();
+        String bookingReference = booking.getBookingReference();
+        String subject = "Vehicle Updated - Booking " + bookingReference;
+
+        String oldVehicleInfo = oldVehicle != null ? oldVehicle.getBrand() + " " + oldVehicle.getModel() + " (" + oldVehicle.getLicensePlate() + ")" : "Previous Vehicle";
+        String newVehicleInfo = newVehicle != null ? newVehicle.getBrand() + " " + newVehicle.getModel() + " (" + newVehicle.getLicensePlate() + ")" : "New Vehicle";
+        String reasonText = (reason != null && !reason.isBlank()) ? "<p><strong>Reason:</strong> " + reason + "</p>" : "";
+
+        String htmlContent = """
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+                    <h2 style="color: #2563eb; text-align: center;">Vehicle Updated for Your Booking</h2>
+                    <p>Hello %s,</p>
+                    <p>The vehicle assigned to your booking <strong>%s</strong> has been updated.</p>
+                    <div style="background-color: #f8fafc; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                        <p><strong>Previous Vehicle:</strong> %s</p>
+                        <p><strong>New Vehicle:</strong> %s</p>
+                        %s
+                    </div>
+                    <p>Your trip schedule and driver details remain unchanged.</p>
+                </div>
+                """.formatted(name, bookingReference, oldVehicleInfo, newVehicleInfo, reasonText);
+
+        sendHtmlEmail(toEmail, subject, htmlContent, "Vehicle replaced for booking: " + bookingReference);
     }
 
     private void sendHtmlEmail(String to, String subject, String htmlBody, String fallbackLogInfo) {

@@ -6,6 +6,8 @@ import com.carrental.booking.enums.BookingStatus;
 import com.carrental.booking.service.BookingService;
 import com.carrental.common.dto.ApiResponse;
 import com.carrental.owner.dto.request.DriverAssignmentRequest;
+import com.carrental.owner.dto.request.DriverReplacementRequest;
+import com.carrental.owner.dto.request.VehicleReplacementRequest;
 import com.carrental.security.service.UserDetailsImpl;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -61,6 +63,26 @@ public class OwnerBookingController {
             @Valid @RequestBody DriverAssignmentRequest request) {
         BookingResponse response = bookingService.assignDriver(userDetails, id, request.getDriverId());
         return ResponseEntity.ok(ApiResponse.success("Driver assigned and booking confirmed successfully", response));
+    }
+
+    @PostMapping("/{id}/replace-driver")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<ApiResponse<BookingResponse>> replaceDriver(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable("id") Long id,
+            @Valid @RequestBody DriverReplacementRequest request) {
+        BookingResponse response = bookingService.replaceDriver(userDetails, id, request);
+        return ResponseEntity.ok(ApiResponse.success("Driver replaced successfully", response));
+    }
+
+    @PostMapping("/{id}/replace-vehicle")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<ApiResponse<BookingResponse>> replaceVehicle(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable("id") Long id,
+            @Valid @RequestBody VehicleReplacementRequest request) {
+        BookingResponse response = bookingService.replaceVehicle(userDetails, id, request);
+        return ResponseEntity.ok(ApiResponse.success("Vehicle replaced successfully", response));
     }
 
     @PatchMapping("/{id}/status")

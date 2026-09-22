@@ -199,9 +199,10 @@ public class DataInitializer implements CommandLineRunner {
     private void seedVehicles() {
         if (vehicleRepository.count() == 0) {
             userRepository.findByEmail("owner@carrental.com").ifPresent(owner -> {
+                OwnerProfile ownerProfile = ownerProfileRepository.findByUserId(owner.getId()).orElse(null);
                 log.info("Seeding sample vehicles...");
                 Vehicle innova = Vehicle.builder()
-                        .owner(owner)
+                        .owner(ownerProfile)
                         .brand("Toyota")
                         .model("Innova Crysta")
                         .year(2022)
@@ -226,7 +227,7 @@ public class DataInitializer implements CommandLineRunner {
                 innova.getImages().add(image1);
 
                 Vehicle creta = Vehicle.builder()
-                        .owner(owner)
+                        .owner(ownerProfile)
                         .brand("Hyundai")
                         .model("Creta")
                         .year(2023)

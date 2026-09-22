@@ -317,8 +317,14 @@ class V2SchemaEntitiesTest {
                 .build();
         owner = userRepository.save(owner);
 
+        OwnerProfile ownerProfile = OwnerProfile.builder()
+                .user(owner)
+                .status(OwnerStatus.APPROVED)
+                .build();
+        ownerProfile = ownerProfileRepository.save(ownerProfile);
+
         Vehicle vehicle = Vehicle.builder()
-                .owner(owner)
+                .owner(ownerProfile)
                 .brand("Toyota")
                 .model("Camry")
                 .year(2024)
@@ -377,6 +383,11 @@ class V2SchemaEntitiesTest {
                 .build();
         customer = userRepository.save(customer);
 
+        CustomerProfile customerProfile = CustomerProfile.builder()
+                .user(customer)
+                .build();
+        customerProfile = customerProfileRepository.save(customerProfile);
+
         User owner = User.builder()
                 .name("Car Host")
                 .email("host@test.com")
@@ -386,8 +397,14 @@ class V2SchemaEntitiesTest {
                 .build();
         owner = userRepository.save(owner);
 
+        OwnerProfile ownerProfile = OwnerProfile.builder()
+                .user(owner)
+                .status(OwnerStatus.APPROVED)
+                .build();
+        ownerProfile = ownerProfileRepository.save(ownerProfile);
+
         Vehicle vehicle = Vehicle.builder()
-                .owner(owner)
+                .owner(ownerProfile)
                 .brand("Hyundai")
                 .model("Creta")
                 .year(2023)
@@ -402,7 +419,7 @@ class V2SchemaEntitiesTest {
         vehicle = vehicleRepository.save(vehicle);
 
         Booking booking = Booking.builder()
-                .customer(customer)
+                .customer(customerProfile)
                 .vehicle(vehicle)
                 .customerPhoneNumber("9776655443")
                 .tripType(TripType.LOCAL)

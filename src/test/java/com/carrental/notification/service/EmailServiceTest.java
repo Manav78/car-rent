@@ -3,6 +3,7 @@ package com.carrental.notification.service;
 import com.carrental.notification.service.impl.EmailServiceImpl;
 
 import com.carrental.auth.entity.User;
+import com.carrental.customer.entity.CustomerProfile;
 import com.carrental.booking.entity.Booking;
 import com.carrental.booking.enums.BookingStatus;
 import com.carrental.booking.enums.TripType;
@@ -88,10 +89,11 @@ class EmailServiceTest {
     @DisplayName("sendBookingConfirmationEmail with Booking object")
     void testSendBookingConfirmationEmail_WithBooking() {
         User customer = User.builder().firstName("John").lastName("Doe").email("john@test.com").build();
+        CustomerProfile customerProfile = CustomerProfile.builder().id(10L).user(customer).build();
         Vehicle vehicle = Vehicle.builder().brand("Toyota").model("Corolla").build();
         Booking booking = Booking.builder()
                 .bookingReference("BK-12345")
-                .customer(customer)
+                .customer(customerProfile)
                 .vehicle(vehicle)
                 .startDate(LocalDate.now().plusDays(1))
                 .endDate(LocalDate.now().plusDays(3))

@@ -309,13 +309,14 @@ class AdminServiceTest {
     @Test
     @DisplayName("updateVehicleStatus - updates and returns VehicleResponse")
     void testUpdateVehicleStatus() {
+        OwnerProfile ownerProfile = OwnerProfile.builder().id(10L).user(adminUser).status(OwnerStatus.APPROVED).build();
         Vehicle vehicle = Vehicle.builder()
                 .id(30L)
                 .brand("Toyota")
                 .model("Camry")
                 .status(VehicleStatus.INACTIVE)
                 .approvalStatus(ApprovalDecision.APPROVED)
-                .owner(adminUser)
+                .owner(ownerProfile)
                 .build();
 
         when(vehicleRepository.findById(30L)).thenReturn(Optional.of(vehicle));
@@ -376,13 +377,18 @@ class AdminServiceTest {
     @Test
     @DisplayName("updateVehicleStatus - with reason sets rejectionReason")
     void testUpdateVehicleStatus_WithReason() {
+        OwnerProfile ownerProfile = OwnerProfile.builder()
+                .id(10L)
+                .user(adminUser)
+                .build();
+
         Vehicle vehicle = Vehicle.builder()
                 .id(30L)
                 .brand("Toyota")
                 .model("Camry")
                 .status(VehicleStatus.AVAILABLE)
                 .approvalStatus(ApprovalDecision.APPROVED)
-                .owner(adminUser)
+                .owner(ownerProfile)
                 .build();
 
         when(vehicleRepository.findById(30L)).thenReturn(Optional.of(vehicle));

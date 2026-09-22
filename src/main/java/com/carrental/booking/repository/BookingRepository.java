@@ -57,5 +57,35 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     boolean existsConflictingBooking(@Param("vehicleId") Long vehicleId,
                                      @Param("startDate") LocalDate startDate,
                                      @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.driver.id = :driverId " +
+           "AND b.id != :excludeBookingId " +
+           "AND b.status NOT IN (com.carrental.booking.enums.BookingStatus.CANCELLED, com.carrental.booking.enums.BookingStatus.REJECTED, com.carrental.booking.enums.BookingStatus.COMPLETED) " +
+           "AND ((b.startDateTime <= :endDateTime AND b.endDateTime >= :startDateTime))")
+    boolean existsConflictingDriverBooking(@Param("driverId") Long driverId,
+                                           @Param("excludeBookingId") Long excludeBookingId,
+                                           @Param("startDateTime") LocalDateTime startDateTime,
+                                           @Param("endDateTime") LocalDateTime endDateTime);
+
+    @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.vehicle.id = :vehicleId " +
+           "AND b.id != :excludeBookingId " +
+           "AND b.status NOT IN (com.carrental.booking.enums.BookingStatus.CANCELLED, com.carrental.booking.enums.BookingStatus.REJECTED, com.carrental.booking.enums.BookingStatus.COMPLETED) " +
+           "AND ((b.startDateTime <= :endDateTime AND b.endDateTime >= :startDateTime))")
+    boolean existsConflictingVehicleBooking(@Param("vehicleId") Long vehicleId,
+                                            @Param("excludeBookingId") Long excludeBookingId,
+                                            @Param("startDateTime") LocalDateTime startDateTime,
+                                            @Param("endDateTime") LocalDateTime endDateTime);
+
+    @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.driver.id = :driverId " +
+           "AND b.id != :excludeBookingId " +
+           "AND b.status = com.carrental.booking.enums.BookingStatus.IN_PROGRESS")
+    boolean hasOtherInProgressBookingForDriver(@Param("driverId") Long driverId,
+                                              @Param("excludeBookingId") Long excludeBookingId);
+
+    @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.vehicle.id = :vehicleId " +
+           "AND b.id != :excludeBookingId " +
+           "AND b.status = com.carrental.booking.enums.BookingStatus.IN_PROGRESS")
+    boolean hasOtherInProgressBookingForVehicle(@Param("vehicleId") Long vehicleId,
+                                               @Param("excludeBookingId") Long excludeBookingId);
 }
 

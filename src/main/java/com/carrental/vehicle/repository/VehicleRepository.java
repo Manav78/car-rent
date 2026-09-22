@@ -21,6 +21,10 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long>, JpaSpec
 
     List<Vehicle> findByOwnerId(Long ownerId);
 
+    List<Vehicle> findByOwner_User_Id(Long userId);
+
+    Page<Vehicle> findByOwner_User_Id(Long userId, Pageable pageable);
+
     List<Vehicle> findByStatus(VehicleStatus status);
 
     List<Vehicle> findByVehicleType(VehicleType vehicleType);
