@@ -52,7 +52,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
                                            @Param("endDateTime") LocalDateTime endDateTime);
 
     @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.vehicle.id = :vehicleId " +
-           "AND b.status NOT IN (com.carrental.booking.enums.BookingStatus.CANCELLED, com.carrental.booking.enums.BookingStatus.REJECTED) " +
+           "AND b.status NOT IN (com.carrental.booking.enums.BookingStatus.CANCELLED, com.carrental.booking.enums.BookingStatus.REJECTED, com.carrental.booking.enums.BookingStatus.COMPLETED) " +
            "AND ((CAST(b.startDateTime AS date) <= :endDate AND CAST(b.endDateTime AS date) >= :startDate))")
     boolean existsConflictingBooking(@Param("vehicleId") Long vehicleId,
                                      @Param("startDate") LocalDate startDate,
