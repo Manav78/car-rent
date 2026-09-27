@@ -14,6 +14,7 @@ public interface AuthMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "password", ignore = true)
     @Mapping(target = "role", ignore = true)
+    @Mapping(target = "roles", ignore = true)
     @Mapping(target = "emailVerified", ignore = true)
     @Mapping(target = "isActive", ignore = true)
     @Mapping(target = "enabled", ignore = true)
@@ -24,6 +25,7 @@ public interface AuthMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "password", ignore = true)
     @Mapping(target = "role", ignore = true)
+    @Mapping(target = "roles", ignore = true)
     @Mapping(target = "emailVerified", ignore = true)
     @Mapping(target = "isActive", ignore = true)
     @Mapping(target = "enabled", ignore = true)
@@ -31,6 +33,7 @@ public interface AuthMapper {
     @Mapping(target = "updatedAt", ignore = true)
     User toOwnerEntity(OwnerSignupRequest request);
 
+    @Mapping(target = "roles", source = "roles")
     @Mapping(target = "emailVerified", source = "emailVerified")
     @Mapping(target = "isActive", source = "isActive")
     @Mapping(target = "enabled", expression = "java(Boolean.TRUE.equals(user.getEmailVerified()) && Boolean.TRUE.equals(user.getIsActive()))")

@@ -602,7 +602,7 @@ public class BookingServiceImpl implements BookingService {
             boolean userIsDriver = userDetails.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_DRIVER"));
             boolean userIsAdmin = userDetails.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
-            if (userIsDriver) {
+            if (userIsDriver  && !userIsOwner) {
                 throw new BadRequestException("Drivers cannot confirm, reject, or cancel bookings");
             }
 
@@ -833,9 +833,13 @@ public class BookingServiceImpl implements BookingService {
             throw new BadRequestException("Customers are not permitted to assign drivers or manage owner operations");
         }
 
+        boolean isOwner = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_OWNER"));
+
         boolean isDriver = userDetails.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_DRIVER"));
-        if (isDriver) {
+
+        if (isDriver && !isOwner) {
             throw new BadRequestException("Drivers cannot perform this action");
         }
 
@@ -954,4 +958,3 @@ public class BookingServiceImpl implements BookingService {
         }
     }
 }
-

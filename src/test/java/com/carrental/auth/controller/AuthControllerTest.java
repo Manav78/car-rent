@@ -21,6 +21,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -44,7 +46,7 @@ class AuthControllerTest {
                 .email("test@example.com")
                 .firstName("Test")
                 .lastName("User")
-                .role(Role.CUSTOMER)
+                .roles(Set.of(Role.CUSTOMER))
                 .emailVerified(true)
                 .isActive(true)
                 .enabled(true)

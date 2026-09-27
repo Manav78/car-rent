@@ -42,6 +42,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -113,7 +114,7 @@ class AuthServiceTest {
                 .lastName("Smith")
                 .email("alice@example.com")
                 .phoneNumber("9876543210")
-                .role(Role.CUSTOMER)
+                .roles(Set.of(Role.CUSTOMER))
                 .emailVerified(true)
                 .isActive(true)
                 .enabled(true)
@@ -213,7 +214,7 @@ class AuthServiceTest {
                 .id(1L)
                 .firstName("Super Admin")
                 .email("admin@carrental.com")
-                .role(Role.ADMIN)
+                .roles(Set.of(Role.ADMIN))
                 .emailVerified(true)
                 .isActive(true)
                 .enabled(true)
@@ -231,7 +232,7 @@ class AuthServiceTest {
 
         assertNotNull(authResponse);
         assertEquals("admin-access-token", authResponse.getAccessToken());
-        assertEquals(Role.ADMIN, authResponse.getUser().getRole());
+        assertTrue(authResponse.getUser().getRoles().contains(Role.ADMIN));
     }
 
     @Test
@@ -256,7 +257,7 @@ class AuthServiceTest {
                 .id(1L)
                 .firstName("Super Admin")
                 .email("admin@carrental.com")
-                .role(Role.ADMIN)
+                .roles(Set.of(Role.ADMIN))
                 .emailVerified(true)
                 .isActive(true)
                 .enabled(true)
@@ -274,7 +275,7 @@ class AuthServiceTest {
 
         assertNotNull(authResponse);
         assertEquals("admin-access-token", authResponse.getAccessToken());
-        assertEquals(Role.ADMIN, authResponse.getUser().getRole());
+        assertTrue(authResponse.getUser().getRoles().contains(Role.ADMIN));
     }
 
     @Test
@@ -424,7 +425,7 @@ class AuthServiceTest {
         UserResponse driverResponse = UserResponse.builder()
                 .id(10L)
                 .email("driver@example.com")
-                .role(Role.DRIVER)
+                .roles(Set.of(Role.DRIVER))
                 .emailVerified(true)
                 .isActive(true)
                 .build();
@@ -445,7 +446,7 @@ class AuthServiceTest {
         assertNotNull(authResponse);
         assertEquals("driver-jwt-token", authResponse.getAccessToken());
         assertEquals("driver-refresh-token", authResponse.getRefreshToken());
-        assertEquals(Role.DRIVER, authResponse.getUser().getRole());
+        assertTrue(authResponse.getUser().getRoles().contains(Role.DRIVER));
     }
 
     @Test
@@ -506,6 +507,45 @@ class AuthServiceTest {
         verify(userRepository).save(driverUser);
         verify(passwordResetTokenRepository).save(resetToken);
         verify(refreshTokenService).deleteByUser(driverUser);
+    }
+
+    @Test
+    @DisplayName("Should return collection of roles with both OWNER and DRIVER when owner who is also driver logs in")
+    void testOwnerDriverLoginReturnsAllRoles() {
+        User ownerDriver = User.builder()
+                .id(20L)
+                .name("Owner Driver")
+                .email("ownerdriver@example.com")
+                .roles(Set.of(Role.OWNER, Role.DRIVER))
+                .emailVerified(true)
+                .isActive(true)
+                .build();
+        UserResponse ownerDriverResponse = UserResponse.builder()
+                .id(20L)
+                .email("ownerdriver@example.com")
+                .roles(Set.of(Role.OWNER, Role.DRIVER))
+                .emailVerified(true)
+                .isActive(true)
+                .build();
+        LoginRequest loginRequest = new LoginRequest("ownerdriver@example.com", "Password@123");
+        Authentication authentication = mock(Authentication.class);
+        UserDetailsImpl userDetails = UserDetailsImpl.builder().id(20L).email("ownerdriver@example.com").build();
+        RefreshToken refreshToken = RefreshToken.builder().token("owner-driver-refresh-token").build();
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(userDetails);
+        when(userRepository.findById(20L)).thenReturn(Optional.of(ownerDriver));
+        when(jwtTokenProvider.generateAccessToken(userDetails)).thenReturn("owner-driver-jwt-token");
+        when(refreshTokenService.createRefreshToken(ownerDriver)).thenReturn(refreshToken);
+        when(authMapper.toUserResponse(ownerDriver)).thenReturn(ownerDriverResponse);
+
+        AuthResponse authResponse = authService.login(loginRequest);
+
+        assertNotNull(authResponse);
+        assertNotNull(authResponse.getUser());
+        assertEquals(2, authResponse.getUser().getRoles().size());
+        assertTrue(authResponse.getUser().getRoles().contains(Role.OWNER));
+        assertTrue(authResponse.getUser().getRoles().contains(Role.DRIVER));
     }
 }
 
