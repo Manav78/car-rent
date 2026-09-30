@@ -27,7 +27,7 @@ import java.util.Map;
 
 @Tag(name = "Admin", description = "Admin platform management, profile, dashboard, and summaries")
 @RestController
-@RequestMapping({"/api/v1/admin", "/api/admin"})
+@RequestMapping("/api/admin")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 public class AdminController {

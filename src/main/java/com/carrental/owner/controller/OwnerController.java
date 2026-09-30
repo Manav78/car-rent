@@ -34,19 +34,19 @@ public class OwnerController {
                 Map.of("message", "Welcome Car Owner! You can manage your vehicles and monitor earnings.")));
     }
 
-    @GetMapping("/profile")
-    @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<ApiResponse<OwnerResponse>> getProfile(@AuthenticationPrincipal UserDetailsImpl userDetails) {
-        OwnerResponse response = ownerService.getOwnerProfile(userDetails.getId());
-        return ResponseEntity.ok(ApiResponse.success("Owner profile retrieved", response));
-    }
-
-    @PutMapping("/profile")
-    @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<ApiResponse<OwnerResponse>> updateProfile(@AuthenticationPrincipal UserDetailsImpl userDetails,
-                                                                    @Valid @RequestBody OwnerUpdateRequest request) {
-        OwnerResponse response = ownerService.updateOwnerProfile(userDetails.getId(), request);
-        return ResponseEntity.ok(ApiResponse.success("Owner profile updated successfully", response));
-    }
+//    @GetMapping("/profile")
+//    @PreAuthorize("hasRole('OWNER')")
+//    public ResponseEntity<ApiResponse<OwnerResponse>> getProfile(@AuthenticationPrincipal UserDetailsImpl userDetails) {
+//        OwnerResponse response = ownerService.getOwnerProfile(userDetails.getId());
+//        return ResponseEntity.ok(ApiResponse.success("Owner profile retrieved", response));
+//    }
+//
+//    @PutMapping("/profile")
+//    @PreAuthorize("hasRole('OWNER')")
+//    public ResponseEntity<ApiResponse<OwnerResponse>> updateProfile(@AuthenticationPrincipal UserDetailsImpl userDetails,
+//                                                                    @Valid @RequestBody OwnerUpdateRequest request) {
+//        OwnerResponse response = ownerService.updateOwnerProfile(userDetails.getId(), request);
+//        return ResponseEntity.ok(ApiResponse.success("Owner profile updated successfully", response));
+//    }
 }
 

@@ -35,14 +35,14 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping(value = {"/signup/customer", "/customer/signup"})
+    @PostMapping(value = "/customer/signup")
     public ResponseEntity<ApiResponse<UserResponse>> registerCustomer(@Valid @RequestBody CustomerSignupRequest request) {
         UserResponse response = authService.registerCustomer(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created("Signup successful. Please verify your email using the OTP sent to your email address.", response));
     }
 
-    @PostMapping(value = {"/signup/owner", "/owner/signup"})
+    @PostMapping(value = "/owner/signup")
     public ResponseEntity<ApiResponse<UserResponse>> registerOwner(@Valid @RequestBody OwnerSignupRequest request) {
         UserResponse response = authService.registerOwner(request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -55,7 +55,7 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Login successful", response));
     }
 
-    @PostMapping(value = {"/admin/login", "/login/admin"})
+    @PostMapping(value = "/admin/login")
     public ResponseEntity<ApiResponse<AuthResponse>> adminLogin(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.adminLogin(request);
         return ResponseEntity.ok(ApiResponse.success("Admin login successful", response));
@@ -73,7 +73,7 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Email verified successfully"));
     }
 
-    @PostMapping(value = {"/resend-verification-otp", "/resend-verification"})
+    @PostMapping(value = "/resend-verification-otp")
     public ResponseEntity<ApiResponse<Void>> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
         authService.resendVerificationOtp(request.getEmail());
         return ResponseEntity.ok(ApiResponse.success("Verification OTP has been resent to your email address."));

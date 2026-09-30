@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Owner Profile", description = "Endpoints for managing owner profile")
 @RestController
-@RequestMapping("/api/v1/owners/profile")
+@RequestMapping("/api/owners/profile")
 @RequiredArgsConstructor
 public class OwnerProfileController {
 

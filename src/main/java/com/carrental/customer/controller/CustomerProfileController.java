@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Customer Profile", description = "Endpoints for managing customer profile")
 @RestController
-@RequestMapping("/api/v1/customers/profile")
+@RequestMapping("/api/customers/profile")
 @RequiredArgsConstructor
 public class CustomerProfileController {
 

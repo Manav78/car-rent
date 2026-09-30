@@ -16,6 +16,9 @@ import com.carrental.vehicle.enums.VehicleType;
 import com.carrental.vehicle.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +37,7 @@ public class VehicleServiceImpl implements VehicleService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "ownerVehicles", key = "#ownerId")
     public VehicleResponse createVehicle(Long ownerId, VehicleRequest request) {
         OwnerProfile ownerProfile = ownerProfileRepository.findByUserId(ownerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Owner profile not found for user: " + ownerId));
@@ -75,6 +79,7 @@ public class VehicleServiceImpl implements VehicleService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "ownerVehicles", key = "#ownerId")
     public List<VehicleResponse> getVehiclesByOwner(Long ownerId) {
         OwnerProfile ownerProfile = ownerProfileRepository.findByUserId(ownerId).orElse(null);
         if (ownerProfile == null) {
@@ -97,6 +102,10 @@ public class VehicleServiceImpl implements VehicleService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "ownerVehicles", key = "#ownerId"),
+            @CacheEvict(value = "vehicles", key = "#vehicleId")
+    })
     public VehicleResponse updateVehicle(Long ownerId, Long vehicleId, VehicleRequest request) {
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle", "id", vehicleId));
@@ -142,6 +151,10 @@ public class VehicleServiceImpl implements VehicleService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "ownerVehicles", key = "#ownerId"),
+            @CacheEvict(value = "vehicles", key = "#vehicleId")
+    })
     public void deleteVehicle(Long ownerId, Long vehicleId) {
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle", "id", vehicleId));

@@ -40,35 +40,35 @@ public class CustomerController {
                 Map.of("message", "Welcome Customer! You can browse cars and manage bookings.")));
     }
 
-    @GetMapping("/profile")
-    @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<ApiResponse<CustomerResponse>> getProfile(@AuthenticationPrincipal UserDetailsImpl userDetails) {
-        CustomerResponse response = customerService.getCustomerProfile(userDetails.getId());
-        return ResponseEntity.ok(ApiResponse.success("Profile retrieved", response));
-    }
+//    @GetMapping("/profile")
+//    @PreAuthorize("hasRole('CUSTOMER')")
+//    public ResponseEntity<ApiResponse<CustomerResponse>> getProfile(@AuthenticationPrincipal UserDetailsImpl userDetails) {
+//        CustomerResponse response = customerService.getCustomerProfile(userDetails.getId());
+//        return ResponseEntity.ok(ApiResponse.success("Profile retrieved", response));
+//    }
 
-    @PutMapping("/profile")
-    @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<ApiResponse<CustomerResponse>> updateProfile(@AuthenticationPrincipal UserDetailsImpl userDetails,
-                                                                        @Valid @RequestBody CustomerUpdateRequest request) {
-        CustomerResponse response = customerService.updateCustomerProfile(userDetails.getId(), request);
-        return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", response));
-    }
-
-    @PatchMapping("/profile")
-    @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<ApiResponse<CustomerResponse>> patchProfile(@AuthenticationPrincipal UserDetailsImpl userDetails,
-                                                                       @Valid @RequestBody CustomerUpdateRequest request) {
-        CustomerResponse response = customerService.updateCustomerProfile(userDetails.getId(), request);
-        return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", response));
-    }
-
-    @DeleteMapping("/profile")
-    @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<ApiResponse<Void>> deleteProfile(@AuthenticationPrincipal UserDetailsImpl userDetails) {
-        customerService.deleteCustomerAccount(userDetails.getId());
-        return ResponseEntity.ok(ApiResponse.success("Customer account deleted successfully"));
-    }
+//    @PutMapping("/profile")
+//    @PreAuthorize("hasRole('CUSTOMER')")
+//    public ResponseEntity<ApiResponse<CustomerResponse>> updateProfile(@AuthenticationPrincipal UserDetailsImpl userDetails,
+//                                                                        @Valid @RequestBody CustomerUpdateRequest request) {
+//        CustomerResponse response = customerService.updateCustomerProfile(userDetails.getId(), request);
+//        return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", response));
+//    }
+//
+//    @PatchMapping("/profile")
+//    @PreAuthorize("hasRole('CUSTOMER')")
+//    public ResponseEntity<ApiResponse<CustomerResponse>> patchProfile(@AuthenticationPrincipal UserDetailsImpl userDetails,
+//                                                                       @Valid @RequestBody CustomerUpdateRequest request) {
+//        CustomerResponse response = customerService.updateCustomerProfile(userDetails.getId(), request);
+//        return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", response));
+//    }
+//
+//    @DeleteMapping("/profile")
+//    @PreAuthorize("hasRole('CUSTOMER')")
+//    public ResponseEntity<ApiResponse<Void>> deleteProfile(@AuthenticationPrincipal UserDetailsImpl userDetails) {
+//        customerService.deleteCustomerAccount(userDetails.getId());
+//        return ResponseEntity.ok(ApiResponse.success("Customer account deleted successfully"));
+//    }
 
     @GetMapping("/history")
     @PreAuthorize("hasRole('CUSTOMER')")

@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Admin Accounts", description = "Admin soft-delete, restore, permanent delete, and deleted accounts listing")
 @RestController
-@RequestMapping({"/api/v1/admin/accounts", "/api/admin/accounts"})
+@RequestMapping("/api/admin/accounts")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminAccountController {

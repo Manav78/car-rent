@@ -21,7 +21,7 @@ import java.util.List;
 
 @Tag(name = "Driver Trips", description = "Endpoints for driver trips and assignment lifecycle")
 @RestController
-@RequestMapping({ "/api/v1/drivers/trips", "/api/drivers/trips" })
+@RequestMapping( "/api/drivers/trips" )
 @RequiredArgsConstructor
 public class DriverTripController {
 
