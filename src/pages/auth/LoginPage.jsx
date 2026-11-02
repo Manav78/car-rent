@@ -574,7 +574,7 @@ const LoginPage = () => {
       });
 
       if (data?.requiresLogin) {
-        showToast('🎉 Email verified successfully! Please sign in to continue.', 'success');
+        showToast('Email verified successfully. Please sign in to continue.', 'success');
         setMode('login');
         setStep('form');
         setPassword('');
@@ -584,7 +584,7 @@ const LoginPage = () => {
       const { accessToken, refreshToken, user, roles } = data || {};
       if (accessToken) {
         saveAuth({ accessToken, refreshToken, user, roles });
-        showToast(`🎉 Account verified & created successfully! Welcome, ${user?.name || name}!`, 'success');
+        showToast(`Account verified and created successfully. Welcome, ${user?.name || name}!`, 'success');
 
         const userRoles = roles || (user?.roles) || [selectedRole];
         const targetRole = userRoles[0];
@@ -592,7 +592,7 @@ const LoginPage = () => {
 
         navigate(redirectPath, { replace: true });
       } else {
-        showToast('🎉 Account verified! Please sign in to continue.', 'success');
+        showToast('Account verified. Please sign in to continue.', 'success');
         setMode('login');
         setStep('form');
       }
@@ -659,7 +659,7 @@ const LoginPage = () => {
         newPassword: forgotNewPassword,
         confirmPassword: forgotConfirmPassword,
       });
-      showToast('🎉 Password reset successfully! Please sign in with your new password.', 'success');
+      showToast('Password reset successfully. Please sign in with your new password.', 'success');
       setEmail(forgotEmail.trim().toLowerCase());
       setPassword('');
       setShowForgotModal(false);
@@ -681,10 +681,6 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex items-center justify-center p-4 relative">
-      {/* Background Glows */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none" />
-
       <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl p-6 sm:p-8 relative z-10 my-6">
         
         {/* Brand Header */}

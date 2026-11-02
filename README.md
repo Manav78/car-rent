@@ -1,57 +1,68 @@
-# 🚗 DriveEase — Premium Car Rental & Cab Mobility Frontend
+# DriveEase — On-Demand Car Rental & Mobility Platform
 
-A modern, high-performance on-demand car rental and chauffeur mobility web application built with **React 19**, **Tailwind CSS v4**, and **Vite**. Inspired by the sleek, user-centric experiences of platforms like **Uber** and **Ola**, DriveEase provides an intuitive booking and fleet management interface for Customers, Vehicle Owners, Drivers, and Administrators.
-
----
-
-## 🌟 Key Features
-
-### 👤 1. Customer Experience (Ola / Uber Style)
-- **Interactive Hero & Partitioned Showcase**: High-impact visuals highlighting vehicle categories (Prime Sedan, Executive SUV, Electric EV, Outstation 7-Seaters).
-- **Search & Multi-Criteria Filtering**: Filter by City, Seating Capacity (4, 5, 7, 8+ seats), Fuel Type (Petrol, Diesel, EV, Hybrid), and Vehicle Type.
-- **Transparent Fare Estimates**: Real-time rate calculation (₹/km rate, daily estimated fares, free cancellation guarantee).
-- **Instant Booking & Modal Flow**: Streamlined itinerary booking (Pickup & Drop-off locations, dates, passenger count, notes).
-- **Booking Management & Trip OTP**: Review active bookings, assigned driver details, trip-start OTPs, and booking cancellation.
-
-### 🏢 2. Vehicle Owner Fleet Portal
-- **Fleet Dashboard**: Real-time vehicle utilization, active rentals, and earnings metrics.
-- **Vehicle Catalog Management**: Register new cars, edit specifications, upload multi-angle photos, and monitor admin approval status.
-- **Driver Fleet Assignment**: Assign verified drivers to incoming booking requests or request replacements.
-- **Booking Management**: Accept, reject, or manage ongoing car reservations.
-
-### 🚖 3. Driver Operations Hub
-- **Availability Toggle**: Instant 1-click toggle between Active (On-Duty) and Inactive (Off-Duty Rest).
-- **Trip Lifecycle Management**: View assigned trips, customer pickup locations, and transition trip statuses (Start Trip with OTP, Complete Trip).
-- **Driver Profile**: Manage license details and view completed trip logs.
-
-### 🛡️ 4. Super Admin Management Console
-- **Approval Queues**: Review and approve/reject pending vehicles, drivers, and owner-driver applications with custom notes.
-- **User Governance**: Activate, suspend, or manage platform accounts across all roles.
-- **System Metrics**: Real-time counts of users, bookings, total revenue, and active fleet vehicles.
+A production-grade, human-crafted mobility web application built with **React 19**, **Tailwind CSS v4**, and **Vite**, engineered to connect to a **Spring Boot 3** REST backend. Inspired by tier-1 mobility platforms (Uber, Ola, Turo), DriveEase delivers an intuitive, utility-first rental and chauffeur booking interface for Customers, Vehicle Owners, Chauffeurs, and Administrators.
 
 ---
 
-## 🛠️ Technology Stack
+## Design System & The Science of Mobility
 
-| Layer | Technologies |
+Modern automotive and transit interfaces demand immediate wayfinding, high outdoor contrast, and functional clarity:
+
+- **Canvas & Grounding**: Deep Asphalt Onyx (`#09090b`) and Architectural Slate (`#f8fafc`). Provides road-grounded authority and maximum visual contrast under bright sunlight or dark environments.
+- **Signal Wayfinding Accent**: Signal Amber (`#f59e0b` / `#d97706`). Derived from automotive transit science (headway lamps, warning indicators, turn signals) for warm, focused call-to-actions without alarmist red.
+- **Verification & Status**: Precision Emerald (`#10b981`). Used for certified safety ratings, verified vehicle status, zero deposit guarantees, and instant booking confirmations.
+- **Human Typography & Spacing**: Strict 4px/8px modular rhythm, tight tracking (-0.025em), zero rainbow gradients, zero floating emoji clutter, and zero artificial glow halos.
+
+---
+
+## Key Modules & Capabilities
+
+### 1. Customer Booking Console
+- **Ride Intent Switcher**: Single-click toggling between **Self-Drive Rental**, **Chauffeur Drive**, and **Intercity Outstation** corridors.
+- **Connected Search Matrix**: Direct pickup and drop-off inputs with quick-select transit hubs (Airports, Railway terminals, Business districts), return date pickers, and dynamic duration calculations.
+- **Fleet Catalog & Real-Time Filters**: Instant classification by SUVs & 4x4, Executive Sedans, Luxury AMG, 7-Seater Family Wagons, and Eco EVs.
+- **Transparent Tariff Cards**: Direct per-km rates (`₹/km`), estimated daily package rates, luggage capacity, NCAP safety ratings, and instant reservation.
+- **In-Context Booking Flow**: Frictionless modal authentication for guests without losing vehicle selection state.
+
+### 2. Fleet Owner Portal
+- **Fleet Performance**: Real-time vehicle utilization metrics, revenue tracking, and active rental status.
+- **Vehicle Catalog Management**: Register new fleet vehicles, edit specifications, upload photos, and track administrative compliance status.
+- **Driver Allocation**: Assign verified chauffeurs to customer itineraries or execute driver replacements.
+- **Booking Management**: Confirm, reject, or reassign incoming rental requests.
+
+### 3. Chauffeur Operations Hub
+- **Duty Availability**: Instant toggle between Active (On-Duty) and Inactive (Off-Duty Rest).
+- **Assigned Itineraries**: Real-time view of customer pickup hubs, travel destinations, passenger manifests, and route notes.
+- **Trip Lifecycle**: Transition ride stages from dispatch to trip completion with verified OTP verification.
+
+### 4. Enterprise Administration Console
+- **Compliance & Approval Queues**: Review and approve/reject pending vehicle entries, commercial drivers, and fleet owners.
+- **User Governance**: Audit, activate, or soft-delete user accounts across all roles.
+- **Real-Time Analytics**: Monitor active fleet count, gross rental revenue, and booking conversion.
+
+---
+
+## Technology Architecture
+
+| Layer | Stack |
 |---|---|
 | **Core Framework** | React 19 (`react`, `react-dom`) |
 | **Routing** | React Router DOM v7 (`react-router-dom`) |
-| **Styling & Theme** | Tailwind CSS v4 (`@tailwindcss/vite`), Custom High-Contrast Dark/Light Themes |
+| **Styling** | Tailwind CSS v4 (`@tailwindcss/vite`), Custom Mobility Utility Classes |
 | **Icons** | Lucide React (`lucide-react`) |
-| **HTTP & State** | Axios (`axios`), Custom SWR Cache & Automatic Token Refresh Interceptor |
+| **HTTP Client** | Axios (`axios`) with automatic JWT refresh and unified ApiResponse unwrapping |
 | **Build & Tooling** | Vite v8, Oxlint |
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - **Node.js**: v18.0.0 or higher (v20+ recommended)
-- **npm** or **pnpm** / **yarn**
+- **npm** or **pnpm**
 
 ### 1. Installation
-Navigate to the frontend directory and install dependencies:
+Navigate to the frontend workspace directory and install dependencies:
 
 ```bash
 cd "D:\Kalibytes\car rental\Car Rental Application"
@@ -59,30 +70,28 @@ npm install
 ```
 
 ### 2. Environment Configuration
-Create or review the `.env` file in the root of the frontend project:
+Review `.env` in the root of the frontend project:
 
 ```properties
-# Backend REST API Base URL
+# Spring Boot Backend API Base URL
 VITE_API_BASE_URL=http://localhost:8080/api
 
-# Standalone / Mock fallback mode:
-# Set to "false" to connect to your live Spring Boot backend server
-# Set to "true" to test in offline standalone demo mode
+# Connect to live backend (false) or test in offline standalone demo mode (true)
 VITE_USE_MOCK=false
 ```
 
-### 3. Running the Development Server
+### 3. Development Server
 Start the Vite local development server:
 
 ```bash
 npm run dev
 ```
 
-The application will be live at:
-👉 **`http://localhost:5173`**
+Access the application in your browser:
+**`http://localhost:5173`**
 
 ### 4. Production Build
-Generate an optimized production build:
+Verify compilation and produce an optimized distribution build:
 
 ```bash
 npm run build
@@ -96,20 +105,21 @@ npm run preview
 
 ---
 
-## 🔐 Default Demo Accounts
-
-If running with the seeded backend database or in standalone demo mode, you can log in with:
+## Default Seed Accounts
 
 | Role | Email | Password |
 |---|---|---|
 | **Customer** | `customer@carrental.com` | `Password@123` |
-| **Vehicle Owner** | `owner@carrental.com` | `Password@123` |
-| **Verified Driver** | `driver@carrental.com` | `Password@123` |
-| **Super Admin** | `admin@carrental.com` | `Admin@123` |
+| **Fleet Owner** | `owner@carrental.com` | `Password@123` |
+| **Chauffeur** | `driver@carrental.com` | `Password@123` |
+| **System Admin** | `admin@carrental.com` | `Admin@123` |
 
 ---
 
-## 📡 API Integration & Resilience
-- **Dual Endpoint Mapping**: Supports direct Spring Boot REST routes (`/api/auth/*`, `/api/vehicles/*`, `/api/bookings/*`, etc.) with route fallback safety.
-- **Silent JWT Token Refresh**: Automatically intercepts HTTP 401 responses, executes token refresh against the backend, and retries queued requests without logging out the user.
-- **Tag-based SWR Caching**: Intelligent cache invalidation upon mutations (e.g. creating a booking immediately invalidates the booking and dashboard caches).
+## Git Workflow & Repository Structure
+
+The complete solution is hosted at [https://github.com/Manav78/car-rent.git](https://github.com/Manav78/car-rent.git).
+
+- **`main`**: Full-stack codebase with the Spring Boot backend service and documentation.
+- **`backend`**: Dedicated backend branch containing the complete Java 21 / Spring Boot 3 enterprise service.
+- **`frontend`**: Dedicated frontend branch containing the React 19 / Vite mobility application.

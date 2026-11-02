@@ -144,16 +144,14 @@ export const driverApi = {
     return driverApi.updateStatus(status, inactiveReason);
   },
 
-  // Assigned Trips (/api/v1/drivers/trips)
+  // Assigned Trips (/api/drivers/trips)
   getAssignedTrips: async (options = {}) => {
     const { bypassCache = false } = options;
     return apiCache.fetchWithCache(
       'driver:assigned_trips',
       async () => {
         try {
-          const response = await axiosClient.get('/drivers/trips').catch(() =>
-            axiosClient.get('/bookings/driver-trips')
-          );
+          const response = await axiosClient.get('/drivers/trips');
           return extractList(unwrapData(response));
         } catch (err) {
           console.warn('Driver trips fetch fallback:', err.message);
@@ -171,9 +169,7 @@ export const driverApi = {
       rejectionReason: reason,
       bookingStatus: status,
     };
-    const response = await axiosClient.patch(`/drivers/trips/${tripId}/status`, payload).catch(() =>
-      axiosClient.patch(`/bookings/${tripId}/status`, payload)
-    );
+    const response = await axiosClient.patch(`/drivers/trips/${tripId}/status`, payload);
     apiCache.invalidateTags(['trips', 'bookings', 'drivers', 'dashboard', 'vehicles', 'customer', 'owners', 'profile']);
     return unwrapData(response);
   },

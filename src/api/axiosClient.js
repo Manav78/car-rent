@@ -30,55 +30,23 @@ export const executeRefreshToken = async (rawRefreshToken) => {
     throw new Error('No refresh token available');
   }
 
-  const payload = {
-    refreshToken: currentRefreshToken,
-  };
+  const response = await axios.post(
+    `${API_BASE_URL}/auth/refresh-token`,
+    { refreshToken: currentRefreshToken },
+    { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
+  );
 
-  const candidateEndpoints = [
-    '/auth/refresh-token',
-    '/auth/refresh',
-    '/auth/token/refresh',
-    '/auth/refreshtoken',
-  ];
+  const resData = response?.data || response;
+  const dataPayload = (resData?.data !== undefined && resData?.success !== undefined) ? resData.data : resData;
+  const newAccessToken = dataPayload?.accessToken || dataPayload?.token || resData?.accessToken;
+  const newRefreshToken = dataPayload?.refreshToken || resData?.refreshToken || currentRefreshToken;
 
-  let lastError = null;
-
-  for (const endpoint of candidateEndpoints) {
-    try {
-      const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
-      const response = await axios.post(url, payload, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        timeout: 10000,
-      });
-
-      const resData = response?.data || response;
-      const dataPayload = (resData?.data !== undefined && resData?.success !== undefined) ? resData.data : resData;
-
-      const newAccessToken = dataPayload?.accessToken || dataPayload?.token || dataPayload?.jwt || dataPayload?.access_token ||
-                             resData?.accessToken || resData?.token || resData?.jwt || resData?.access_token;
-      
-      const newRefreshToken = dataPayload?.refreshToken || dataPayload?.refresh_token ||
-                              resData?.refreshToken || resData?.refresh_token || currentRefreshToken;
-
-      if (newAccessToken) {
-        updateTokens({ accessToken: newAccessToken, refreshToken: newRefreshToken });
-        return { accessToken: newAccessToken, refreshToken: newRefreshToken };
-      }
-    } catch (err) {
-      lastError = err;
-      const status = err?.response?.status || err?.status;
-      if (status === 404 || status === 405 || !status) {
-        continue;
-      }
-      if (status === 401 || status === 403) {
-        throw err;
-      }
-    }
+  if (newAccessToken) {
+    updateTokens({ accessToken: newAccessToken, refreshToken: newRefreshToken });
+    return { accessToken: newAccessToken, refreshToken: newRefreshToken };
   }
 
-  throw lastError || new Error('All token refresh endpoints failed');
+  throw new Error('Failed to parse refreshed token from server response');
 };
 
 const axiosClient = axios.create({

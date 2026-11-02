@@ -2,25 +2,20 @@ import axiosClient, { unwrapData, extractList } from './axiosClient';
 import apiCache from '../utils/apiCache';
 
 export const adminApi = {
-  // Admin Profile (/api/admin/me)
+  // Admin Profile
   getProfile: async (options = {}) => {
     const { bypassCache = false } = options;
     return apiCache.fetchWithCache(
       'admin:me',
       async () => {
-        try {
-          const response = await axiosClient.get('/admin/me');
-          return unwrapData(response);
-        } catch (err) {
-          const response = await axiosClient.get('/admin/me');
-          return unwrapData(response);
-        }
+        const response = await axiosClient.get('/admin/me');
+        return unwrapData(response);
       },
       { ttl: 60 * 1000, tags: ['admin', 'profile'], bypassCache }
     );
   },
 
-  // Dashboard Metrics & Stats (/api/admin/dashboard, /api/admin/stats)
+  // Dashboard Metrics & Stats
   getDashboardStats: async (options = {}) => {
     const { bypassCache = false } = options;
     return apiCache.fetchWithCache(
@@ -37,7 +32,6 @@ export const adminApi = {
           totalRevenue: 0,
           pendingVehicleApprovals: 0,
           pendingDriverApprovals: 0,
-          pendingOwnerDriverApprovals: 0,
           pendingOwnerApprovals: 0,
           totalPendingApprovals: 0,
           activeVehicles: 0,
@@ -46,31 +40,30 @@ export const adminApi = {
         };
 
         try {
-          const dashRes = await axiosClient.get('/admin/dashboard').catch(() => axiosClient.get('/admin/dashboard'));
+          const dashRes = await axiosClient.get('/admin/dashboard');
           const dashData = unwrapData(dashRes);
           if (dashData && typeof dashData === 'object') {
             Object.assign(result, dashData);
           }
-        } catch (e) {
-          console.warn('Dashboard endpoint skipped:', e.message);
+        } catch {
+          // stats will supply metrics
         }
 
         try {
-          const statsRes = await axiosClient.get('/admin/stats').catch(() => axiosClient.get('/admin/stats'));
+          const statsRes = await axiosClient.get('/admin/stats');
           const statsData = unwrapData(statsRes);
           if (statsData && typeof statsData === 'object') {
             Object.assign(result, statsData);
           }
-        } catch (e) {
-          console.warn('Stats endpoint skipped:', e.message);
+        } catch {
+          // fallback default result
         }
 
-        result.pendingOwnerApprovals = result.pendingOwnerDriverApprovals || result.pendingOwnerApprovals || 0;
         result.totalPendingApprovals =
           result.totalPendingApprovals ||
           (result.pendingVehicleApprovals || 0) +
-            (result.pendingDriverApprovals || 0) +
-            (result.pendingOwnerApprovals || 0);
+          (result.pendingDriverApprovals || 0) +
+          (result.pendingOwnerApprovals || 0);
 
         return result;
       },
@@ -78,21 +71,14 @@ export const adminApi = {
     );
   },
 
-  // Approvals Queues (/api/admin/approvals)
+  // Approvals Queues
   getPendingVehicles: async (options = {}) => {
     const { bypassCache = false } = options;
     return apiCache.fetchWithCache(
       'admin:pending_vehicles',
       async () => {
-        try {
-          const response = await axiosClient.get('/admin/approvals/vehicles/pending');
-          const data = unwrapData(response);
-          return extractList(data);
-        } catch (err) {
-          const response = await axiosClient.get('/admin/approvals/vehicles/pending');
-          const data = unwrapData(response);
-          return extractList(data);
-        }
+        const response = await axiosClient.get('/admin/approvals/vehicles/pending');
+        return extractList(unwrapData(response));
       },
       { ttl: 30 * 1000, tags: ['admin', 'approvals', 'vehicles'], bypassCache }
     );
@@ -103,15 +89,8 @@ export const adminApi = {
     return apiCache.fetchWithCache(
       'admin:pending_drivers',
       async () => {
-        try {
-          const response = await axiosClient.get('/admin/approvals/drivers/pending');
-          const data = unwrapData(response);
-          return extractList(data);
-        } catch (err) {
-          const response = await axiosClient.get('/admin/approvals/drivers/pending');
-          const data = unwrapData(response);
-          return extractList(data);
-        }
+        const response = await axiosClient.get('/admin/approvals/drivers/pending');
+        return extractList(unwrapData(response));
       },
       { ttl: 30 * 1000, tags: ['admin', 'approvals', 'drivers'], bypassCache }
     );
@@ -122,14 +101,9 @@ export const adminApi = {
     return apiCache.fetchWithCache(
       'admin:pending_owners',
       async () => {
-        // Fetch both owner-driver pending approvals AND all registered owners in parallel
         const [ownerDriversRes, allOwnersRes] = await Promise.allSettled([
-          axiosClient.get('/admin/approvals/owner-drivers/pending').catch(() =>
-            axiosClient.get('/admin/approvals/owner-drivers/pending')
-          ),
-          axiosClient.get('/admin/owners?page=0&size=100').catch(() =>
-            axiosClient.get('/admin/owners?page=0&size=100')
-          ),
+          axiosClient.get('/admin/approvals/owner-drivers/pending'),
+          axiosClient.get('/admin/owners?page=0&size=100'),
         ]);
 
         const rawOwnerDrivers = ownerDriversRes.status === 'fulfilled'
@@ -142,7 +116,6 @@ export const adminApi = {
 
         const pendingMap = new Map();
 
-        // 1. Ingest Owner-Drivers requiring driving license / dual-role verification
         rawOwnerDrivers.forEach((od) => {
           const uid = od.userId || od.id;
           const key = `user_${uid}`;
@@ -164,7 +137,6 @@ export const adminApi = {
           });
         });
 
-        // 2. Ingest Platform Vehicle Owners who are pending admin approval
         rawAllOwners.forEach((o) => {
           const uid = o.userId || o.id;
           const key = `user_${uid}`;
@@ -229,59 +201,45 @@ export const adminApi = {
 
   // Detail queries
   getVehicleApprovalDetail: async (vehicleId) => {
-    const response = await axiosClient.get(`/admin/approvals/vehicles/${vehicleId}`).catch(() =>
-      axiosClient.get(`/admin/approvals/vehicles/${vehicleId}`)
-    );
+    const response = await axiosClient.get(`/admin/approvals/vehicles/${vehicleId}`);
     return unwrapData(response);
   },
 
   getDriverApprovalDetail: async (driverId) => {
-    const response = await axiosClient.get(`/admin/approvals/drivers/${driverId}`).catch(() =>
-      axiosClient.get(`/admin/approvals/drivers/${driverId}`)
-    );
+    const response = await axiosClient.get(`/admin/approvals/drivers/${driverId}`);
     return unwrapData(response);
   },
 
   getOwnerDriverApprovalDetail: async (id) => {
-    const response = await axiosClient.get(`/admin/approvals/owner-drivers/${id}`).catch(() =>
-      axiosClient.get(`/admin/approvals/owner-drivers/${id}`)
-    );
+    const response = await axiosClient.get(`/admin/approvals/owner-drivers/${id}`);
     return unwrapData(response);
   },
 
-  // Approval Decisions (PATCH /api/admin/approvals/{entity}/{id})
+  // Approval Decisions
   approveVehicle: async (vehicleId, reason = 'Vehicle verified and approved') => {
     const payload = { decision: 'APPROVED', reason };
-    const response = await axiosClient.patch(`/admin/approvals/vehicles/${vehicleId}`, payload).catch(() =>
-      axiosClient.patch(`/admin/approvals/vehicles/${vehicleId}`, payload)
-    );
+    const response = await axiosClient.patch(`/admin/approvals/vehicles/${vehicleId}`, payload);
     apiCache.invalidateTags(['admin', 'approvals', 'vehicles', 'owners', 'dashboard', 'profile']);
     return unwrapData(response);
   },
 
   rejectVehicle: async (vehicleId, reason = 'Vehicle documents do not meet compliance standards') => {
     const payload = { decision: 'REJECTED', reason };
-    const response = await axiosClient.patch(`/admin/approvals/vehicles/${vehicleId}`, payload).catch(() =>
-      axiosClient.patch(`/admin/approvals/vehicles/${vehicleId}`, payload)
-    );
+    const response = await axiosClient.patch(`/admin/approvals/vehicles/${vehicleId}`, payload);
     apiCache.invalidateTags(['admin', 'approvals', 'vehicles', 'owners', 'dashboard', 'profile']);
     return unwrapData(response);
   },
 
   approveDriver: async (driverId, reason = 'Driver verified and approved') => {
     const payload = { decision: 'APPROVED', reason };
-    const response = await axiosClient.patch(`/admin/approvals/drivers/${driverId}`, payload).catch(() =>
-      axiosClient.patch(`/admin/approvals/drivers/${driverId}`, payload)
-    );
+    const response = await axiosClient.patch(`/admin/approvals/drivers/${driverId}`, payload);
     apiCache.invalidateTags(['admin', 'approvals', 'drivers', 'owners', 'dashboard', 'profile']);
     return unwrapData(response);
   },
 
   rejectDriver: async (driverId, reason = 'Driver license verification failed') => {
     const payload = { decision: 'REJECTED', reason };
-    const response = await axiosClient.patch(`/admin/approvals/drivers/${driverId}`, payload).catch(() =>
-      axiosClient.patch(`/admin/approvals/drivers/${driverId}`, payload)
-    );
+    const response = await axiosClient.patch(`/admin/approvals/drivers/${driverId}`, payload);
     apiCache.invalidateTags(['admin', 'approvals', 'drivers', 'owners', 'dashboard', 'profile']);
     return unwrapData(response);
   },
@@ -292,33 +250,13 @@ export const adminApi = {
     const ownerId = isObject ? (idOrTarget.ownerId || idOrTarget.id) : idOrTarget;
 
     const promises = [];
-
-    // If driverProfileId is known or this is an owner-driver
     if (driverProfileId) {
-      const payload = { decision: 'APPROVED', reason };
-      promises.push(
-        axiosClient.patch(`/admin/approvals/owner-drivers/${driverProfileId}`, payload).catch(() =>
-          axiosClient.patch(`/admin/approvals/owner-drivers/${driverProfileId}`, payload)
-        )
-      );
+      promises.push(axiosClient.patch(`/admin/approvals/owner-drivers/${driverProfileId}`, { decision: 'APPROVED', reason }));
     }
-
-    // Always update owner profile status if ownerId is known
     if (ownerId) {
       const query = new URLSearchParams({ status: 'APPROVED' });
       if (reason) query.append('reason', reason);
-      promises.push(
-        axiosClient.patch(`/admin/owners/${ownerId}/status?${query.toString()}`).catch(() =>
-          axiosClient.patch(`/admin/owners/${ownerId}/status?${query.toString()}`).catch(() => {
-            if (!driverProfileId) {
-              const payload = { decision: 'APPROVED', reason };
-              return axiosClient.patch(`/admin/approvals/owner-drivers/${ownerId}`, payload).catch(() =>
-                axiosClient.patch(`/admin/approvals/owner-drivers/${ownerId}`, payload)
-              );
-            }
-          })
-        )
-      );
+      promises.push(axiosClient.patch(`/admin/owners/${ownerId}/status?${query.toString()}`));
     }
 
     const results = await Promise.allSettled(promises);
@@ -336,31 +274,13 @@ export const adminApi = {
     const ownerId = isObject ? (idOrTarget.ownerId || idOrTarget.id) : idOrTarget;
 
     const promises = [];
-
     if (driverProfileId) {
-      const payload = { decision: 'REJECTED', reason };
-      promises.push(
-        axiosClient.patch(`/admin/approvals/owner-drivers/${driverProfileId}`, payload).catch(() =>
-          axiosClient.patch(`/admin/approvals/owner-drivers/${driverProfileId}`, payload)
-        )
-      );
+      promises.push(axiosClient.patch(`/admin/approvals/owner-drivers/${driverProfileId}`, { decision: 'REJECTED', reason }));
     }
-
     if (ownerId) {
       const query = new URLSearchParams({ status: 'REJECTED' });
       if (reason) query.append('reason', reason);
-      promises.push(
-        axiosClient.patch(`/admin/owners/${ownerId}/status?${query.toString()}`).catch(() =>
-          axiosClient.patch(`/admin/owners/${ownerId}/status?${query.toString()}`).catch(() => {
-            if (!driverProfileId) {
-              const payload = { decision: 'REJECTED', reason };
-              return axiosClient.patch(`/admin/approvals/owner-drivers/${ownerId}`, payload).catch(() =>
-                axiosClient.patch(`/admin/approvals/owner-drivers/${ownerId}`, payload)
-              );
-            }
-          })
-        )
-      );
+      promises.push(axiosClient.patch(`/admin/owners/${ownerId}/status?${query.toString()}`));
     }
 
     const results = await Promise.allSettled(promises);
@@ -376,28 +296,21 @@ export const adminApi = {
     return adminApi.getPendingOwners(options);
   },
 
-  // User Management (/api/admin/users)
+  // User Management
   getAllUsers: async (options = {}) => {
     const { bypassCache = false } = options;
     return apiCache.fetchWithCache(
       'admin:users',
       async () => {
-        try {
-          const response = await axiosClient.get('/admin/users');
-          return extractList(unwrapData(response));
-        } catch (err) {
-          const response = await axiosClient.get('/admin/users');
-          return extractList(unwrapData(response));
-        }
+        const response = await axiosClient.get('/admin/users');
+        return extractList(unwrapData(response));
       },
       { ttl: 60 * 1000, tags: ['admin', 'users'], bypassCache }
     );
   },
 
   deleteUser: async (userId) => {
-    const response = await axiosClient.delete(`/admin/users/${userId}`).catch(() =>
-      axiosClient.delete(`/admin/users/${userId}`)
-    );
+    const response = await axiosClient.delete(`/admin/users/${userId}`);
     apiCache.invalidateTags(['admin', 'users', 'owners', 'dashboard']);
     return unwrapData(response);
   },
@@ -411,26 +324,19 @@ export const adminApi = {
           emailVerified: statusData.emailVerified ?? true,
           accountNonLocked: statusData.accountNonLocked ?? true,
         };
-    const response = await axiosClient.patch(`/admin/users/${userId}/status`, payload).catch(() =>
-      axiosClient.patch(`/admin/users/${userId}/status`, payload)
-    );
+    const response = await axiosClient.patch(`/admin/users/${userId}/status`, payload);
     apiCache.invalidateTags(['admin', 'users', 'owners', 'dashboard']);
     return unwrapData(response);
   },
 
-  // Full Vehicle Owners Management (/api/admin/owners)
+  // Vehicle Owners Management
   getAllOwners: async (options = {}) => {
     const { bypassCache = false, page = 0, size = 50 } = options;
     return apiCache.fetchWithCache(
       `admin:owners:${page}:${size}`,
       async () => {
-        try {
-          const response = await axiosClient.get(`/admin/owners?page=${page}&size=${size}`);
-          return extractList(unwrapData(response));
-        } catch (err) {
-          const response = await axiosClient.get(`/admin/owners?page=${page}&size=${size}`);
-          return extractList(unwrapData(response));
-        }
+        const response = await axiosClient.get(`/admin/owners?page=${page}&size=${size}`);
+        return extractList(unwrapData(response));
       },
       { ttl: 60 * 1000, tags: ['admin', 'owners'], bypassCache }
     );
@@ -439,26 +345,19 @@ export const adminApi = {
   updateOwnerStatus: async (ownerId, status, reason = '') => {
     const query = new URLSearchParams({ status });
     if (reason) query.append('reason', reason);
-    const response = await axiosClient.patch(`/admin/owners/${ownerId}/status?${query.toString()}`).catch(() =>
-      axiosClient.patch(`/admin/owners/${ownerId}/status?${query.toString()}`)
-    );
+    const response = await axiosClient.patch(`/admin/owners/${ownerId}/status?${query.toString()}`);
     apiCache.invalidateTags(['admin', 'owners', 'dashboard']);
     return unwrapData(response);
   },
 
-  // Full Drivers Management (/api/admin/drivers)
+  // Drivers Management
   getAllDrivers: async (options = {}) => {
     const { bypassCache = false, page = 0, size = 50 } = options;
     return apiCache.fetchWithCache(
       `admin:drivers:${page}:${size}`,
       async () => {
-        try {
-          const response = await axiosClient.get(`/admin/drivers?page=${page}&size=${size}`);
-          return extractList(unwrapData(response));
-        } catch (err) {
-          const response = await axiosClient.get(`/admin/drivers?page=${page}&size=${size}`);
-          return extractList(unwrapData(response));
-        }
+        const response = await axiosClient.get(`/admin/drivers?page=${page}&size=${size}`);
+        return extractList(unwrapData(response));
       },
       { ttl: 60 * 1000, tags: ['admin', 'drivers'], bypassCache }
     );
@@ -467,14 +366,12 @@ export const adminApi = {
   updateDriverStatus: async (driverId, status, reason = '') => {
     const query = new URLSearchParams({ status });
     if (reason) query.append('reason', reason);
-    const response = await axiosClient.patch(`/admin/drivers/${driverId}/status?${query.toString()}`).catch(() =>
-      axiosClient.patch(`/admin/drivers/${driverId}/status?${query.toString()}`)
-    );
+    const response = await axiosClient.patch(`/admin/drivers/${driverId}/status?${query.toString()}`);
     apiCache.invalidateTags(['admin', 'drivers', 'dashboard']);
     return unwrapData(response);
   },
 
-  // Full Platform Vehicles Management (/api/vehicles)
+  // Platform Vehicles Management
   getAllVehicles: async (options = {}) => {
     const { bypassCache = false } = options;
     return apiCache.fetchWithCache(
@@ -490,14 +387,12 @@ export const adminApi = {
   updateVehicleStatus: async (vehicleId, status, reason = '') => {
     const query = new URLSearchParams({ status });
     if (reason) query.append('reason', reason);
-    const response = await axiosClient.patch(`/admin/vehicles/${vehicleId}/status?${query.toString()}`).catch(() =>
-      axiosClient.patch(`/admin/vehicles/${vehicleId}/status?${query.toString()}`)
-    );
+    const response = await axiosClient.patch(`/admin/vehicles/${vehicleId}/status?${query.toString()}`);
     apiCache.invalidateTags(['admin', 'vehicles', 'dashboard']);
     return unwrapData(response);
   },
 
-  // Deleted Accounts & Restore (/api/admin/accounts/deleted)
+  // Deleted Accounts & Restore
   getDeletedAccounts: async (options = {}) => {
     const { bypassCache = false, search = '', page = 0, size = 50 } = options;
     const query = new URLSearchParams();
@@ -508,43 +403,32 @@ export const adminApi = {
     return apiCache.fetchWithCache(
       `admin:deleted_accounts:${search}:${page}:${size}`,
       async () => {
-        try {
-          const response = await axiosClient.get(`/admin/accounts/deleted?${query.toString()}`);
-          return extractList(unwrapData(response));
-        } catch (err) {
-          const response = await axiosClient.get(`/admin/accounts/deleted?${query.toString()}`);
-          return extractList(unwrapData(response));
-        }
+        const response = await axiosClient.get(`/admin/accounts/deleted?${query.toString()}`);
+        return extractList(unwrapData(response));
       },
       { ttl: 30 * 1000, tags: ['admin', 'accounts'], bypassCache }
     );
   },
 
   restoreAccount: async (userId) => {
-    const response = await axiosClient.patch(`/admin/accounts/${userId}/restore`).catch(() =>
-      axiosClient.patch(`/admin/accounts/${userId}/restore`)
-    );
+    const response = await axiosClient.patch(`/admin/accounts/${userId}/restore`);
     apiCache.invalidateTags(['admin', 'accounts', 'users', 'owners', 'drivers', 'dashboard']);
     return unwrapData(response);
   },
 
   softDeleteAccount: async (userId, reason = 'Account deactivated by administrator') => {
-    const response = await axiosClient.delete(`/admin/accounts/${userId}`, { data: { reason } }).catch(() =>
-      axiosClient.delete(`/admin/accounts/${userId}`, { data: { reason } })
-    );
+    const response = await axiosClient.delete(`/admin/accounts/${userId}`, { data: { reason } });
     apiCache.invalidateTags(['admin', 'accounts', 'users', 'owners', 'drivers', 'dashboard']);
     return unwrapData(response);
   },
 
   permanentDeleteAccount: async (userId) => {
-    const response = await axiosClient.delete(`/admin/accounts/${userId}/permanent`).catch(() =>
-      axiosClient.delete(`/admin/accounts/${userId}/permanent`)
-    );
+    const response = await axiosClient.delete(`/admin/accounts/${userId}/permanent`);
     apiCache.invalidateTags(['admin', 'accounts', 'users', 'owners', 'drivers', 'dashboard']);
     return unwrapData(response);
   },
 
-  // Admin Notifications (/api/admin/notifications)
+  // Admin Notifications
   getNotifications: async (options = {}) => {
     const { bypassCache = false, isRead, page = 0, size = 50 } = options;
     const query = new URLSearchParams();
@@ -555,13 +439,8 @@ export const adminApi = {
     return apiCache.fetchWithCache(
       `admin:notifications:${isRead}:${page}:${size}`,
       async () => {
-        try {
-          const response = await axiosClient.get(`/admin/notifications?${query.toString()}`);
-          return extractList(unwrapData(response));
-        } catch (err) {
-          const response = await axiosClient.get(`/admin/notifications?${query.toString()}`);
-          return extractList(unwrapData(response));
-        }
+        const response = await axiosClient.get(`/admin/notifications?${query.toString()}`);
+        return extractList(unwrapData(response));
       },
       { ttl: 30 * 1000, tags: ['admin', 'notifications'], bypassCache }
     );
@@ -572,37 +451,27 @@ export const adminApi = {
     return apiCache.fetchWithCache(
       'admin:notifications:unread_count',
       async () => {
-        try {
-          const response = await axiosClient.get('/admin/notifications/unread-count');
-          const data = unwrapData(response);
-          return data?.unreadCount !== undefined ? data.unreadCount : (data || 0);
-        } catch (err) {
-          const response = await axiosClient.get('/admin/notifications/unread-count');
-          const data = unwrapData(response);
-          return data?.unreadCount !== undefined ? data.unreadCount : (data || 0);
-        }
+        const response = await axiosClient.get('/admin/notifications/unread-count');
+        const data = unwrapData(response);
+        return data?.unreadCount !== undefined ? data.unreadCount : (data || 0);
       },
       { ttl: 15 * 1000, tags: ['admin', 'notifications'], bypassCache }
     );
   },
 
   markNotificationAsRead: async (notificationId) => {
-    const response = await axiosClient.patch(`/admin/notifications/${notificationId}/read`).catch(() =>
-      axiosClient.patch(`/admin/notifications/${notificationId}/read`)
-    );
+    const response = await axiosClient.patch(`/admin/notifications/${notificationId}/read`);
     apiCache.invalidateTags(['admin', 'notifications']);
     return unwrapData(response);
   },
 
   markAllNotificationsAsRead: async () => {
-    const response = await axiosClient.patch('/admin/notifications/read-all').catch(() =>
-      axiosClient.patch('/admin/notifications/read-all')
-    );
+    const response = await axiosClient.patch('/admin/notifications/read-all');
     apiCache.invalidateTags(['admin', 'notifications']);
     return unwrapData(response);
   },
 
-  // Subscription Plans Management (CRUD)
+  // Subscription Plans
   getSubscriptionPlans: async (options = {}) => {
     const { bypassCache = false } = options;
     return apiCache.fetchWithCache(
@@ -611,7 +480,7 @@ export const adminApi = {
         try {
           const response = await axiosClient.get('/admin/plans');
           return extractList(unwrapData(response));
-        } catch (e) {
+        } catch {
           return [
             { id: 1, name: 'Starter Tier', vehicleLimit: 3, monthlyFee: 999, active: true, features: ['Standard Support', 'Instant Bookings'] },
             { id: 2, name: 'Fleet Growth', vehicleLimit: 10, monthlyFee: 2499, active: true, features: ['Priority Support', 'GPS Tracking', 'Multi-Driver'] },
@@ -643,4 +512,3 @@ export const adminApi = {
 };
 
 export default adminApi;
-
