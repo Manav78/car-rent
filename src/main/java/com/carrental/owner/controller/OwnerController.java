@@ -21,7 +21,7 @@ import java.util.Map;
 
 @Tag(name = "Owner", description = "Endpoints for owner profile and fleet management")
 @RestController
-@RequestMapping("/api/owners")
+@RequestMapping({"/api/owners", "/api/v1/owners"})
 @RequiredArgsConstructor
 public class OwnerController {
 

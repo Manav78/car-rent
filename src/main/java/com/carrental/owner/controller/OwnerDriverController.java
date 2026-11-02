@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @Tag(name = "Owner Drivers", description = "Endpoints for managing drivers in owner fleet")
 @RestController
-@RequestMapping("/api/owners/drivers")
+@RequestMapping({"/api/owners/drivers", "/api/v1/owners/drivers"})
 @RequiredArgsConstructor
 public class OwnerDriverController {
 

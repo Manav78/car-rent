@@ -25,7 +25,7 @@ import java.util.List;
 
 @Tag(name = "Bookings", description = "Endpoints for vehicle booking lifecycle and management")
 @RestController
-@RequestMapping("/api/bookings")
+@RequestMapping({"/api/bookings", "/api/v1/bookings"})
 @RequiredArgsConstructor
 public class BookingController {
 

@@ -24,7 +24,7 @@ import java.util.Map;
 
 @Tag(name = "Driver", description = "Endpoints for driver profile, status, and ride operations")
 @RestController
-@RequestMapping("/api/drivers")
+@RequestMapping({"/api/drivers", "/api/v1/drivers"})
 @RequiredArgsConstructor
 public class DriverController {
 

@@ -38,12 +38,14 @@ class CustomerControllerTest {
 
     @InjectMocks
     private CustomerController customerController;
+    private CustomerProfileController customerProfileController;
 
     private UserDetailsImpl userDetails;
     private CustomerResponse customerResponse;
 
     @BeforeEach
     void setUp() {
+        customerProfileController = new CustomerProfileController(customerService);
         userDetails = UserDetailsImpl.builder()
                 .id(10L)
                 .email("alice@example.com")
@@ -73,7 +75,7 @@ class CustomerControllerTest {
     void testGetProfile() {
         when(customerService.getCustomerProfile(10L)).thenReturn(customerResponse);
 
-        ResponseEntity<ApiResponse<CustomerResponse>> response = customerController.getProfile(userDetails);
+        ResponseEntity<ApiResponse<CustomerResponse>> response = customerProfileController.getProfile(userDetails);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -88,7 +90,7 @@ class CustomerControllerTest {
 
         when(customerService.updateCustomerProfile(eq(10L), any(CustomerUpdateRequest.class))).thenReturn(customerResponse);
 
-        ResponseEntity<ApiResponse<CustomerResponse>> response = customerController.updateProfile(userDetails, request);
+        ResponseEntity<ApiResponse<CustomerResponse>> response = customerProfileController.updateProfile(userDetails, request);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -100,11 +102,12 @@ class CustomerControllerTest {
     void testDeleteAccount() {
         doNothing().when(customerService).deleteCustomerAccount(10L);
 
-        ResponseEntity<ApiResponse<Void>> response = customerController.deleteProfile(userDetails);
+        ResponseEntity<ApiResponse<Void>> response = customerProfileController.deleteProfile(userDetails);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(customerService).deleteCustomerAccount(10L);
     }
 }
+
 

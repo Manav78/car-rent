@@ -27,7 +27,7 @@ import java.util.List;
 
 @Tag(name = "Vehicles", description = "Endpoints for vehicle discovery, search, filtering, and fleet management")
 @RestController
-@RequestMapping("/api/vehicles")
+@RequestMapping({"/api/vehicles", "/api/v1/vehicles"})
 @RequiredArgsConstructor
 public class VehicleController {
 

@@ -35,14 +35,14 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping(value = "/customer/signup")
+    @PostMapping(value = {"/customer/signup", "/signup/customer"})
     public ResponseEntity<ApiResponse<UserResponse>> registerCustomer(@Valid @RequestBody CustomerSignupRequest request) {
         UserResponse response = authService.registerCustomer(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created("Signup successful. Please verify your email using the OTP sent to your email address.", response));
     }
 
-    @PostMapping(value = "/owner/signup")
+    @PostMapping(value = {"/owner/signup", "/signup/owner"})
     public ResponseEntity<ApiResponse<UserResponse>> registerOwner(@Valid @RequestBody OwnerSignupRequest request) {
         UserResponse response = authService.registerOwner(request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -55,25 +55,25 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Login successful", response));
     }
 
-    @PostMapping(value = "/admin/login")
+    @PostMapping(value = {"/admin/login", "/login/admin"})
     public ResponseEntity<ApiResponse<AuthResponse>> adminLogin(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.adminLogin(request);
         return ResponseEntity.ok(ApiResponse.success("Admin login successful", response));
     }
 
-    @PostMapping("/refresh-token")
+    @PostMapping(value = {"/refresh-token", "/refresh", "/token/refresh"})
     public ResponseEntity<ApiResponse<TokenRefreshResponse>> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         TokenRefreshResponse response = authService.refreshToken(request);
         return ResponseEntity.ok(ApiResponse.success("Token refreshed successfully", response));
     }
 
-    @PostMapping("/verify-email")
+    @PostMapping(value = {"/verify-email", "/verify-otp", "/verify"})
     public ResponseEntity<ApiResponse<Void>> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
         authService.verifyEmail(request);
         return ResponseEntity.ok(ApiResponse.success("Email verified successfully"));
     }
 
-    @PostMapping(value = "/resend-verification-otp")
+    @PostMapping(value = {"/resend-verification-otp", "/resend-verification", "/send-otp"})
     public ResponseEntity<ApiResponse<Void>> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
         authService.resendVerificationOtp(request.getEmail());
         return ResponseEntity.ok(ApiResponse.success("Verification OTP has been resent to your email address."));
@@ -105,4 +105,5 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("User profile fetched successfully", response));
     }
 }
+
 

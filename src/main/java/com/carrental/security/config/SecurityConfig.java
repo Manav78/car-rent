@@ -85,8 +85,8 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/vehicles/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/v1/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/vehicles/**", "/api/v1/vehicles/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(
                                 "/v3/api-docs",

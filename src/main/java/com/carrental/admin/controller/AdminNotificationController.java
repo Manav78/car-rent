@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Admin Notifications", description = "Admin platform notifications and alerts")
 @RestController
-@RequestMapping("/api/admin/notifications")
+@RequestMapping({"/api/admin/notifications", "/api/v1/admin/notifications"})
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminNotificationController {

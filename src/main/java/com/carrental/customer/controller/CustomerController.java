@@ -26,7 +26,7 @@ import java.util.Map;
 
 @Tag(name = "Customer", description = "Endpoints for customer profile, dashboard, and booking history")
 @RestController
-@RequestMapping("/api/customers")
+@RequestMapping({"/api/customers", "/api/v1/customers"})
 @RequiredArgsConstructor
 public class CustomerController {
 

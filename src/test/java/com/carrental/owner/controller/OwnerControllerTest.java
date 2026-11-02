@@ -31,12 +31,14 @@ class OwnerControllerTest {
 
     @InjectMocks
     private OwnerController ownerController;
+    private OwnerProfileController ownerProfileController;
 
     private UserDetailsImpl userDetails;
     private OwnerResponse ownerResponse;
 
     @BeforeEach
     void setUp() {
+        ownerProfileController = new OwnerProfileController(ownerService);
         userDetails = UserDetailsImpl.builder()
                 .id(20L)
                 .email("owner@example.com")
@@ -65,7 +67,7 @@ class OwnerControllerTest {
     void testGetProfile() {
         when(ownerService.getOwnerProfile(20L)).thenReturn(ownerResponse);
 
-        ResponseEntity<ApiResponse<OwnerResponse>> response = ownerController.getProfile(userDetails);
+        ResponseEntity<ApiResponse<OwnerResponse>> response = ownerProfileController.getProfile(userDetails);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -80,11 +82,12 @@ class OwnerControllerTest {
 
         when(ownerService.updateOwnerProfile(eq(20L), any(OwnerUpdateRequest.class))).thenReturn(ownerResponse);
 
-        ResponseEntity<ApiResponse<OwnerResponse>> response = ownerController.updateProfile(userDetails, request);
+        ResponseEntity<ApiResponse<OwnerResponse>> response = ownerProfileController.updateProfile(userDetails, request);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(ownerService).updateOwnerProfile(eq(20L), any(OwnerUpdateRequest.class));
     }
 }
+
 
