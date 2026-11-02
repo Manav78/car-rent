@@ -26,7 +26,7 @@ const AppLayout = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
       <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
       
       <div className="flex-1 flex w-full">
@@ -39,8 +39,8 @@ const AppLayout = () => {
           />
         )}
         
-        <main className={`flex-1 min-w-0 p-4 md:p-6 lg:p-8 ${isAuth ? 'pb-24 md:pb-8' : 'pb-12'} bg-slate-950 transition-colors duration-200`}>
-          <div className="max-w-7xl mx-auto space-y-6">
+        <main className={`flex-1 min-w-0 p-4 md:p-6 lg:p-8 ${isAuth ? 'pb-24 md:pb-8' : 'pb-12'} transition-colors duration-200`}>
+          <div className="max-w-7xl mx-auto space-y-8">
             <Outlet />
           </div>
         </main>
@@ -53,4 +53,3 @@ const AppLayout = () => {
 };
 
 export default AppLayout;
-

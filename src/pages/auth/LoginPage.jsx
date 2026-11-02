@@ -680,19 +680,19 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex items-center justify-center p-4 relative">
       {/* Background Glows */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 relative z-10 my-6">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl p-6 sm:p-8 relative z-10 my-6">
         
         {/* Brand Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600/15 border border-indigo-500/30 text-indigo-400 mb-3 shadow-lg shadow-indigo-600/10">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-950 dark:bg-amber-500 text-amber-400 dark:text-slate-950 mb-3 shadow-sm">
             <Car className="w-7 h-7" />
           </div>
-          <h1 className="text-2xl font-black text-slate-100 tracking-tight">DriveIndia Rentals 🇮🇳</h1>
+          <h1 className="text-2xl font-black text-slate-950 dark:text-slate-100 tracking-tight">DriveEase Mobility</h1>
           <p className="text-xs text-slate-400 mt-1">
             {step === 'otp' ? 'Security & Identity Verification' : 'Multi-Role Indian Car Rental Platform'}
           </p>
@@ -700,14 +700,14 @@ const LoginPage = () => {
 
         {/* Tab Switcher (Only visible in Form step) */}
         {step === 'form' && (
-          <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 mb-6">
+          <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 mb-6">
             <button
               type="button"
               onClick={() => handleModeSwitch('login')}
               className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all duration-200 ${
                 mode === 'login' 
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' 
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-slate-950 text-amber-400 dark:bg-amber-500 dark:text-slate-950 font-bold shadow-xs' 
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               Sign In
@@ -717,8 +717,8 @@ const LoginPage = () => {
               onClick={() => handleModeSwitch('signup')}
               className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all duration-200 ${
                 mode === 'signup' 
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' 
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-slate-950 text-amber-400 dark:bg-amber-500 dark:text-slate-950 font-bold shadow-xs' 
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               Sign Up
@@ -741,7 +741,7 @@ const LoginPage = () => {
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             {mode === 'signup' && (
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                   Full Name <span className="text-rose-400">*</span>
                 </label>
                 <div className="relative">
@@ -769,7 +769,7 @@ const LoginPage = () => {
             )}
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                 Email Address <span className="text-rose-400">*</span>
               </label>
               <div className="relative">
@@ -798,7 +798,7 @@ const LoginPage = () => {
 
             {mode === 'signup' && (
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                   Mobile Number (For OTP Verification) <span className="text-rose-400">*</span>
                 </label>
                 <div className="relative">
@@ -830,7 +830,7 @@ const LoginPage = () => {
             )}
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                 Password <span className="text-rose-400">*</span>
               </label>
               <div className="relative">
@@ -868,7 +868,7 @@ const LoginPage = () => {
                   <button
                     type="button"
                     onClick={handleOpenForgotPassword}
-                    className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors hover:underline cursor-pointer"
+                    className="text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:underline transition-colors hover:underline cursor-pointer"
                   >
                     Forgot Password?
                   </button>
@@ -878,7 +878,7 @@ const LoginPage = () => {
 
             {mode === 'signup' && (
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                   Confirm Password <span className="text-rose-400">*</span>
                 </label>
                 <div className="relative">
@@ -916,7 +916,7 @@ const LoginPage = () => {
             {mode === 'signup' && (
               <div className="space-y-4 pt-1">
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                     Register Account As
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -1028,7 +1028,7 @@ const LoginPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full mt-2 py-3 px-4 bg-slate-950 hover:bg-black text-amber-400 dark:bg-amber-500 dark:hover:bg-amber-400 dark:text-slate-950 text-xs font-black rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {loading ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -1146,7 +1146,7 @@ const LoginPage = () => {
                 type="button"
                 onClick={handleResendOtp}
                 disabled={!canResend || loading}
-                className="font-bold text-indigo-400 hover:text-indigo-300 disabled:opacity-40 disabled:hover:text-indigo-400 flex items-center gap-1 transition-colors cursor-pointer"
+                className="font-bold text-amber-600 dark:text-amber-400 hover:underline disabled:opacity-40 disabled:hover:text-indigo-400 flex items-center gap-1 transition-colors cursor-pointer"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                 <span>Resend OTP</span>

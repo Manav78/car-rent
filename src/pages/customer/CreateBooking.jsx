@@ -142,17 +142,17 @@ const CreateBooking = () => {
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-100 tracking-tight">Create Vehicle Reservation</h1>
+          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">Create Vehicle Reservation</h1>
           <p className="text-xs text-slate-400">Specify trip dates, pickup points, and itinerary details for vehicle owner dispatch.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: Form */}
-        <form onSubmit={handleSubmit} className="lg:col-span-2 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 md:p-7 shadow-2xl space-y-6 backdrop-blur">
+        <form onSubmit={handleSubmit} className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm rounded-3xl p-6 md:p-7 shadow-2xl space-y-6 backdrop-blur">
           {/* Vehicle Selection Dropdown */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
               Select Available Vehicle
             </label>
             <div className="relative">
@@ -160,7 +160,7 @@ const CreateBooking = () => {
               <select
                 value={selectedVehicle ? (selectedVehicle.vehicleId || selectedVehicle.id) : ''}
                 onChange={(e) => handleVehicleChange(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
                 required
               >
                 <option value="">-- Select Available Car --</option>
@@ -181,7 +181,7 @@ const CreateBooking = () => {
 
           {/* Contact Mobile */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
               Customer Contact Phone
             </label>
             <div className="relative">
@@ -192,7 +192,7 @@ const CreateBooking = () => {
                 onChange={(e) => setCustomerPhone(e.target.value)}
                 placeholder="+91 98220 11223"
                 required
-                className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition-colors"
               />
             </div>
           </div>
@@ -200,7 +200,7 @@ const CreateBooking = () => {
           {/* Date Selection */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                 Start Date
               </label>
               <div className="relative">
@@ -211,13 +211,13 @@ const CreateBooking = () => {
                   onChange={(e) => setStartDate(e.target.value)}
                   min={new Date().toISOString().split('T')[0]}
                   required
-                  className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                 End Date
               </label>
               <div className="relative">
@@ -228,7 +228,7 @@ const CreateBooking = () => {
                   onChange={(e) => setEndDate(e.target.value)}
                   min={startDate || new Date().toISOString().split('T')[0]}
                   required
-                  className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
                 />
               </div>
             </div>
@@ -237,7 +237,7 @@ const CreateBooking = () => {
           {/* Pickup & Dropoff Location */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                 Pickup Location
               </label>
               <div className="relative">
@@ -248,13 +248,13 @@ const CreateBooking = () => {
                   onChange={(e) => setPickupLocation(e.target.value)}
                   placeholder="Pune Station, CSMT Airport..."
                   required
-                  className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition-colors"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                 Drop Location
               </label>
               <div className="relative">
@@ -265,7 +265,7 @@ const CreateBooking = () => {
                   onChange={(e) => setDropoffLocation(e.target.value)}
                   placeholder="Mahabaleshwar, Goa Beach..."
                   required
-                  className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition-colors"
                 />
               </div>
             </div>
@@ -274,13 +274,13 @@ const CreateBooking = () => {
           {/* Trip Type & Passenger Count */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                 Trip Category
               </label>
               <select
                 value={tripType}
                 onChange={(e) => setTripType(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
               >
                 <option value="LOCAL">LOCAL (Intra-city Ride)</option>
                 <option value="OUTSTATION">OUTSTATION (Inter-city Tour)</option>
@@ -288,7 +288,7 @@ const CreateBooking = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                 Passengers (Max: {selectedVehicle?.seatingCapacity || 5})
               </label>
               <div className="flex items-center gap-2">
@@ -309,10 +309,10 @@ const CreateBooking = () => {
                     }}
                     placeholder="e.g. 2"
                     required
-                    className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs text-slate-100 focus:outline-none focus:border-emerald-500 font-semibold"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 font-semibold"
                   />
                 </div>
-                <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-2xl p-1 shrink-0">
+                <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-1 shrink-0">
                   <button
                     type="button"
                     onClick={() => {
@@ -346,7 +346,7 @@ const CreateBooking = () => {
 
           {/* Special Notes */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
               Trip Notes / Luggage Instructions
             </label>
             <div className="relative">
@@ -356,7 +356,7 @@ const CreateBooking = () => {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Luggage carrier requirement, extra stopovers, timing..."
-                className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500"
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
@@ -381,8 +381,8 @@ const CreateBooking = () => {
 
         {/* Right 1 Col: Selected Vehicle Summary & Specs Modal Trigger */}
         <div className="space-y-4">
-          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4 backdrop-blur">
-            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider border-b border-slate-800 pb-3 flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm rounded-3xl p-5 shadow-2xl space-y-4 backdrop-blur">
+            <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider border-b border-slate-800 pb-3 flex items-center gap-2">
               <Zap className="w-4 h-4 text-emerald-400" />
               <span>Selected Vehicle Preview</span>
             </h3>
@@ -401,7 +401,7 @@ const CreateBooking = () => {
                 </div>
 
                 <div>
-                  <h4 className="text-base font-extrabold text-slate-100">
+                  <h4 className="text-base font-extrabold text-slate-900 dark:text-slate-100">
                     {selectedVehicle.brand ? `${selectedVehicle.brand} ${selectedVehicle.model}` : selectedVehicle.name} ({selectedVehicle.year || 2024})
                   </h4>
                   <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
@@ -464,7 +464,7 @@ const CreateBooking = () => {
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>Verified Operational Vehicle</span>
                 </div>
-                <h2 className="text-xl md:text-2xl font-extrabold text-slate-100">
+                <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-slate-100">
                   {selectedVehicle.brand} {selectedVehicle.model} ({selectedVehicle.year || 2024})
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">

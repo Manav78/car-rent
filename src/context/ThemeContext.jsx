@@ -1,15 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const ThemeContext = createContext({
-  theme: 'dark',
+  theme: 'light',
   toggleTheme: () => {},
-  isDark: true,
+  isDark: false,
 });
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('app_theme');
-    return saved === 'light' ? 'light' : 'dark';
+    // Default to clean, professional light mode (Ola/Uber style)
+    return saved === 'dark' ? 'dark' : 'light';
   });
 
   useEffect(() => {
